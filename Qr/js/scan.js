@@ -1,75 +1,86 @@
-// js/scan.js
-
-// 1. Init Firebase (using your js/firebaseConfig.js)
+// 1. Init Firebase (compat)
 if (!window.firebaseConfig) {
   throw new Error("Missing firebaseConfig.js");
 }
 firebase.initializeApp(window.firebaseConfig);
 const db = firebase.firestore();
 
-// 2. Simple decrypt matching your QR generator
+// 2. Decrypt helper
 function decryptText(noisy) {
   if (noisy.length <= 10) throw "Invalid payload";
-  // strip 5 chars front/back, then Base64-decode
   return atob(noisy.slice(5, -5));
 }
 
-// 3. Scan handler
+// 3. Popup helper
+const popup = document.getElementById('scan-popup');
+const popupMsg = document.getElementById('scan-popup-msg');
+const popupClose = document.getElementById('scan-popup-close');
+let popupTimer;
+
+function showPopup(msg) {
+  clearTimeout(popupTimer);
+  popupMsg.textContent = msg;
+  popup.style.display = 'block';
+  popup.style.opacity = '1';
+  popupClose.onclick = hidePopup;
+  popupTimer = setTimeout(hidePopup, 7000);
+}
+
+function hidePopup() {
+  popup.style.opacity = '0';
+  clearTimeout(popupTimer);
+  setTimeout(() => popup.style.display = 'none', 300);
+}
+
+// 4. Scan handler
 async function startQRScan() {
   const btn = document.getElementById('btn-scan');
-  const resultEl = document.getElementById('scan-result');
-  btn.disabled = true;
-  resultEl.textContent = '';
+  const scannerEl = document.getElementById('qr-scanner');
+
+  btn.style.display = 'none';
+  scannerEl.style.display = 'block';
 
   const scanner = new Html5Qrcode("qr-scanner");
   try {
     await scanner.start(
       { facingMode: "environment" },
-      { fps: 10, qrbox: 256 },
+      { fps: 10, qrbox: parseInt(getComputedStyle(document.documentElement)
+                                .getPropertyValue('--qr-size')) },
       async decodedText => {
         await scanner.stop();
-        btn.disabled = false;
 
-        // 3a. Decrypt & parse membership phone
         let plain;
         try {
           plain = decryptText(decodedText);
         } catch {
-          resultEl.textContent = "Error: invalid QR";
-          return;
+          return showPopup("Error: invalid QR");
         }
-        const phone = plain.slice(11); // mmddhhmmssR + phone
 
-        // 3b. Firestore lookup & validation
+        const phone = plain.slice(11);
         const docRef = db.collection("members").doc(phone);
-        const snap   = await docRef.get();
+        const snap = await docRef.get();
         if (!snap.exists) {
-          resultEl.textContent = `No record for ${phone}`;
-          return;
+          return showPopup(`No record for ${phone}`);
         }
         const data = snap.data();
         if (!data.onList) {
-          resultEl.textContent = `❌ Not on list`;
-          return;
+          return showPopup("❌ Not on list");
         }
-
-        // 3c. Award points
         await docRef.update({
           sPoints: firebase.firestore.FieldValue.increment(7)
         });
-        resultEl.textContent = `✅ Welcome, ${data.name || phone}!`;
+        showPopup(`✅ Welcome, ${data.name || phone}!`);
       },
-      errorMessage => {
-        // you can ignore scan errors here
+      _ => {
+        // ignore frame scan errors
       }
     );
   } catch (e) {
     console.error(e);
-    btn.disabled = false;
-    resultEl.textContent = "Error starting camera";
+    showPopup("Error starting camera");
   }
 }
 
-// 4. Wire the button
+// 5. Wire the button
 document.getElementById('btn-scan')
         .addEventListener('click', startQRScan);
