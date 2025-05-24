@@ -262,3 +262,93 @@ header {
   color: var(--green-light);
   cursor: pointer;
 }
+
+/* Fullscreen, centered container */
+#scan-container {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: inherit; /* keep your gradient */
+}
+
+/* Scan button uses existing style */
+#controls button {
+  width: var(--qr-size);
+  padding: 1rem;
+  font-size: 1.1rem;
+  background: linear-gradient(45deg, var(--green), var(--green-light));
+  color: var(--gold);
+  border: none;
+  border-radius: 0.5rem;
+  box-shadow: var(--button-shadow);
+  transition: transform 300ms var(--ease), opacity 300ms var(--ease);
+}
+
+/* Scanner preview: hidden by default */
+#scanner-wrapper {
+  display: none;
+  position: relative;
+  width: var(--qr-size);
+  height: var(--qr-size);
+  border-radius: 0.5rem;
+  overflow: hidden;
+  box-shadow: var(--card-shadow);
+  margin-top: 1rem;
+  opacity: 0;
+  transform: scale(0.9);
+  transition: opacity 300ms var(--ease), transform 300ms var(--ease);
+}
+/* When active */
+#scanner-wrapper.show {
+  display: block;
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* Close button inside preview */
+#scanner-close {
+  position: absolute;
+  top: 6px; right: 6px;
+  width: 24px; height: 24px;
+  background: rgba(255,255,255,0.8);
+  border: none; border-radius: 50%;
+  font-size: 16px; color: var(--green);
+  cursor: pointer;
+  z-index: 10;
+}
+
+/* Popup banner */
+#scan-popup {
+  position: absolute;
+  top: 10%;
+  left: 10%;
+  width: 80%;
+  padding: 0.75rem 1rem;
+  background: #fff;
+  border-radius: 0.5rem;
+  box-shadow: var(--card-shadow);
+  display: none;
+  opacity: 1;
+  transition: opacity 300ms var(--ease);
+}
+#scan-popup-msg {
+  color: var(--green);
+  font-size: 1rem;
+}
+#scan-popup-close {
+  position: absolute;
+  top: 4px; right: 6px;
+  background: none; border: none;
+  font-size: 1rem; color: var(--green-light);
+  cursor: pointer;
+}
+
+/* Flash animations */
+@keyframes flash-green { 0% { background: rgba(0,255,0,0.2); } 100% { background: transparent; } }
+@keyframes flash-red   { 0% { background: rgba(255,0,0,0.2); } 100% { background: transparent; } }
+
+body.flash-success { animation: flash-green 500ms var(--ease) forwards; }
+body.flash-error   { animation: flash-red   500ms var(--ease) forwards; }
