@@ -7,10 +7,23 @@ if (!window.firebaseConfig) {
 firebase.initializeApp(window.firebaseConfig);
 const db = firebase.firestore();
 
-// 2) Decrypt helper
+// 2) Decrypt & timestamp helpers
 function decryptText(noisy) {
   if (noisy.length <= 10) throw "Invalid payload";
   return atob(noisy.slice(5, -5));
+}
+
+function diffSec(ts) {
+  const now = new Date();
+  const qr  = new Date(
+    now.getFullYear(),
+    +ts.slice(0,2) - 1,
+    +ts.slice(2,4),
+    +ts.slice(4,6),
+    +ts.slice(6,8),
+    +ts.slice(8,10)
+  );
+  return Math.abs((now - qr) / 1000);
 }
 
 // 3) Elements & state
@@ -23,7 +36,7 @@ const popupMsg   = document.getElementById('scan-popup-msg');
 const popupClose = document.getElementById('scan-popup-close');
 let html5Scanner, popupTimer;
 
-// 4) Popup helpers
+// 4) Popup
 function showPopup(msg) {
   clearTimeout(popupTimer);
   popupMsg.innerText = msg;
@@ -38,7 +51,7 @@ function hidePopup() {
   setTimeout(() => popup.style.display = 'none', 300);
 }
 
-// 5) Flash helpers
+// 5) Flash
 function flash(ok) {
   document.body.classList.add(ok ? 'flash-success' : 'flash-error');
   setTimeout(() =>
@@ -47,28 +60,26 @@ function flash(ok) {
   );
 }
 
-// 6) Show / hide scanner
+// 6) Show/hide scanner UI
 function showScanner() {
-  // hide button
   scanBtn.style.transition = 'opacity 300ms';
   scanBtn.style.opacity = '0';
   setTimeout(() => scanBtn.style.display = 'none', 300);
 
-  // show wrapper + scanner
   wrapper.style.display = 'block';
   qrScanner.style.display = 'block';
   requestAnimationFrame(() => wrapper.classList.add('show'));
 }
-
 function hideScanner() {
-  // hide wrapper
+  if (html5Scanner) {
+    html5Scanner.stop().catch(()=>{});
+  }
   wrapper.classList.remove('show');
   setTimeout(() => {
     wrapper.style.display = 'none';
     qrScanner.style.display = 'none';
   }, 300);
 
-  // show button
   scanBtn.style.display = 'block';
   setTimeout(() => scanBtn.style.opacity = '1', 50);
 }
@@ -79,7 +90,7 @@ async function startQRScan() {
 
   html5Scanner = new Html5Qrcode("qr-scanner");
 
-  // ensure inline on iOS
+  // iOS inline
   const obs = new MutationObserver(() => {
     const vid = qrScanner.querySelector('video');
     if (vid) {
@@ -95,16 +106,26 @@ async function startQRScan() {
       { fps: 10, qrbox: parseInt(getComputedStyle(document.documentElement)
                                 .getPropertyValue('--qr-size')) },
       async raw => {
+        // got a code!
         await html5Scanner.stop();
         hideScanner();
 
         let plain;
-        try { plain = decryptText(raw); }
-        catch {
+        try {
+          plain = decryptText(raw);
+        } catch {
           flash(false);
-          return showPopup("Error: invalid QR");
+          return showPopup("Invalid QR code");
         }
 
+        // expiration check
+        const timePart = plain.slice(0,10);
+        if (diffSec(timePart) > 28) {
+          flash(false);
+          return showPopup("Error: QR expired");
+        }
+
+        // extract phone & lookup
         const phone = plain.slice(11);
         const docRef = db.collection("members").doc(phone);
         const snap   = await docRef.get();
@@ -118,15 +139,18 @@ async function startQRScan() {
           return showPopup("❌ Not on list");
         }
 
+        // award points & success
         await docRef.update({
           sPoints: firebase.firestore.FieldValue.increment(7)
         });
         flash(true);
         showPopup(`✅ Welcome, ${name}!`);
       },
-      _err => { /* ignore scan-frame errors */ }
+      _err => {
+        // silent
+      }
     );
-  } catch (e) {
+  } catch(e) {
     console.error(e);
     hideScanner();
     flash(false);
@@ -134,10 +158,7 @@ async function startQRScan() {
   }
 }
 
-// 8) Wire events
+// 8) Wiring
 scanBtn   .addEventListener('click', startQRScan);
-closeCam  .addEventListener('click', () => {
-  if (html5Scanner) html5Scanner.stop();
-  hideScanner();
-});
+closeCam  .addEventListener('click', hideScanner);
 popupClose.addEventListener('click', hidePopup);
