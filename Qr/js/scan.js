@@ -1,5 +1,7 @@
-// 1. Init Firebase
-if (!window.firebaseConfig) throw new Error("Missing firebaseConfig.js");
+// 1. Init Firebase (compat)
+if (!window.firebaseConfig) {
+  throw new Error("Missing firebaseConfig.js");
+}
 firebase.initializeApp(window.firebaseConfig);
 const db = firebase.firestore();
 
@@ -9,113 +11,76 @@ function decryptText(noisy) {
   return atob(noisy.slice(5, -5));
 }
 
-// 3. Popup helpers
-const popup      = document.getElementById('scan-popup');
-const popupMsg   = document.getElementById('scan-popup-msg');
+// 3. Popup helper
+const popup = document.getElementById('scan-popup');
+const popupMsg = document.getElementById('scan-popup-msg');
 const popupClose = document.getElementById('scan-popup-close');
 let popupTimer;
-popupClose.onclick = () => hidePopup();
+
 function showPopup(msg) {
   clearTimeout(popupTimer);
   popupMsg.textContent = msg;
   popup.style.display = 'block';
   popup.style.opacity = '1';
+  popupClose.onclick = hidePopup;
   popupTimer = setTimeout(hidePopup, 7000);
 }
+
 function hidePopup() {
   popup.style.opacity = '0';
   clearTimeout(popupTimer);
   setTimeout(() => popup.style.display = 'none', 300);
 }
 
-// 4. Flash helper
-const flash = document.getElementById('flash-overlay');
-function doFlash(success) {
-  flash.classList.toggle('fail', !success);
-  flash.style.opacity = '1';
-  setTimeout(() => flash.style.opacity = '0', 200);
-}
-
-// 5. Scan logic
-let scanner; 
+// 4. Scan handler
 async function startQRScan() {
-  const btn        = document.getElementById('btn-scan');
-  const scannerEl  = document.getElementById('qr-scanner');
-  const closeBtn   = document.getElementById('scanner-close');
+  const btn = document.getElementById('btn-scan');
+  const scannerEl = document.getElementById('qr-scanner');
 
-  // toggle UI
   btn.style.display = 'none';
   scannerEl.style.display = 'block';
-  closeBtn.style.display = 'block';
 
-  // stop on close
-  closeBtn.onclick = async () => {
-    await scanner.stop();
-    resetUI();
-  };
-
-  // init scanner
-  scanner = new Html5Qrcode("qr-scanner");
-  // ensure video plays inline on iOS
-  new MutationObserver((_,o)=> {
-    const v = document.querySelector('#qr-scanner video');
-    if (v) { v.setAttribute('playsinline',''); o.disconnect(); }
-  }).observe(scannerEl,{ childList:true, subtree:true });
-
+  const scanner = new Html5Qrcode("qr-scanner");
   try {
     await scanner.start(
-      { facingMode:"environment" },
-      { fps:10, qrbox:256 },
-      onDecodeSuccess,
-      _ => {}
+      { facingMode: "environment" },
+      { fps: 10, qrbox: parseInt(getComputedStyle(document.documentElement)
+                                .getPropertyValue('--qr-size')) },
+      async decodedText => {
+        await scanner.stop();
+
+        let plain;
+        try {
+          plain = decryptText(decodedText);
+        } catch {
+          return showPopup("Error: invalid QR");
+        }
+
+        const phone = plain.slice(11);
+        const docRef = db.collection("members").doc(phone);
+        const snap = await docRef.get();
+        if (!snap.exists) {
+          return showPopup(`No record for ${phone}`);
+        }
+        const data = snap.data();
+        if (!data.onList) {
+          return showPopup("❌ Not on list");
+        }
+        await docRef.update({
+          sPoints: firebase.firestore.FieldValue.increment(7)
+        });
+        showPopup(`✅ Welcome, ${data.name || phone}!`);
+      },
+      _ => {
+        // ignore frame scan errors
+      }
     );
-  } catch(e) {
+  } catch (e) {
     console.error(e);
     showPopup("Error starting camera");
-    resetUI();
   }
 }
 
-// 6. On decode (success or fail)
-async function onDecodeSuccess(raw) {
-  await scanner.stop();
-
-  let plain, phone, docRef, snap, data;
-  try {
-    plain = decryptText(raw);
-    phone = plain.slice(11);
-    docRef= db.collection('members').doc(phone);
-    snap  = await docRef.get();
-    if (!snap.exists) throw "No record";
-    data = snap.data();
-    if (!data.onList) throw "Not on list";
-
-    // award points
-    await docRef.update({
-      sPoints: firebase.firestore.FieldValue.increment(7)
-    });
-    doFlash(true);
-    showPopup(`✅ Welcome, ${data.name || phone}!`);
-  } catch(err) {
-    console.warn(err);
-    doFlash(false);
-    showPopup(
-      err === "Not on list"    ? "❌ Not on list" :
-      err === "No record"      ? `No record for ${phone}` :
-                                "Invalid QR"
-    );
-  } finally {
-    resetUI();
-  }
-}
-
-// 7. Reset to button
-function resetUI() {
-  document.getElementById('scanner-close').style.display = 'none';
-  document.getElementById('qr-scanner').style.display = 'none';
-  document.getElementById('btn-scan').style.display = 'block';
-}
-
-// 8. Wire button
+// 5. Wire the button
 document.getElementById('btn-scan')
         .addEventListener('click', startQRScan);
