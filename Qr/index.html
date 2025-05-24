@@ -5,6 +5,30 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>From Strangers</title>
   <link rel="stylesheet" href="css/style.css" />
+
+  <!-- QR & camera libs -->
+  <script src="js/vendor/qrcode.min.js" defer></script>
+  <script src="js/vendor/html5-qrcode.min.js" defer></script>
+
+  <!-- Firebase (compat) -->
+  <script
+    src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"
+    defer
+  ></script>
+  <script
+    src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"
+    defer
+  ></script>
+  <script
+    src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"
+    defer
+  ></script>
+
+  <!-- Your git-ignored config -->
+  <script src="js/firebaseConfig.js" defer></script>
+
+  <!-- Main app logic -->
+  <script src="js/app.js" defer></script>
 </head>
 <body>
 
@@ -14,6 +38,11 @@
       <h2>Enter your phone number</h2>
       <input id="phone-input" type="tel" placeholder="1234567890" maxlength="15" />
       <button id="phone-submit">Continue</button>
+      <div id="recaptcha-container"></div>
+      <div id="otp-entry" style="display:none; margin-top:1rem;">
+        <input id="otp-input" type="text" placeholder="123456" maxlength="6" />
+        <button id="otp-submit">Verify Code</button>
+      </div>
     </div>
   </div>
 
@@ -27,36 +56,18 @@
     <main>
       <div id="controls">
         <button id="btn-display">Display QR Code</button>
-        
         <button id="btn-photos">View / Add Photos</button>
         <button id="btn-chat">Group Chat</button>
         <button id="btn-suggest">Suggest Activity</button>
-
-        <!-- tiny text link for scan -->
         <a id="link-scan" href="#">Scan QR Code</a>
       </div>
 
-      <div id="qr-wrapper">
-        <button id="qr-close">×</button>
-        <div id="qr-display"></div>
-        <div id="qr-timer"></div>
-      </div>
+      
 
       <div id="qr-scanner"></div>
       <div id="scan-result"></div>
     </main>
   </div>
 
-  <!-- Vendor libs -->
-  <script src="js/vendor/qrcode.min.js" defer></script>
-  <script src="js/vendor/html5-qrcode.min.js" defer></script>
-  <script src="js/vendor/firebase-app-compat.js" defer></script>
-  <script src="js/vendor/firebase-firestore-compat.js" defer></script>
-  
-  <!-- Load your secret-free template (ignored) -->
-  <script src="js/firebaseConfig.js" defer></script>
-  
-  <!-- App logic -->
-  <script src="js/app.js" defer></script>
 </body>
 </html>
