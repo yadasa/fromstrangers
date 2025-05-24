@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+
+  <title>Scan QR</title>
+  <!-- your existing CSS for buttons, colors, etc. -->
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+  <main style="display:flex; flex-direction:column; align-items:center; padding:2rem;">
+    <button id="btn-scan" style="width:256px; margin-bottom:1rem;">
+      Scan QR Code
+    </button>
+    <!-- container for the live camera preview -->
+    <div id="qr-scanner" style="width:256px; height:256px; margin-bottom:1rem;"></div>
+    <!-- result message -->
+    <div id="scan-result" style="font-size:1rem; color:var(--green);"></div>
+  </main>
+
+  <!-- HTML5 QR Code library -->
+  <script src="js/vendor/html5-qrcode.min.js"></script>
+  <!-- Firebase SDKs -->
+  <script src="js/vendor/firebase-app-compat.js"></script>
+  <script src="js/vendor/firebase-firestore-compat.js"></script>
+  <!-- Your injected config (tracked in Git) -->
+  <script src="js/firebaseConfig.js"></script>
+  <!-- The scan logic below -->
+  <script src="js/scan.js"></script>
+</body>
+</html>
