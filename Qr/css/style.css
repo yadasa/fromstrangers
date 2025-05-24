@@ -1,18 +1,18 @@
 :root {
   --qr-size:       256px;
-  --gold:          #b49e85;  /* muted tan accent */
-  --gold-light:    #d9c0a1;  /* lighter tan */
-  --green:         #3e2f1b;  /* deep, warm brown */
-  --green-light:   #5a4025;  /* softer medium brown */
-  --bg-start:      #f5efde;  /* cream top */
-  --bg-end:        #e8d6bb;  /* pale sand bottom */
+  --gold:          #b49e85;   /* muted tan accent */
+  --gold-light:    #d9c0a1;   /* lighter tan */
+  --green:         #3e2f1b;   /* deep, warm brown */
+  --green-light:   #5a4025;   /* softer medium brown */
+  --bg-start:      #f5efde;   /* cream top */
+  --bg-end:        #e8d6bb;   /* pale sand bottom */
   --button-shadow: 0 4px 8px rgba(0,0,0,0.1);
   --card-shadow:   0 8px 16px rgba(0,0,0,0.1);
   --fade-duration: 300ms;
   --ease:          ease;
 }
 
-/* reset & base (unchanged) */
+/* reset & base */
 * {
   box-sizing: border-box;
   margin: 0;
@@ -29,6 +29,7 @@ body {
   flex-direction: column;
   align-items: center;
 }
+
 main {
   width: 100%;
   max-width: 400px;
@@ -38,12 +39,12 @@ main {
 /* Phone entry overlay */
 #phone-entry {
   position: fixed;
-  top:0; left:0; right:0; bottom:0;
+  inset: 0;
   background: rgba(0,0,0,0.5);
   display: flex;
-  align-items:center;
-  justify-content:center;
-  z-index:1000;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
 }
 .phone-box {
   background: #fff;
@@ -52,6 +53,7 @@ main {
   text-align: center;
   width: 90%;
   max-width: 320px;
+  box-shadow: var(--card-shadow);
 }
 .phone-box h2 {
   margin-bottom: 1rem;
@@ -120,32 +122,39 @@ header {
   box-shadow: none;
 }
 
-/* QR Wrapper */
+/* QR modal & backdrop */
+#qr-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  display: none;
+  z-index: 1000;
+}
 #qr-wrapper {
-  position: relative;
+  position: fixed;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1001;
   display: none;
   width: calc(var(--qr-size) + 32px);
   padding: 16px;
-  background: rgba(180,158,133,1);;
+  background: var(--gold);
   border-radius: 1rem;
   box-shadow: var(--card-shadow);
-  margin: 0 auto 1.5rem;
   opacity: 0;
+  transition: opacity 300ms var(--ease);
 }
 #qr-close {
   position: absolute;
-  top: 8px;
-  right: 8px;
-  display: none;
-  width: 20px;
-  height: 20px;
+  top: 8px; right: 8px;
+  width: 20px; height: 20px;
   background: rgba(255,255,255,0.9);
   border: none;
   border-radius: 50%;
   color: var(--green);
   font-size: 0.9rem;
-  line-height: 1;
   cursor: pointer;
+  display: none;
 }
 #qr-close:hover {
   background: rgba(255,255,255,1);
@@ -163,107 +172,8 @@ header {
   margin-top: 0.5rem;
   font-size: 1rem;
 }
-/* Dark backdrop behind the QR modal */
-#qr-overlay {
-  position: fixed;
-  top: 0; left: 0;
-  width: 100%; height: 100%;
-  background: rgba(0,0,0,0.5);
-  display: none;
-  z-index: 1000;
-}
 
-/* Force the QR wrapper into a fixed, centered modal */
-#qr-wrapper {
-  position: fixed !important;
-  top: 50% !important;
-  left: 50% !important;
-  transform: translate(-50%, -50%) !important;
-  z-index: 1001 !important;
-}
-
-#controls a#link-scan {
-  display: block;
-  margin-top: 0.5rem;
-  font-size: 0.65rem;       /* slightly smaller text */
-  color: var(--green);       /* same green accent */
-  text-decoration: underline;
-  cursor: pointer;
-  background: none;          /* ensure it’s not button-styled */
-  border: none;
-  padding: 0;
-  transition: color 200ms var(--ease);
-}
-#controls a#link-scan:hover {
-  color: var(--green-light);
-}
-/* Fullscreen center for scan page */
-#scan-container {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100vh;
-}
-
-/* Override controls button to match existing style */
-#scan-container #controls button {
-  width: var(--qr-size);
-  padding: 1rem;
-  font-size: 1.1rem;
-  background: linear-gradient(45deg, var(--green), var(--green-light));
-  color: var(--gold);
-  border: none;
-  border-radius: 0.5rem;
-  box-shadow: var(--button-shadow);
-}
-
-/* Scanner preview (hidden initially) */
-#qr-scanner {
-  display: none;
-  width: var(--qr-size);
-  height: var(--qr-size);
-  border-radius: 0.5rem;
-  overflow: hidden;
-  box-shadow: var(--card-shadow);
-  margin-top: 1rem;
-}
-
-/* Popup message */
-#scan-popup {
-  position: absolute;
-  top: 10%;
-  left: 50%;
-  transform: translateX(-50%);
-  background: #fff;
-  padding: 0.75rem 1rem;
-  border-radius: 0.5rem;
-  box-shadow: var(--card-shadow);
-  display: none;
-  opacity: 1;
-  transition: opacity 300ms var(--ease);
-}
-
-/* Popup text */
-#scan-popup-msg {
-  color: var(--green);
-  font-size: 1rem;
-}
-
-/* Close button in popup */
-#scan-popup-close {
-  position: absolute;
-  top: 4px;
-  right: 6px;
-  background: none;
-  border: none;
-  font-size: 1rem;
-  color: var(--green-light);
-  cursor: pointer;
-}
-
-/* Fullscreen, centered container */
+/* Scan page container */
 #scan-container {
   position: fixed;
   inset: 0;
@@ -271,52 +181,31 @@ header {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: inherit; /* keep your gradient */
+  background: inherit;
 }
 
-/* Scan button uses existing style */
-#controls button {
-  width: var(--qr-size);
-  padding: 1rem;
-  font-size: 1.1rem;
-  background: linear-gradient(45deg, var(--green), var(--green-light));
-  color: var(--gold);
-  border: none;
-  border-radius: 0.5rem;
-  box-shadow: var(--button-shadow);
-  transition: transform 300ms var(--ease), opacity 300ms var(--ease);
-}
-
-/* Scanner preview: hidden by default */
-#scanner-wrapper {
-  display: none;
+/* Scanner preview */
+#qr-scanner {
   position: relative;
+  display: none;
   width: var(--qr-size);
   height: var(--qr-size);
   border-radius: 0.5rem;
   overflow: hidden;
   box-shadow: var(--card-shadow);
   margin-top: 1rem;
-  opacity: 0;
-  transform: scale(0.9);
-  transition: opacity 300ms var(--ease), transform 300ms var(--ease);
 }
-/* When active */
-#scanner-wrapper.show {
-  display: block;
-  opacity: 1;
-  transform: scale(1);
-}
-
-/* Close button inside preview */
 #scanner-close {
   position: absolute;
   top: 6px; right: 6px;
   width: 24px; height: 24px;
   background: rgba(255,255,255,0.8);
-  border: none; border-radius: 50%;
-  font-size: 16px; color: var(--green);
+  border: none;
+  border-radius: 50%;
+  font-size: 16px;
+  color: var(--green);
   cursor: pointer;
+  display: none;
   z-index: 10;
 }
 
@@ -336,7 +225,6 @@ header {
   opacity: 1;
   transition: opacity 300ms var(--ease);
 }
-
 #scan-popup-msg {
   color: var(--green);
   font-size: 1rem;
@@ -344,26 +232,27 @@ header {
 #scan-popup-close {
   position: absolute;
   top: 4px; right: 6px;
-  background: none; border: none;
-  font-size: 1rem; color: var(--green-light);
+  background: none;
+  border: none;
+  font-size: 1rem;
+  color: var(--green-light);
   cursor: pointer;
 }
 
-/* Flash animations */
-@keyframes flash-green { 0% { background: rgba(0,255,0,0.2); } 100% { background: transparent; } }
-@keyframes flash-red   { 0% { background: rgba(255,0,0,0.2); } 100% { background: transparent; } }
+/* Flash overlay */
+#flash-overlay {
+  position: fixed;
+  inset: 0;
+  background: green;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 200ms ease;
+  z-index: 1000;
+}
+#flash-overlay.fail { background: red; }
 
+/* Flash animations */
 body.flash-success { animation: flash-green 500ms var(--ease) forwards; }
 body.flash-error   { animation: flash-red   500ms var(--ease) forwards; }
-
-/* Ensure the scanner wrapper & qr-scanner start hidden */
-#scanner-wrapper, #qr-scanner {
-  display: none;
-}
-
-/* When `.show` is added, wrapper fades/zooms into view */
-#scanner-wrapper.show {
-  display: block !important;
-  opacity: 1 !important;
-  transform: scale(1) !important;
-}
+@keyframes flash-green { 0% { background: rgba(0,255,0,0.2); } 100% { background: transparent; } }
+@keyframes flash-red   { 0% { background: rgba(255,0,0,0.2); } 100% { background: transparent; } }
