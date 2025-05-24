@@ -8,10 +8,18 @@
 </head>
 <body>
   <div id="scan-container">
+    <!-- Controls -->
     <div id="controls">
       <button id="btn-scan">Scan QR Code</button>
     </div>
-    <div id="qr-scanner"></div>
+
+    <!-- Scanner preview wrapper -->
+    <div id="scanner-wrapper">
+      <button id="scanner-close">×</button>
+      <div id="qr-scanner"></div>
+    </div>
+
+    <!-- Popup -->
     <div id="scan-popup">
       <span id="scan-popup-msg"></span>
       <button id="scan-popup-close">×</button>
