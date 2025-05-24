@@ -13,7 +13,7 @@ function decryptText(noisy) {
   return atob(noisy.slice(5, -5));
 }
 
-// 3. Parse & diff timestamp
+// 3. Timestamp diff (sec)
 function diffSec(ts) {
   const now = new Date();
   const qrTime = new Date(
@@ -27,43 +27,48 @@ function diffSec(ts) {
   return Math.abs((now - qrTime) / 1000);
 }
 
-// 4. Flash overlay helper
+// 4. Flash overlay
 let flashOverlay = null;
 function ensureFlashOverlay() {
   if (!flashOverlay) {
     flashOverlay = document.createElement('div');
     flashOverlay.id = 'flash-overlay';
+    Object.assign(flashOverlay.style, {
+      position:'fixed',top:0,left:0,width:'100%',height:'100%',
+      pointerEvents:'none', opacity:0,
+      transition:'opacity 300ms ease', zIndex:1002
+    });
     document.body.appendChild(flashOverlay);
   }
 }
 function flashScreen(success) {
   ensureFlashOverlay();
   flashOverlay.style.background = success
-    ? 'rgba(0,255,0,0.3)'   // green
-    : 'rgba(255,0,0,0.3)';  // red
+    ? 'rgba(0,255,0,0.3)'
+    : 'rgba(255,0,0,0.3)';
   flashOverlay.style.opacity = '1';
-  setTimeout(() => {
-    flashOverlay.style.opacity = '0';
-  }, 1000);
+  setTimeout(() => flashOverlay.style.opacity = '0', 1000);
 }
 
 // 5. Popup helper
-const popup     = document.getElementById('scan-popup');
-const popupMsg  = document.getElementById('scan-popup-msg');
-const popupClose= document.getElementById('scan-popup-close');
+const popup      = document.getElementById('scan-popup');
+const popupMsg   = document.getElementById('scan-popup-msg');
+const popupClose = document.getElementById('scan-popup-close');
 let popupTimer;
 function showPopup(msg, success) {
   clearTimeout(popupTimer);
   popupMsg.textContent = msg;
   popup.style.display = 'block';
   popup.style.opacity = '1';
-  // flash screen
   flashScreen(success);
+
+  // close early on X
   popupClose.onclick = () => {
     clearTimeout(popupTimer);
     hidePopup();
   };
-  popupTimer = setTimeout(hidePopup, 7000);
+  // auto‐dismiss after 4s
+  popupTimer = setTimeout(hidePopup, 4000);
 }
 function hidePopup() {
   popup.style.opacity = '0';
@@ -76,18 +81,28 @@ async function startQRScan() {
   const btn       = document.getElementById('btn-scan');
   const scannerEl = document.getElementById('qr-scanner');
 
-  btn.style.display      = 'none';
-  scannerEl.style.display= 'block';
+  // show camera preview
+  btn.style.display       = 'none';
+  scannerEl.style.display = 'block';
 
   const scanner = new Html5Qrcode("qr-scanner");
   try {
     await scanner.start(
       { facingMode: "environment" },
-      { fps: 10, qrbox: parseInt(getComputedStyle(document.documentElement)
-                                .getPropertyValue('--qr-size')) },
+      {
+        fps: 10,
+        qrbox: parseInt(getComputedStyle(document.documentElement)
+                        .getPropertyValue('--qr-size'))
+      },
       async decodedText => {
+        // stop camera
         await scanner.stop();
 
+        // reset UI
+        scannerEl.style.display = 'none';
+        btn.style.display       = 'block';
+
+        // decrypt & parse
         let plain;
         try {
           plain = decryptText(decodedText);
@@ -95,14 +110,16 @@ async function startQRScan() {
           return showPopup("Error: invalid QR", false);
         }
 
+        // expiry
         const timePart = plain.slice(0,10);
         if (diffSec(timePart) > 28) {
           return showPopup("Error: QR expired", false);
         }
 
-        const phone = plain.slice(11);
-        const docRef= db.collection("members").doc(phone);
-        const snap  = await docRef.get();
+        // lookup member
+        const phone  = plain.slice(11);
+        const docRef = db.collection("members").doc(phone);
+        const snap   = await docRef.get();
         if (!snap.exists) {
           return showPopup(`No record for ${phone}`, false);
         }
@@ -111,17 +128,21 @@ async function startQRScan() {
           return showPopup("❌ Not on list", false);
         }
 
+        // award points
         await docRef.update({
           sPoints: firebase.firestore.FieldValue.increment(7)
         });
         showPopup(`✅ Welcome, ${data.name || phone}!`, true);
       },
-      _ => {
-        // ignore scan errors
+      _error => {
+        // ignore frame scanning errors
       }
     );
   } catch (e) {
     console.error(e);
+    // reset UI on start failure
+    scannerEl.style.display = 'none';
+    btn.style.display       = 'block';
     showPopup("Error starting camera", false);
   }
 }
