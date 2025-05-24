@@ -12,14 +12,18 @@
   --ease:          ease;
 }
 
-/* reset & base */
+/*────────────────────────────────────────────────────────────────
+   Reset & Base
+────────────────────────────────────────────────────────────────*/
 * {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
   transition: all var(--fade-duration) var(--ease);
 }
-html, body { height: 100%; }
+html, body {
+  height: 100%;
+}
 body {
   font-family: Arial, sans-serif;
   background: linear-gradient(to top, var(--bg-start), var(--bg-end));
@@ -29,14 +33,15 @@ body {
   flex-direction: column;
   align-items: center;
 }
-
 main {
   width: 100%;
   max-width: 400px;
   padding: env(safe-area-inset-top) 1rem env(safe-area-inset-bottom) 1rem;
 }
 
-/* Phone entry overlay */
+/*────────────────────────────────────────────────────────────────
+   Phone Entry Overlay
+────────────────────────────────────────────────────────────────*/
 #phone-entry {
   position: fixed;
   inset: 0;
@@ -77,7 +82,9 @@ main {
   box-shadow: var(--button-shadow);
 }
 
-/* Header */
+/*────────────────────────────────────────────────────────────────
+   Header
+────────────────────────────────────────────────────────────────*/
 header {
   text-align: center;
   margin: 1.5rem 0 1rem;
@@ -93,7 +100,9 @@ header {
   margin-top: 0.5rem;
 }
 
-/* Controls */
+/*────────────────────────────────────────────────────────────────
+   Button Controls (shared)
+────────────────────────────────────────────────────────────────*/
 #controls {
   display: flex;
   flex-direction: column;
@@ -122,7 +131,9 @@ header {
   box-shadow: none;
 }
 
-/* QR modal & backdrop */
+/*────────────────────────────────────────────────────────────────
+   QR Modal (index.html)
+────────────────────────────────────────────────────────────────*/
 #qr-overlay {
   position: fixed;
   inset: 0;
@@ -173,7 +184,9 @@ header {
   font-size: 1rem;
 }
 
-/* Scan page container */
+/*────────────────────────────────────────────────────────────────
+   Scan Page Layout
+────────────────────────────────────────────────────────────────*/
 #scan-container {
   position: fixed;
   inset: 0;
@@ -184,7 +197,7 @@ header {
   background: inherit;
 }
 
-/* Scanner preview */
+/* Scanner preview & close */
 #qr-scanner {
   position: relative;
   display: none;
@@ -206,10 +219,12 @@ header {
   color: var(--green);
   cursor: pointer;
   display: none;
-  z-index: 10;
+  z-index: 1002;
 }
 
-/* Popup banner */
+/*────────────────────────────────────────────────────────────────
+   Scan Popup Banner
+────────────────────────────────────────────────────────────────*/
 #scan-popup {
   position: absolute;
   top: 10%;
@@ -224,6 +239,7 @@ header {
   display: none;
   opacity: 1;
   transition: opacity 300ms var(--ease);
+  z-index: 1002;
 }
 #scan-popup-msg {
   color: var(--green);
@@ -239,20 +255,22 @@ header {
   cursor: pointer;
 }
 
-/* Flash overlay */
+/*────────────────────────────────────────────────────────────────
+   Flash Overlay for Success/Error
+────────────────────────────────────────────────────────────────*/
 #flash-overlay {
   position: fixed;
   inset: 0;
-  background: green;
+  background: var(--green);
   opacity: 0;
   pointer-events: none;
-  transition: opacity 200ms ease;
-  z-index: 1000;
+  transition: opacity 500ms var(--ease);
+  z-index: 1001;
 }
-#flash-overlay.fail { background: red; }
+#flash-overlay.fail {
+  background: red;
+}
 
-/* Flash animations */
-body.flash-success { animation: flash-green 500ms var(--ease) forwards; }
-body.flash-error   { animation: flash-red   500ms var(--ease) forwards; }
-@keyframes flash-green { 0% { background: rgba(0,255,0,0.2); } 100% { background: transparent; } }
-@keyframes flash-red   { 0% { background: rgba(255,0,0,0.2); } 100% { background: transparent; } }
+/* Keyframe flashes (optional alternative) */
+@keyframes flash-green { 0% { background: rgba(0,255,0,0.2) } 100% { background: transparent } }
+@keyframes flash-red   { 0% { background: rgba(255,0,0,0.2) } 100% { background: transparent } }
