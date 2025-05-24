@@ -324,8 +324,10 @@ header {
 #scan-popup {
   position: absolute;
   top: 10%;
-  left: 10%;
+  left: 50%;
+  transform: translateX(-50%);
   width: 80%;
+  max-width: 360px;
   padding: 0.75rem 1rem;
   background: #fff;
   border-radius: 0.5rem;
@@ -334,6 +336,7 @@ header {
   opacity: 1;
   transition: opacity 300ms var(--ease);
 }
+
 #scan-popup-msg {
   color: var(--green);
   font-size: 1rem;
