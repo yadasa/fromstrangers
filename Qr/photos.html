@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Our Pics</title>
+  <link rel="stylesheet" href="css/style.css" />
+
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js" defer></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js" defer></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-storage-compat.js" defer></script>
+  <!-- Your config & logic -->
+  <script src="js/firebaseConfig.js" defer></script>
+  <script src="js/photos.js" defer></script>
+</head>
+<body>
+
+  <!-- 1) Phone‐entry overlay (same as index.html) -->
+  <div id="phone-entry">
+    <div class="phone-box">
+      <h2>Enter your phone number</h2>
+      <input id="phone-input" type="tel" placeholder="1234567890" maxlength="15" />
+      <button id="phone-submit">Continue</button>
+    </div>
+  </div>
+
+  <!-- 2) Photos app -->
+  <div id="photos-app" style="display:none;">
+    <header>
+      <h1 id="photos-title">Our Pics</h1>
+      <h2 id="user-info-photos"></h2>
+    </header>
+    <main>
+      <div id="controls-photos">
+        <button id="btn-upload">upload media</button>
+        <button id="btn-select">select multiple</button>
+        <button id="btn-download" disabled>download selected</button>
+        <button id="btn-delete-multi" disabled>delete selected</button>
+      </div>
+      <input id="file-input" type="file" multiple accept="image/*" style="display:none" />
+      <div id="gallery"></div>
+    </main>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
+
+</body>
+</html>
