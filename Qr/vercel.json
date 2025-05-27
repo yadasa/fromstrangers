@@ -1,5 +1,6 @@
 {
   "version": 2,
+  "rootDirectory": ".",
   "installCommand": "npm install --prefix Qr",
   "builds": [
     { "src": "Qr/api/**/*.js", "use": "@vercel/node" },
