@@ -81,7 +81,7 @@ async function uploadFiles(files) {
   loadGallery();
 }
 
-// 6) Load & render gallery — REPLACED to fetch from Drive API
+// 6) Load & render gallery — now fetch from Drive API
 async function loadGallery() {
   // reset select state
   selectedItems.clear();
@@ -91,7 +91,7 @@ async function loadGallery() {
   gallery.innerHTML =
     '<p style="grid-column:1/-1;text-align:center;color:var(--green);">Loading…</p>';
 
-  // fetch listing from the new serverless endpoint
+  // fetch listing from the serverless endpoint
   const res = await fetch('/api/drive/list');
   if (!res.ok) {
     gallery.innerHTML =
@@ -102,7 +102,7 @@ async function loadGallery() {
   renderGallery(items);
 }
 
-// 7) Render gallery — REPLACED to use Drive file props
+// 7) Render gallery — using Drive file properties
 function renderGallery(items) {
   gallery.innerHTML = '';
   if (!items.length) {
@@ -137,7 +137,7 @@ function renderGallery(items) {
     img.onclick = () => window.open(item.webContentLink, '_blank');
     card.append(img);
 
-    // caption: date
+    // caption: creation date
     const cap = document.createElement('div');
     cap.className = 'photo-caption';
     cap.innerText = new Date(item.createdTime).toLocaleString();
