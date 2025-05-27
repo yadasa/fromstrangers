@@ -1,0 +1,9 @@
+.vercel
+/api/drive/service-account.json
+.env
+# ignore Node modules and lock files
+node_modules/
+package-lock.json
+
+# ignore service account key
+/api/drive/service-account.json
