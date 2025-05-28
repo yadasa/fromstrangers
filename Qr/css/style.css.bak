@@ -130,6 +130,27 @@ header {
   gap: 0.5rem;
   margin-top: 1rem;
 }
+.photo-card {
+  position: relative;
+  background: #fff;
+  border-radius: 0.5rem;
+  box-shadow: var(--card-shadow);
+  overflow: hidden;
+  text-align: center;
+}
+.photo-card img {
+  width: 100%;
+  height: 100%;
+  padding-bottom: 100%;
+  object-fit: cover;
+  display: block;
+}
+.photo-caption {
+  padding: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--green);
+  text-align: center;
+}
 .photo-delete {
   width: 100%;
   padding: 0.5rem;
@@ -261,6 +282,9 @@ header {
 }
 
 /* Photo card like button */
+.photo-card {
+  text-align: center;
+}
 .photo-like-btn {
   background: none;
   border: none;
@@ -372,131 +396,4 @@ header {
 }
 #modal-download:hover {
   background: var(--green-light);
-}
-
-.photo-card {
-  position: relative;
-  aspect-ratio: 4 / 5;
-  overflow: hidden;
-  border-radius: 0.5rem;
-  box-shadow: var(--card-shadow);
-}
-.photo-card img {
-  position: absolute;
-  top: 0; left: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-.photo-card .photo-caption {
-  position: absolute;
-  bottom: 0; left: 0; right: 0;
-  padding: 0.5rem;
-  color: #fff;
-  background: linear-gradient(
-    to top,
-    rgba(0,0,0,0.8) 0%,
-    rgba(0,0,0,0.3) 50%,
-    transparent 100%
-  );
-  display: flex;
-  flex-direction: column;
-  font-size: 0.8rem;
-}
-.photo-card .photo-caption .info-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 0.25rem;
-}
-.photo-card .photo-caption .info-row .uploader {
-  flex: 1;
-}
-.photo-card .photo-caption .info-row .heart {
-  display: flex;
-  align-items: center;
-  font-size: 1rem;
-}
-.photo-card .photo-caption .info-row .heart.liked {
-  color: red;
-}
-.photo-card .photo-caption .info-row .heart .count {
-  margin-left: 0.25rem;
-}
-/* restore heart/count visibility over gradient */
-.photo-like-btn {
-  position: absolute;
-  bottom: 0.5rem;
-  right: 0.5rem;
-  z-index: 3;
-  background: none;
-  border: none;
-  font-size: 1rem;
-  color: #fff;            /* white on dark gradient */
-  cursor: pointer;
-}
-.photo-like-btn.liked {
-  color: red;             /* filled heart turns red */
-}
-/* move like-heart + count to top-left, shrink overlay text */
-.photo-like-btn {
-  top: 0.5rem;       /* move down a bit */
-  left: 0.5rem;      /* move in from the left */
-  bottom: auto;      /* cancel bottom positioning */
-  right: auto;       /* cancel right positioning */
-  font-size: 0.85rem;/* slightly smaller heart/count */
-}
-
-/* shrink all caption text */
-.photo-card .photo-caption {
-  font-size: 0.75rem; /* smaller overlay text */
-  padding: 0.25rem;   /* a bit less padding */
-}
-.photo-card .photo-caption > div {
-  line-height: 1rem;  /* tighten line spacing */
-}
-/* 1) shrink just the poster-name (second line of caption) */
-.photo-card .photo-caption div:last-child {
-  font-size: 0.65rem;
-}
-
-/* 2) ensure cards NEVER change aspect-ratio (even in select-mode) */
-.photo-card,
-.photo-card.select-mode {
-  aspect-ratio: 4 / 5 !important;
-}
-
-/* 3) hide heart/count when in select-mode */
-.photo-card.select-mode .photo-like-btn {
-  display: none !important;
-}
-/* drop‐shadow behind heart/count */
-.photo-like-btn {
-  filter: drop-shadow(0 0 2px black);
-}
-
-/* hide the checkbox in select‐mode */
-.photo-card.select-mode input.photo-checkbox {
-  display: none !important;
-}
-
-/* selected card styling (35% opacity + smooth) */
-.photo-card.selected {
-  opacity: 0.65;
-  transition: opacity 0.3s ease;
-}
-/* always use the same heart glyph */
-.photo-like-btn {
-  font-family: inherit;
-  font-size: 0.9rem;        /* your existing size */
-  color: transparent;       /* hide fill */
-  -webkit-text-stroke: 1px white; /* show white outline */
-  text-stroke: 1px white;        /* for non-WebKit engines */
-}
-
-/* when liked, fill with red and remove outline */
-.photo-like-btn.liked {
-  color: red;
-  -webkit-text-stroke: 0;
-  text-stroke: 0;
 }
