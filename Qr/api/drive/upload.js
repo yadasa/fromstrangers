@@ -15,7 +15,6 @@ export default async function handler(req, res) {
     return res.status(405).end('Method Not Allowed');
   }
 
-  // 1) Parse multipart/form-data
   const form = new IncomingForm({ keepExtensions: true, maxFileSize: 20 * 1024 * 1024 });
   form.parse(req, async (err, fields, files) => {
     if (err) {
@@ -30,8 +29,9 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'No file uploaded' });
     }
 
-    const filePath = file.filepath || file.filepath;      // v3 vs v1 naming
-    const filename = file.originalFilename || file.newFilename;
+    // ←────────── FIX: handle both v2 and v1 formidable paths ──────────→
+    const filePath = file.filepath || file.path;
+    const filename = file.originalFilename || file.newFilename || file.name;
     const mimeType = file.mimetype || file.type;
 
     // 2) Load service-account key
