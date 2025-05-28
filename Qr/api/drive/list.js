@@ -1,25 +1,21 @@
-// Qr/api/drive/list.js
+// api/drive/list.js
 import { google } from 'googleapis';
 import { readFileSync, existsSync } from 'fs';
 import { join } from 'path';
 
 export default async function handler(req, res) {
   let key;
-
-  // 1️⃣ Try the env var first (for Vercel prod)
   if (process.env.GOOGLE_SA_KEY) {
     try {
       key = JSON.parse(process.env.GOOGLE_SA_KEY);
     } catch (e) {
-      console.error("Invalid JSON in GOOGLE_SA_KEY:", e);
+      console.error("Invalid GOOGLE_SA_KEY JSON:", e);
       return res.status(500).send("Misconfigured GOOGLE_SA_KEY");
     }
-  }
-  // 2️⃣ Fallback to file on disk (for local dev)
-  else {
+  } else {
     const keyPath = join(process.cwd(), 'api/drive/service-account.json');
     if (!existsSync(keyPath)) {
-      console.error("service-account.json not found at", keyPath);
+      console.error("service-account.json not found");
       return res.status(500).send("Missing service-account.json");
     }
     try {
@@ -30,12 +26,11 @@ export default async function handler(req, res) {
     }
   }
 
-  //  Now initialize the Drive client
   const auth = new google.auth.GoogleAuth({
     credentials: key,
     scopes: ['https://www.googleapis.com/auth/drive.readonly']
   });
-  const drive    = google.drive({ version: 'v3', auth });
+  const drive = google.drive({ version: 'v3', auth });
   const folderId = process.env.DRIVE_FOLDER_ID;
   if (!folderId) {
     console.error("DRIVE_FOLDER_ID not set");
@@ -45,12 +40,13 @@ export default async function handler(req, res) {
   try {
     const response = await drive.files.list({
       q: `'${folderId}' in parents and trashed = false and mimeType contains 'image/'`,
-      fields: 'files(id,name,thumbnailLink,webContentLink,createdTime)',
+      // request id, name, thumbnailLink (for preview), webContentLink (for full image), timestamp, and any appProperties
+      fields: 'files(id,name,thumbnailLink,webContentLink,createdTime,appProperties)',
       orderBy: 'createdTime desc'
     });
     return res.status(200).json(response.data.files);
   } catch (driveErr) {
-    console.error("Drive API error:", driveErr);
+    console.error("Drive list error:", driveErr);
     return res.status(500).send("Drive API error");
   }
 }
