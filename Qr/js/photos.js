@@ -366,22 +366,45 @@ btnDelete.onclick = async () => {
 // 11) Modal image/video overlay ---------------------------------------------
 function showMedia(item) {
   modalOverlay.style.display = 'flex';
-  const isVideo = item.mimeType ? item.mimeType.startsWith('video/') : /\.(mp4|mov|avi|webm)$/i.test(item.name);
+
+  // decide if it’s video by looking at mimeType or extension
+  const isVideo = item.mimeType
+    ? item.mimeType.startsWith('video/')
+    : /\.(mp4|mov|avi|webm)$/i.test(item.name);
+
   if (isVideo) {
     modalImage.style.display = 'none';
     modalVideo.style.display = 'block';
-    modalVideo.src = item.webContentLink;
+    modalVideo.src = `/api/drive/thumb?id=${item.id}&sz=1600`;
   } else {
     modalVideo.style.display = 'none';
     modalImage.style.display = 'block';
-    modalImage.src = item.webContentLink;
+    // use your thumb endpoint at high resolution for the full view
+    modalImage.src = `/api/drive/thumb?id=${item.id}&sz=1600`;
   }
-  modalDownload.href = item.webContentLink;
+
+  // everything else stays the same
+  modalDownload.href    = `/api/drive/thumb?id=${item.id}&sz=1600`;
   modalDownload.download = item.name || '';
-}
+};
+
+// 1) Close button
 modalClose.onclick = () => {
   modalOverlay.style.display = 'none';
-  modalVideo.pause();
+  modalVideo.pause?.();
+};
+
+// 2) Clickoutside to close
+modalOverlay.onclick = (e) => {
+  if (e.target === modalOverlay) {
+    modalOverlay.style.display = 'none';
+    modalVideo.pause?.();
+  }
+};
+
+// 3) Prevent clicks inside the content from closing
+modalContent.onclick = (e) => {
+  e.stopPropagation();
 };
 
 // 12) Persistent likes & sPoints --------------------------------------------
