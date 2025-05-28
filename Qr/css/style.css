@@ -299,7 +299,7 @@ header {
 /* Square thumbnail */
 .photo-card img {
   width: 100%;
-  height: 0;
+  height: 100%;
   padding-bottom: 100%;
   object-fit: cover;
   display: block;
@@ -381,3 +381,5 @@ header {
   margin-right: 0.5rem;
   line-height: 1.2;
 }
+.photo-card       { aspect-ratio: 1 / 1; }
+.photo-card img   { height: 100%; padding-bottom: 0; }

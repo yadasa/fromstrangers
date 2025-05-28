@@ -150,7 +150,9 @@ function renderGallery(items) {
 
     // thumbnail
     const img = document.createElement('img');
-    img.src = `https://drive.google.com/thumbnail?id=${item.id}&sz=w320`;
+    img.src = `/api/drive/thumb?id=${item.id}`; // &max=320 optional
+    img.loading  = 'lazy';
+    img.decoding = 'async';
     img.alt = item.name;
     img.onclick = () => window.open(item.webContentLink, '_blank');
     card.append(img);
