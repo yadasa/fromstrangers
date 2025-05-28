@@ -30,7 +30,7 @@ export default async function handler(req, res) {
     }
   }
 
-  // Now initialize the Drive client
+  //  Now initialize the Drive client
   const auth = new google.auth.GoogleAuth({
     credentials: key,
     scopes: ['https://www.googleapis.com/auth/drive.readonly']
