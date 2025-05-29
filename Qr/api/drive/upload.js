@@ -22,19 +22,30 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: 'Failed to parse form' });
     }
 
-    const owner     = fields.owner;
-    const ownerName = fields.ownerName;
-    const file      = files.file;
-    if (!file) {
-      return res.status(400).json({ error: 'No file uploaded' });
+
+    // — pull the first file out of the array Formidable gives us —
+    let raw = files.file ?? files[Object.keys(files)[0]];
+    let fileArr = Array.isArray(raw) ? raw : [raw];
+    const fileObj = fileArr[0];
+
+    if (!fileObj) {
+    return res.status(400).json({ error: 'No file uploaded' });
     }
 
-    // ←────────── FIX: handle both v2 and v1 formidable paths ──────────→
-    const filePath = file.filepath || file.path;
-    const filename = file.originalFilename || file.newFilename || file.name;
-    const mimeType = file.mimetype || file.type;
+    // — robust fallback for the temp filepath —
+    const filePath = fileObj.filepath 
+                ?? fileObj.filePath 
+                ?? fileObj.path;
 
-    // 2) Load service-account key
+    if (!filePath) {
+    console.error('Missing temp file path in upload:', fileObj);
+    return res.status(500).json({ error: 'Temporary file missing' });
+    }
+
+    const filename = fileObj.originalFilename || fileObj.newFilename || fileObj.name;
+    const mimeType = fileObj.mimetype || fileObj.type;
+
+    // —————— load service-account key ——————
     let key;
     if (process.env.GOOGLE_SA_KEY) {
       try {
@@ -48,12 +59,12 @@ export default async function handler(req, res) {
       try {
         key = JSON.parse(fs.readFileSync(keyPath, 'utf8'));
       } catch (e) {
-        console.error('Missing or invalid service-account.json', e);
+        console.error('Missing/invalid service-account.json', e);
         return res.status(500).json({ error: 'Missing service-account.json' });
       }
     }
 
-    // 3) Init Drive client
+    // —————— init Drive client ——————
     const auth = new google.auth.GoogleAuth({
       credentials: key,
       scopes: ['https://www.googleapis.com/auth/drive.file']
@@ -61,12 +72,15 @@ export default async function handler(req, res) {
     const drive = google.drive({ version: 'v3', auth });
 
     try {
-      // 4) Upload file
+      // —————— upload to Drive ——————
       const driveRes = await drive.files.create({
         requestBody: {
           name: filename,
           parents: [process.env.DRIVE_FOLDER_ID],
-          appProperties: { owner, ownerName }
+          appProperties: {
+            owner:     fields.owner,
+            ownerName: fields.ownerName
+          }
         },
         media: {
           mimeType,
@@ -75,7 +89,7 @@ export default async function handler(req, res) {
         fields: 'id,name,thumbnailLink,webContentLink,createdTime,appProperties'
       });
 
-      // 5) Make it publicly readable
+      // —————— make it public ——————
       await drive.permissions.create({
         fileId: driveRes.data.id,
         requestBody: { role: 'reader', type: 'anyone' }
@@ -84,6 +98,11 @@ export default async function handler(req, res) {
       return res.status(200).json(driveRes.data);
     } catch (uploadErr) {
       console.error('Drive upload error:', uploadErr);
+      console.error('Drive upload error:', {
+        message: uploadErr.message,
+        response: uploadErr.response?.data
+      });
+
       return res.status(500).json({ error: 'Failed to upload to Drive' });
     }
   });
