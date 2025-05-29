@@ -30,6 +30,7 @@ const modalImage    = document.getElementById('modal-image');
 const modalVideo    = document.getElementById('modal-video');
 const modalClose    = document.getElementById('modal-close');
 const modalDownload = document.getElementById('modal-download');
+const modalLoading  = document.getElementById('modal-loading-overlay');
 const pointsOverlay = document.getElementById('points-overlay');
 const pointsClose   = document.getElementById('points-close');
 
@@ -96,32 +97,193 @@ fileInput.onchange = () => uploadFiles(fileInput.files);
 
 async function uploadFiles(files) {
   for (const file of files) {
-    const form = new FormData();
-    form.append('owner', userPhone);
-    form.append('ownerName', userName);
-    form.append('file', file);
-
-    const res = await fetch('/api/drive/upload', { method: 'POST', body: form });
-    if (!res.ok) {
-      console.error('Upload failed', await res.text());
-      continue;
+    // Create placeholder card for the new file
+    const card = document.createElement('div');
+    card.className = 'photo-card new-upload';
+    if (selectMode) card.classList.add('select-mode');
+    const isVideo = file.type.startsWith('video/');
+    if (isVideo) {
+      card.classList.add('video');
     }
-    const data = await res.json();
-
-    // record metadata in Firestore (optional)
-    await db.collection('photos').doc(data.id).set({
-      name:          data.name,
-      url:           data.webContentLink,
-      thumbnailLink: data.thumbnailLink,
-      owner:         data.appProperties.owner,
-      ownerName:     data.appProperties.ownerName,
-      timestamp:     firebase.firestore.Timestamp.fromDate(new Date(data.createdTime)),
-      deleted: false
+    // (Checkbox will be added after upload with actual data)
+    // Thumbnail or preview
+    let imgEl = null;
+    if (!isVideo) {
+      imgEl = document.createElement('img');
+      imgEl.src = URL.createObjectURL(file);
+      imgEl.alt = file.name;
+      // No click action until uploaded
+      card.append(imgEl);
+    }
+    // Play icon overlay for video
+    if (isVideo) {
+      const playIcon = document.createElement('div');
+      playIcon.className = 'play-icon';
+      playIcon.innerText = '▶';
+      card.append(playIcon);
+    }
+    // Caption overlay (use current date and user name)
+    const cap = document.createElement('div');
+    cap.className = 'photo-caption';
+    cap.appendChild(document.createElement('div')).innerText = new Date().toLocaleDateString();
+    cap.appendChild(document.createElement('div')).innerText = `From ${userName}`;
+    card.append(cap);
+    // Progress bar
+    const progressBar = document.createElement('div');
+    progressBar.className = 'upload-progress';
+    card.append(progressBar);
+    // Insert card at top of gallery with slide-in animation
+    gallery.prepend(card);
+    requestAnimationFrame(() => {
+      card.classList.add('slide-in');
     });
-    // award sPoints for upload
-    await updatePoints('upload');
+    // Upload file via XHR with progress tracking
+    await new Promise((resolve) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', '/api/drive/upload');
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable) {
+          const percent = (e.loaded / e.total) * 100;
+          progressBar.style.width = percent + '%';
+        }
+      };
+      xhr.onload = async () => {
+        if (xhr.status !== 200) {
+          console.error('Upload failed', xhr.responseText);
+          alert('Upload failed for file: ' + file.name);
+          card.remove();
+          return resolve();
+        }
+        let data;
+        try {
+          data = JSON.parse(xhr.responseText);
+        } catch (err) {
+          console.error('Upload response parse error', err);
+          alert('Upload failed for file: ' + file.name);
+          card.remove();
+          return resolve();
+        }
+        // Record metadata in Firestore
+        try {
+          await db.collection('photos').doc(data.id).set({
+            name:          data.name,
+            url:           data.webContentLink,
+            thumbnailLink: data.thumbnailLink,
+            owner:         data.appProperties.owner,
+            ownerName:     data.appProperties.ownerName,
+            timestamp:     firebase.firestore.Timestamp.fromDate(new Date(data.createdTime)),
+            deleted:       false
+          });
+        } catch (e) {
+          console.error('Failed to save file metadata:', e);
+        }
+        // Award sPoints for upload
+        try {
+          await updatePoints('upload');
+        } catch (e) {
+          console.error('Failed to update points after upload:', e);
+        }
+        // Remove progress bar
+        progressBar.style.display = 'none';
+        // For video, insert thumbnail image if available
+        if (isVideo && data.thumbnailLink) {
+          const thumbImg = document.createElement('img');
+          thumbImg.src = data.thumbnailLink;
+          thumbImg.alt = data.name;
+          thumbImg.onclick = () => {
+            if (selectMode) return;
+            showMedia(data);
+          };
+          // Insert thumbnail image behind play icon and caption
+          const firstCaption = card.querySelector('.photo-caption');
+          card.insertBefore(thumbImg, firstCaption);
+        }
+        // Enable click on image to open modal
+        if (!isVideo && imgEl) {
+          imgEl.onclick = () => {
+            if (selectMode) return;
+            showMedia(data);
+          };
+        }
+        // Add like button
+        const likeBtn = document.createElement('button');
+        likeBtn.className = 'photo-like-btn';
+        likeBtn.innerText = '♡';
+        likeBtn.onclick = async () => {
+          if (likeBtn.dataset.liked === 'true') {
+            await db.collection('photos').doc(data.id).collection('likes').doc(userPhone).delete();
+            likeBtn.dataset.liked = 'false';
+            let count = parseInt(likeBtn.innerText.split(' ')[1]) || 0;
+            count = Math.max(0, count - 1);
+            likeBtn.innerText = count > 0 ? `♥ ${count}` : '♥';
+            likeBtn.classList.remove('liked');
+            updatePoints('like', -1);
+          } else {
+            await db.collection('photos').doc(data.id).collection('likes').doc(userPhone).set({ liked: true });
+            likeBtn.dataset.liked = 'true';
+            let count = parseInt(likeBtn.innerText.split(' ')[1]) || 0;
+            count = count + 1;
+            likeBtn.innerText = `♥ ${count}`;
+            likeBtn.classList.add('liked');
+            updatePoints('like', 1);
+          }
+        };
+        // Fetch initial like status/count
+        db.collection('photos').doc(data.id).collection('likes').get().then(snap => {
+          const count = snap.size;
+          const liked = snap.docs.some(doc => doc.id === userPhone);
+          likeBtn.textContent = count > 0 ? `♥ ${count}` : '♥';
+          likeBtn.dataset.liked = liked ? 'true' : 'false';
+          likeBtn.classList.toggle('liked', liked);
+        });
+        card.append(likeBtn);
+        // Add delete button if owner
+        if (data.appProperties.owner === userPhone) {
+          const delBtn = document.createElement('button');
+          delBtn.className = 'photo-delete';
+          delBtn.innerText = 'Request Delete';
+          delBtn.onclick = async () => {
+            await fetch('/api/drive/move', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ fileId: data.id })
+            });
+            card.style.display = 'none';
+          };
+          card.append(delBtn);
+        }
+        // Add checkbox for multi-select (now that item exists)
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.className = 'photo-checkbox';
+        cb.onchange = e => {
+          if (e.target.checked) {
+            selectedItems.add(data);
+            card.classList.add('selected');
+          } else {
+            selectedItems.delete(data);
+            card.classList.remove('selected');
+          }
+          btnShare.disabled = selectedItems.size === 0;
+          const canDelete = Array.from(selectedItems).every(it => it.appProperties?.owner === userPhone);
+          btnDelete.disabled = !canDelete || selectedItems.size === 0;
+        };
+        card.prepend(cb);
+        resolve();
+      };
+      xhr.onerror = () => {
+        console.error('Upload XHR error');
+        alert('Upload failed for file: ' + file.name);
+        card.remove();
+        resolve();
+      };
+      const formData = new FormData();
+      formData.append('owner', userPhone);
+      formData.append('ownerName', userName);
+      formData.append('file', file);
+      xhr.send(formData);
+    });
   }
-  prependCard(data);
 }
 
 // 6) Load & render gallery --------------------------------------------------
@@ -142,7 +304,7 @@ async function loadGallery() {
   const data = await res.json();
   const items = data.files || data;
   nextPageToken = data.nextPageToken || null;
-  renderGallery(items, false);
+  await renderGallery(items, false);
   if (nextPageToken) {
     loadMoreContainer.style.display = 'block';
     btnLoadMore.disabled = false;
@@ -153,155 +315,287 @@ async function loadGallery() {
   }
 }
 
-function prependCard(item) {
-  const temp = document.createElement('div');
-  temp.innerHTML = cardHTML(item);           // same markup as renderGallery
-  const card = temp.firstElementChild;
-  card.classList.add('new-upload');
-  gallery.prepend(card);
-
-  // animate slide‐in
-  requestAnimationFrame(() => {
-    card.classList.add('slide-in');
-  });
-}
-
-
-// 7) Render gallery ---------------------------------------------------------
-function renderGallery(items, append = false) {
-  if (!append) gallery.innerHTML = '';
-
+// Render gallery with row-by-row loading
+async function renderGallery(items, append = false) {
+  if (!append) {
+    gallery.innerHTML = '';
+  }
   if (!items.length) {
     if (!append) {
       gallery.innerHTML = '<p style="grid-column:1/-1;text-align:center;color:var(--green-light);">No media yet</p>';
     }
     return;
   }
-
   let lastWeekLabel = '';
-  items.forEach(item => {
-    // insert week divider if needed
-    const createdDate = new Date(item.createdTime);
-    const day = createdDate.getDay();
-    const offset = day === 0 ? 6 : day - 1;
-    const monday = new Date(createdDate);
-    monday.setDate(createdDate.getDate() - offset);
-    const weekOf = monday.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
-    const weekLabel = `Week of ${weekOf}`;
-    if (weekLabel !== lastWeekLabel) {
-      const divider = document.createElement('div');
-      divider.className = 'week-divider';
-      divider.innerText = weekLabel;
-      gallery.append(divider);
-      lastWeekLabel = weekLabel;
-    }
-
-    // photo card
-    const card = document.createElement('div');
-    card.className = 'photo-card';
-    if (selectMode) card.classList.add('select-mode');
-
-    // checkbox for multi-select
-    const cb = document.createElement('input');
-    cb.type = 'checkbox';
-    cb.className = 'photo-checkbox';
-    cb.onchange = e => {
-      if (e.target.checked) {
-        selectedItems.add(item);
-        card.classList.add('selected');
-      } else {
-        selectedItems.delete(item);
-        card.classList.remove('selected');
-      }
-
-      btnShare.disabled = selectedItems.size === 0;
-      const canDelete = Array.from(selectedItems)
-        .every(it => it.appProperties?.owner === userPhone);
-      btnDelete.disabled = !canDelete || selectedItems.size === 0;
-    };
-    card.append(cb);
-
-    // thumbnail
-    const img = document.createElement('img');
-    img.src = `/api/drive/thumb?id=${item.id}`;
-    img.loading = 'lazy';
-    img.decoding = 'async';
-    img.alt = item.name;
-    img.onclick = () => {
-      if (selectMode) return;
-      showMedia(item);
-    };
-    card.append(img);
-
-    // caption overlay (date + uploader)
-    const cap = document.createElement('div');
-    cap.className = 'photo-caption';
-
-    // line 1: just the date
-    const dateOnly = new Date(item.createdTime).toLocaleDateString();
-    cap.appendChild(document.createElement('div')).innerText = dateOnly;
-
-    // line 2: uploader name (fallback to “Strangers”)
-    const uploaderName = item.appProperties?.ownerName || 'Strangers';
-    cap.appendChild(document.createElement('div')).innerText = `From ${uploaderName}`;
-
-    card.append(cap);
-
-
-    // like button & count
-    const likeBtn = document.createElement('button');
-    likeBtn.className = 'photo-like-btn';
-    likeBtn.innerText = '♡ 0';
-    likeBtn.onclick = async () => {
-      if (likeBtn.dataset.liked === 'true') {
-        // Unlike
-        await db.collection('photos').doc(item.id).collection('likes').doc(userPhone).delete();
-        likeBtn.dataset.liked = 'false';
-        let count = parseInt(likeBtn.innerText.split(' ')[1]) || 0;
-        count = Math.max(0, count - 1);
-        likeBtn.innerText = count > 0 ? `♥ ${count}` : '♥';
-        likeBtn.classList.remove('liked');
-        updatePoints('like', -1);
-      } else {
-        // Like
-        await db.collection('photos').doc(item.id).collection('likes').doc(userPhone).set({ liked: true });
-        likeBtn.dataset.liked = 'true';
-        let count = parseInt(likeBtn.innerText.split(' ')[1]) || 0;
-        count = count + 1;
-        likeBtn.innerText = `♥ ${count}`;
-        likeBtn.classList.add('liked');
-        updatePoints('like', 1);
-      }
-    };
-    // fetch initial like status and count
-    db.collection('photos').doc(item.id).collection('likes').get().then(snap => {
-      const count = snap.size;
-      const liked = snap.docs.some(doc => doc.id === userPhone);
-
-      // always use the same glyph
-      likeBtn.textContent = count > 0 ? `♥ ${count}` : '♥';
-      likeBtn.dataset.liked = liked ? 'true' : 'false';
-      likeBtn.classList.toggle('liked', liked);
-    });
-    card.append(likeBtn);
-    // single-delete (owner only)
-    if (item.appProperties?.owner === userPhone) {
-      const delBtn = document.createElement('button');
-      delBtn.className = 'photo-delete';
-      delBtn.innerText = 'Request Delete';
-      delBtn.onclick = async () => {
-        await fetch('/api/drive/move', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ fileId: item.id })
+  let startIndex = 0;
+  if (append) {
+    const existingCards = gallery.querySelectorAll('.photo-card').length;
+    const remainder = existingCards % 3;
+    if (remainder !== 0) {
+      const fillCount = 3 - remainder;
+      if (items.length >= fillCount) {
+        const groupItems = items.slice(0, fillCount);
+        const groupCards = [];
+        const loadPromises = [];
+        for (const item of groupItems) {
+          const createdDate = new Date(item.createdTime);
+          const day = createdDate.getDay();
+          const offset = day === 0 ? 6 : day - 1;
+          const monday = new Date(createdDate);
+          monday.setDate(createdDate.getDate() - offset);
+          const weekOf = monday.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+          const weekLabel = `Week of ${weekOf}`;
+          if (weekLabel !== lastWeekLabel) {
+            const divider = document.createElement('div');
+            divider.className = 'week-divider';
+            divider.innerText = weekLabel;
+            gallery.append(divider);
+            lastWeekLabel = weekLabel;
+          }
+          const card = document.createElement('div');
+          card.className = 'photo-card';
+          if (selectMode) card.classList.add('select-mode');
+          const isVideo = item.mimeType ? item.mimeType.startsWith('video/') : /\.(mp4|mov|avi|webm)$/i.test(item.name);
+          if (isVideo) card.classList.add('video');
+          const cb = document.createElement('input');
+          cb.type = 'checkbox';
+          cb.className = 'photo-checkbox';
+          cb.onchange = e => {
+            if (e.target.checked) {
+              selectedItems.add(item);
+              card.classList.add('selected');
+            } else {
+              selectedItems.delete(item);
+              card.classList.remove('selected');
+            }
+            btnShare.disabled = selectedItems.size === 0;
+            const canDelete = Array.from(selectedItems).every(it => it.appProperties?.owner === userPhone);
+            btnDelete.disabled = !canDelete || selectedItems.size === 0;
+          };
+          card.append(cb);
+          const img = document.createElement('img');
+          if (isVideo) {
+            img.src = item.thumbnailLink;
+          } else {
+            img.src = `/api/drive/thumb?id=${item.id}`;
+          }
+          img.decoding = 'async';
+          img.alt = item.name;
+          img.onclick = () => {
+            if (selectMode) return;
+            showMedia(item);
+          };
+          card.append(img);
+          if (isVideo) {
+            const playIcon = document.createElement('div');
+            playIcon.className = 'play-icon';
+            playIcon.innerText = '▶';
+            card.append(playIcon);
+          }
+          const cap = document.createElement('div');
+          cap.className = 'photo-caption';
+          const dateOnly = new Date(item.createdTime).toLocaleDateString();
+          cap.appendChild(document.createElement('div')).innerText = dateOnly;
+          const uploaderName = item.appProperties?.ownerName || 'Strangers';
+          cap.appendChild(document.createElement('div')).innerText = `From ${uploaderName}`;
+          card.append(cap);
+          const likeBtn = document.createElement('button');
+          likeBtn.className = 'photo-like-btn';
+          likeBtn.innerText = '♡ 0';
+          likeBtn.onclick = async () => {
+            if (likeBtn.dataset.liked === 'true') {
+              await db.collection('photos').doc(item.id).collection('likes').doc(userPhone).delete();
+              likeBtn.dataset.liked = 'false';
+              let count = parseInt(likeBtn.innerText.split(' ')[1]) || 0;
+              count = Math.max(0, count - 1);
+              likeBtn.innerText = count > 0 ? `♥ ${count}` : '♥';
+              likeBtn.classList.remove('liked');
+              updatePoints('like', -1);
+            } else {
+              await db.collection('photos').doc(item.id).collection('likes').doc(userPhone).set({ liked: true });
+              likeBtn.dataset.liked = 'true';
+              let count = parseInt(likeBtn.innerText.split(' ')[1]) || 0;
+              count = count + 1;
+              likeBtn.innerText = `♥ ${count}`;
+              likeBtn.classList.add('liked');
+              updatePoints('like', 1);
+            }
+          };
+          db.collection('photos').doc(item.id).collection('likes').get().then(snap => {
+            const count = snap.size;
+            const liked = snap.docs.some(doc => doc.id === userPhone);
+            likeBtn.textContent = count > 0 ? `♥ ${count}` : '♥';
+            likeBtn.dataset.liked = liked ? 'true' : 'false';
+            likeBtn.classList.toggle('liked', liked);
+          });
+          card.append(likeBtn);
+          if (item.appProperties?.owner === userPhone) {
+            const delBtn = document.createElement('button');
+            delBtn.className = 'photo-delete';
+            delBtn.innerText = 'Request Delete';
+            delBtn.onclick = async () => {
+              await fetch('/api/drive/move', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ fileId: item.id })
+              });
+              card.style.display = 'none';
+            };
+            card.append(delBtn);
+          }
+          card.style.transform = 'scale(0.9)';
+          card.style.opacity = '0';
+          card.style.transition = 'transform 444ms ease, opacity 444ms ease';
+          groupCards.push(card);
+          loadPromises.push(new Promise(res => {
+            img.onload = res;
+            img.onerror = res;
+          }));
+        }
+        await Promise.all(loadPromises);
+        for (const card of groupCards) {
+          gallery.append(card);
+        }
+        requestAnimationFrame(() => {
+          for (const card of groupCards) {
+            card.style.transform = 'scale(1)';
+            card.style.opacity = '1';
+          }
         });
-        card.style.display = 'none';
-      };
-      card.append(delBtn);
+        startIndex = fillCount;
+      }
     }
-
-    gallery.append(card);
-  });
+  }
+  for (let index = startIndex; index < items.length; index += 3) {
+    const groupItems = items.slice(index, index + 3);
+    const groupCards = [];
+    const loadPromises = [];
+    for (const item of groupItems) {
+      const createdDate = new Date(item.createdTime);
+      const day = createdDate.getDay();
+      const offset = day === 0 ? 6 : day - 1;
+      const monday = new Date(createdDate);
+      monday.setDate(createdDate.getDate() - offset);
+      const weekOf = monday.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+      const weekLabel = `Week of ${weekOf}`;
+      if (weekLabel !== lastWeekLabel) {
+        const divider = document.createElement('div');
+        divider.className = 'week-divider';
+        divider.innerText = weekLabel;
+        gallery.append(divider);
+        lastWeekLabel = weekLabel;
+      }
+      const card = document.createElement('div');
+      card.className = 'photo-card';
+      if (selectMode) card.classList.add('select-mode');
+      const isVideo = item.mimeType ? item.mimeType.startsWith('video/') : /\.(mp4|mov|avi|webm)$/i.test(item.name);
+      if (isVideo) card.classList.add('video');
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.className = 'photo-checkbox';
+      cb.onchange = e => {
+        if (e.target.checked) {
+          selectedItems.add(item);
+          card.classList.add('selected');
+        } else {
+          selectedItems.delete(item);
+          card.classList.remove('selected');
+        }
+        btnShare.disabled = selectedItems.size === 0;
+        const canDelete = Array.from(selectedItems).every(it => it.appProperties?.owner === userPhone);
+        btnDelete.disabled = !canDelete || selectedItems.size === 0;
+      };
+      card.append(cb);
+      const img = document.createElement('img');
+      if (isVideo) {
+        img.src = item.thumbnailLink;
+      } else {
+        img.src = `/api/drive/thumb?id=${item.id}`;
+      }
+      img.decoding = 'async';
+      img.alt = item.name;
+      img.onclick = () => {
+        if (selectMode) return;
+        showMedia(item);
+      };
+      card.append(img);
+      if (isVideo) {
+        const playIcon = document.createElement('div');
+        playIcon.className = 'play-icon';
+        playIcon.innerText = '▶';
+        card.append(playIcon);
+      }
+      const cap = document.createElement('div');
+      cap.className = 'photo-caption';
+      const dateOnly = new Date(item.createdTime).toLocaleDateString();
+      cap.appendChild(document.createElement('div')).innerText = dateOnly;
+      const uploaderName = item.appProperties?.ownerName || 'Strangers';
+      cap.appendChild(document.createElement('div')).innerText = `From ${uploaderName}`;
+      card.append(cap);
+      const likeBtn = document.createElement('button');
+      likeBtn.className = 'photo-like-btn';
+      likeBtn.innerText = '♡ 0';
+      likeBtn.onclick = async () => {
+        if (likeBtn.dataset.liked === 'true') {
+          await db.collection('photos').doc(item.id).collection('likes').doc(userPhone).delete();
+          likeBtn.dataset.liked = 'false';
+          let count = parseInt(likeBtn.innerText.split(' ')[1]) || 0;
+          count = Math.max(0, count - 1);
+          likeBtn.innerText = count > 0 ? `♥ ${count}` : '♥';
+          likeBtn.classList.remove('liked');
+          updatePoints('like', -1);
+        } else {
+          await db.collection('photos').doc(item.id).collection('likes').doc(userPhone).set({ liked: true });
+          likeBtn.dataset.liked = 'true';
+          let count = parseInt(likeBtn.innerText.split(' ')[1]) || 0;
+          count = count + 1;
+          likeBtn.innerText = `♥ ${count}`;
+          likeBtn.classList.add('liked');
+          updatePoints('like', 1);
+        }
+      };
+      db.collection('photos').doc(item.id).collection('likes').get().then(snap => {
+        const count = snap.size;
+        const liked = snap.docs.some(doc => doc.id === userPhone);
+        likeBtn.textContent = count > 0 ? `♥ ${count}` : '♥';
+        likeBtn.dataset.liked = liked ? 'true' : 'false';
+        likeBtn.classList.toggle('liked', liked);
+      });
+      card.append(likeBtn);
+      if (item.appProperties?.owner === userPhone) {
+        const delBtn = document.createElement('button');
+        delBtn.className = 'photo-delete';
+        delBtn.innerText = 'Request Delete';
+        delBtn.onclick = async () => {
+          await fetch('/api/drive/move', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ fileId: item.id })
+          });
+          card.style.display = 'none';
+        };
+        card.append(delBtn);
+      }
+      card.style.transform = 'scale(0.9)';
+      card.style.opacity = '0';
+      card.style.transition = 'transform 444ms ease, opacity 444ms ease';
+      groupCards.push(card);
+      loadPromises.push(new Promise(res => {
+        img.onload = res;
+        img.onerror = res;
+      }));
+    }
+    await Promise.all(loadPromises);
+    for (const card of groupCards) {
+      gallery.append(card);
+    }
+    requestAnimationFrame(() => {
+      for (const card of groupCards) {
+        card.style.transform = 'scale(1)';
+        card.style.opacity = '1';
+      }
+    });
+  }
 }
 
 // 8) Select-multiple toggle --------------------------------------------------
@@ -383,38 +677,39 @@ btnDelete.onclick = async () => {
 // 11) Modal image/video overlay ---------------------------------------------
 function showMedia(item) {
   modalOverlay.style.display = 'flex';
-
-  // decide if it’s video by looking at mimeType or extension
+  // Show loading spinner overlay
+  modalLoading.style.display = 'flex';
+  // Determine if video by mimeType or extension
   const isVideo = item.mimeType
     ? item.mimeType.startsWith('video/')
     : /\.(mp4|mov|avi|webm)$/i.test(item.name);
-
   if (isVideo) {
     modalImage.style.display = 'none';
     modalVideo.style.display = 'block';
     modalVideo.src = `/api/drive/thumb?id=${item.id}&sz=1600`;
+    modalVideo.onloadeddata = () => { modalLoading.style.display = 'none'; };
   } else {
     modalVideo.style.display = 'none';
     modalImage.style.display = 'block';
-    // use your thumb endpoint at high resolution for the full view
     modalImage.src = `/api/drive/thumb?id=${item.id}&sz=1600`;
+    modalImage.onload = () => { modalLoading.style.display = 'none'; };
   }
-
-  // everything else stays the same
   modalDownload.href    = `/api/drive/thumb?id=${item.id}&sz=1600`;
   modalDownload.download = item.name || '';
-};
+}
 
 // 1) Close button
 modalClose.onclick = () => {
   modalOverlay.style.display = 'none';
+  modalLoading.style.display = 'none';
   modalVideo.pause?.();
 };
 
-// 2) Clickoutside to close
+// 2) Click outside to close
 modalOverlay.onclick = (e) => {
   if (e.target === modalOverlay) {
     modalOverlay.style.display = 'none';
+    modalLoading.style.display = 'none';
     modalVideo.pause?.();
   }
 };
@@ -492,7 +787,7 @@ async function loadMore() {
     const data = await res.json();
     const items = data.files || data;
     nextPageToken = data.nextPageToken || null;
-    renderGallery(items, true);
+    await renderGallery(items, true);
     if (!nextPageToken) {
       loadMoreContainer.style.display = 'none';
     }
