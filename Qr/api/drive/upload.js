@@ -22,14 +22,13 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: 'Failed to parse form' });
     }
 
-
     // — pull the first file out of the array Formidable gives us —
     let raw = files.file ?? files[Object.keys(files)[0]];
     let fileArr = Array.isArray(raw) ? raw : [raw];
     const fileObj = fileArr[0];
 
     if (!fileObj) {
-    return res.status(400).json({ error: 'No file uploaded' });
+      return res.status(400).json({ error: 'No file uploaded' });
     }
 
     // — robust fallback for the temp filepath —
@@ -38,8 +37,8 @@ export default async function handler(req, res) {
                 ?? fileObj.path;
 
     if (!filePath) {
-    console.error('Missing temp file path in upload:', fileObj);
-    return res.status(500).json({ error: 'Temporary file missing' });
+      console.error('Missing temp file path in upload:', fileObj);
+      return res.status(500).json({ error: 'Temporary file missing' });
     }
 
     const filename = fileObj.originalFilename || fileObj.newFilename || fileObj.name;
@@ -95,15 +94,14 @@ export default async function handler(req, res) {
         requestBody: { role: 'reader', type: 'anyone' }
       });
 
+      // —————— return file info ——————
       return res.status(200).json(driveRes.data);
-    } catch (uploadErr) {
-      console.error('Drive upload error:', uploadErr);
-      console.error('Drive upload error:', {
-        message: uploadErr.message,
-        response: uploadErr.response?.data
-      });
-
-      return res.status(500).json({ error: 'Failed to upload to Drive' });
+    } catch (err) {
+      console.error('Drive upload error:', err);
+      return res.status(500).json({ error: 'Drive API error' });
+    } finally {
+      // clean up temp file
+      fs.unlink(filePath, () => {});
     }
   });
 }
