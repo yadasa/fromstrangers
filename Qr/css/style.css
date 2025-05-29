@@ -500,3 +500,14 @@ header {
   -webkit-text-stroke: 0;
   text-stroke: 0;
 }
+/* initial off‐screen to the left */
+.photo-card.new-upload {
+  transform: translateX(-120%);
+  opacity: 0;
+  transition: transform 300ms ease, opacity 300ms ease;
+}
+/* slide into place */
+.photo-card.new-upload.slide-in {
+  transform: translateX(0);
+  opacity: 1;
+}

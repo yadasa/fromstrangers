@@ -121,7 +121,7 @@ async function uploadFiles(files) {
     // award sPoints for upload
     await updatePoints('upload');
   }
-  loadGallery();
+  prependCard(data);
 }
 
 // 6) Load & render gallery --------------------------------------------------
@@ -152,6 +152,20 @@ async function loadGallery() {
     loadMoreContainer.style.display = 'none';
   }
 }
+
+function prependCard(item) {
+  const temp = document.createElement('div');
+  temp.innerHTML = cardHTML(item);           // same markup as renderGallery
+  const card = temp.firstElementChild;
+  card.classList.add('new-upload');
+  gallery.prepend(card);
+
+  // animate slide‐in
+  requestAnimationFrame(() => {
+    card.classList.add('slide-in');
+  });
+}
+
 
 // 7) Render gallery ---------------------------------------------------------
 function renderGallery(items, append = false) {
@@ -213,7 +227,10 @@ function renderGallery(items, append = false) {
     img.loading = 'lazy';
     img.decoding = 'async';
     img.alt = item.name;
-    img.onclick = () => showMedia(item);
+    img.onclick = () => {
+      if (selectMode) return;
+      showMedia(item);
+    };
     card.append(img);
 
     // caption overlay (date + uploader)
