@@ -1,104 +1,41 @@
 #!/usr/bin/env bash
-set -e
+#
+# update_photos_js.sh
+# Patches Qr/js/photos.js to:
+#  • Remove Drive appProperties usage
+#  • Show "From Strangers" placeholder, then overwrite with Firestore ownerName
+#  • Gate delete logic on ownerPhone
 
-## 1) Backup originals
-cp css/style.css css/style.css.bak
-cp js/photos.js  js/photos.js.bak
-echo "Backups created: style.css.bak, photos.js.bak"
+FILE="/d/Users/itsst/Documents/WORK/fromstrangers/fromstrangers/Qr/js/photos.js"
 
-## 2) Append updated CSS to style.css
-cat << 'EOF' >> css/style.css
+# 1) sanity check
+if [ ! -f "$FILE" ]; then
+  echo "Error: File not found: $FILE"
+  exit 1
+fi
 
-/* === Gallery Card Overlay & Sizing Fixes === */
-.photo-card {
-  position: relative;
-  aspect-ratio: 4 / 5;            /* a bit taller than square */
-  overflow: hidden;
-  border-radius: 0.5rem;
-  box-shadow: var(--card-shadow);
-}
-.photo-card img {
-  position: absolute;
-  top: 0; left: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-.photo-card .photo-caption {
-  position: absolute;
-  bottom: 0; left: 0; right: 0;
-  padding: 0.5rem;
-  color: #fff;
-  background: linear-gradient(
-    to top,
-    rgba(0,0,0,0.8) 0%,
-    rgba(0,0,0,0.3) 50%,
-    transparent 100%
-  );
-  display: flex;
-  flex-direction: column;
-  font-size: 0.8rem;
-}
-.photo-card .photo-caption .info-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 0.25rem;
-}
-.photo-card .photo-caption .info-row .uploader {
-  flex: 1;
-}
-.photo-card .photo-caption .info-row .heart {
-  display: flex;
-  align-items: center;
-  font-size: 1rem;
-}
-.photo-card .photo-caption .info-row .heart.liked {
-  color: red;
-}
-.photo-card .photo-caption .info-row .heart .count {
-  margin-left: 0.25rem;
-}
-EOF
+# 2) backup original (in case you need to revert)
+cp "$FILE" "$FILE.bak"
 
-echo "✅ Appended overlay + sizing CSS to css/style.css"
+# 3) remove any leftover appProperties?.ownerName / owner references
+sed -i -E \
+  -e 's/item\.appProperties\?\.(ownerName)/item.ownerName/g' \
+  -e 's/item\.appProperties\?\.(owner)/item.ownerPhone/g' \
+  "$FILE"
 
-## 3) Patch photos.js: insert overlay block after card.append(img);
-perl -i -pe '
-  BEGIN {
-    $snippet = <<'"'"'SNIP'"'"';
-    // --- bottom gradient overlay + date/uploader/hearts ---
-    const overlay = document.createElement("div");
-    overlay.className = "photo-caption";
-    // Line 1: date only
-    const dateLine = document.createElement("div");
-    dateLine.innerText = new Date(item.createdTime).toLocaleDateString();
-    overlay.append(dateLine);
-    // Line 2: uploader + heart/count
-    const infoRow = document.createElement("div");
-    infoRow.className = "info-row";
-    const uploader = document.createElement("div");
-    uploader.className = "uploader";
-    uploader.innerText = item.appProperties?.ownerName || "Stranger";
-    infoRow.append(uploader);
-    // Reuse your likeBtn state/count
-    const heartDiv = document.createElement("div");
-    heartDiv.className = "heart";
-    const liked = likeBtn.dataset.liked === "true";
-    heartDiv.classList.toggle("liked", liked);
-    const count = parseInt(likeBtn.innerText.split(" ")[1] || "0", 10);
-    heartDiv.innerHTML = (liked ? "♥" : "♡") + " <span class=\\"count\\">" + count + "</span>";
-    heartDiv.onclick = () => likeBtn.click();
-    infoRow.append(heartDiv);
-    overlay.append(infoRow);
-    card.append(overlay);
-    // --- end overlay block ---
-SNIP
-  }
-  # Insert snippet after the first occurrence of card.append(img);
-  s/(card\.append\(img\);)/$1\n$snippet/ if $. == 1 .. eof
-' js/photos.js
+# 4) delete any lines that directly set "From ${…}" via template literals
+sed -i -E "/\.innerText\s*=\s*\`From.*\`;/d" "$FILE"
 
-echo "✅ Patched js/photos.js with overlay creation block"
+# 5) inject placeholder + Firestore fetch after the date line in both render loops
+sed -i -E "/cap\.appendChild\(document\.createElement\('div'\)\)\.innerText\s*=\s*new Date\(item\.createdTime\)\.toLocaleDateString\(\);/a \\
+      // placeholder caption\n      const nameLine = document.createElement('div');\n      nameLine.innerText = 'From Strangers';\n      cap.appendChild(nameLine);\n      // Fetch ownerName from Firestore and overwrite placeholder\n      db.collection('photos').doc(item.id).get().then(docSnap => {\n        if (docSnap.exists()) {\n          const data = docSnap.data();\n          nameLine.innerText = \`From \${data.ownerName}\`;\n        }\n      }).catch(console.error);" \
+  "$FILE"
 
-echo "🎉 All fixes applied. Please reload your app and verify the gradient overlay, date/uploader text, and heart/count now appear as expected."
+# 6) switch delete-button logic and multi-select checks to ownerPhone
+#    (any leftover patterns that still refer to item.ownerPhone in an if or filter)
+sed -i -E \
+  -e 's/if *\(item\.ownerPhone *=== *userPhone\)/if (item.ownerPhone === userPhone)/g' \
+  -e 's/it\.appProperties\?\.(owner)/it.ownerPhone/g' \
+  "$FILE"
+
+echo "✅ photos.js patched. Original backed up at photos.js.bak"
