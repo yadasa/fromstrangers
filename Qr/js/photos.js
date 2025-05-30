@@ -169,8 +169,9 @@ async function uploadFiles(files) {
             name:          data.name,
             url:           data.webContentLink,
             thumbnailLink: data.thumbnailLink,
-            owner:         data.appProperties.owner,
-            ownerName:     data.appProperties.ownerName,
+            ownerPhone:    userPhone,
+            ownerName:     userName,
+            uploaderPhone: userPhone,    // ← new field
             timestamp:     firebase.firestore.Timestamp.fromDate(new Date(data.createdTime)),
             deleted:       false
           });
@@ -238,7 +239,7 @@ async function uploadFiles(files) {
         });
         card.append(likeBtn);
         // Add delete button if owner
-        if (data.appProperties.owner === userPhone) {
+        if (userPhone) {
           const delBtn = document.createElement('button');
           delBtn.className = 'photo-delete';
           delBtn.innerText = 'Request Delete';
@@ -265,7 +266,7 @@ async function uploadFiles(files) {
             card.classList.remove('selected');
           }
           btnShare.disabled = selectedItems.size === 0;
-          const canDelete = Array.from(selectedItems).every(it => it.appProperties?.owner === userPhone);
+          const canDelete = Array.from(selectedItems).every(it =>(it.ownerPhone || it.appProperties?.owner) === userPhone);
           btnDelete.disabled = !canDelete || selectedItems.size === 0;
         };
         card.prepend(cb);
@@ -396,8 +397,18 @@ async function renderGallery(items, append = false) {
           cap.className = 'photo-caption';
           const dateOnly = new Date(item.createdTime).toLocaleDateString();
           cap.appendChild(document.createElement('div')).innerText = dateOnly;
-          const uploaderName = item.appProperties?.ownerName || 'Strangers';
-          cap.appendChild(document.createElement('div')).innerText = `From ${uploaderName}`;
+          // inside renderGallery, right before you need uploaderName
+          let uploaderName = 'Strangers';
+          try {
+            const snap = await db.collection('photos').doc(item.id).get();
+            if (snap.exists) {
+              uploaderName = snap.data().ownerName || uploaderName;
+            }
+          } catch (e) {
+            console.error('Failed to fetch ownerName', e);
+          }
+          cap.appendChild(document.createElement('div'))
+            .innerText = `From ${uploaderName}`;
           card.append(cap);
           const likeBtn = document.createElement('button');
           likeBtn.className = 'photo-like-btn';
@@ -529,8 +540,18 @@ async function renderGallery(items, append = false) {
       cap.className = 'photo-caption';
       const dateOnly = new Date(item.createdTime).toLocaleDateString();
       cap.appendChild(document.createElement('div')).innerText = dateOnly;
-      const uploaderName = item.appProperties?.ownerName || 'Strangers';
-      cap.appendChild(document.createElement('div')).innerText = `From ${uploaderName}`;
+      // inside renderGallery, right before you need uploaderName
+      let uploaderName = 'Strangers';
+      try {
+        const snap = await db.collection('photos').doc(item.id).get();
+        if (snap.exists) {
+          uploaderName = snap.data().ownerName || uploaderName;
+        }
+      } catch (e) {
+        console.error('Failed to fetch ownerName', e);
+      }
+      cap.appendChild(document.createElement('div'))
+        .innerText = `From ${uploaderName}`;          
       card.append(cap);
       const likeBtn = document.createElement('button');
       likeBtn.className = 'photo-like-btn';

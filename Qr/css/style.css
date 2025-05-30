@@ -549,3 +549,78 @@ header {
   animation:spin 1s linear infinite;
 }
 @keyframes spin { to { transform:rotate(360deg); } }
+
+/* -----------------------------------------------------------
+   >>> RESTORED RULES FROM THE BACKUP INDEX.HTML <<<
+   (app, header, controls, timers & scan results)
+   ----------------------------------------------------------- */
+
+/* Main app wrapper */
+#app {
+  width: 100%;
+  max-width: 400px;
+  margin: 0 auto;
+  padding: env(safe-area-inset-top) 1rem env(safe-area-inset-bottom) 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* “Hey Stranger” title & user-name */
+header #title {
+  color: var(--gold);
+  font-size: 2rem;
+  font-weight: bold;
+}
+header #user-name {
+  color: var(--green);
+  font-size: 1.1rem;
+  margin-top: 0.25rem;
+}
+
+/* Controls (home screen) */
+#controls {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  align-items: stretch;
+  margin-bottom: 1rem;
+}
+#controls button {
+  width: 100%;
+  padding: 1rem;
+  font-size: 1.1rem;
+  background: linear-gradient(45deg, var(--green), var(--green-light));
+  color: var(--gold);
+  border: none;
+  border-radius: 0.5rem;
+  box-shadow: var(--button-shadow);
+  cursor: pointer;
+  transition: transform 200ms var(--ease), background 200ms var(--ease);
+}
+#controls button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  background: linear-gradient(45deg, var(--green-light), var(--green));
+}
+#controls button:disabled {
+  background: #ccc;
+  color: #666;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* QR countdown timer */
+#qr-timer {
+  margin-top: 0.5rem;
+  text-align: center;
+  color: var(--green);
+  font-size: 0.9rem;
+}
+
+/* Scan result message */
+#scan-result {
+  margin-top: 1rem;
+  text-align: center;
+  color: var(--green);
+  font-size: 1rem;
+}

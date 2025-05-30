@@ -66,7 +66,7 @@ export default async function handler(req, res) {
     // —————— init Drive client ——————
     const auth = new google.auth.GoogleAuth({
       credentials: key,
-      scopes: ['https://www.googleapis.com/auth/drive.file']
+      scopes: ['https://www.googleapis.com/auth/drive']
     });
     const drive = google.drive({ version: 'v3', auth });
 
@@ -77,8 +77,8 @@ export default async function handler(req, res) {
           name: filename,
           parents: [process.env.DRIVE_FOLDER_ID],
           appProperties: {
-            owner:     fields.owner,
-            ownerName: fields.ownerName
+            owner:     fields.owner     || '',
+            ownerName: fields.ownerName || ''
           }
         },
         media: {

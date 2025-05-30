@@ -34,7 +34,7 @@ export default async function handler(req, res) {
   const folderId = process.env.DRIVE_FOLDER_ID;
   if (!folderId) {
     console.error("DRIVE_FOLDER_ID not set");
-    return res.status(500).send("Missing DRIVE_FOLDER_ID");
+    return res.status(500).json({ error: 'Missing DRIVE_FOLDER_ID' });
   }
 
   try {
