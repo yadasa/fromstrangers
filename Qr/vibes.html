@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Vibe Quiz</title>
+  <!-- 1) your main stylesheet -->
+  <link rel="stylesheet" href="style.css">
+
+  <!-- 2) minimal overrides for the quiz form -->
+  <style>
+    .quiz-form { background:#F7F2EA; padding:24px; border-radius:8px; max-width:400px; margin:2rem auto; position:relative; }
+    .quiz-form h2 { text-align:center; margin-bottom:1.5rem; color:var(--green); }
+    .slider-wrap { margin-bottom:24px; }
+    .slider-labels { display:flex; justify-content:space-between; font-size:0.9em; color:var(--green-light); }
+    input.range-slider {
+      -webkit-appearance:none; appearance:none;
+      width:100%; height:8px; border-radius:4px; background:#FFF;
+    }
+    input.range-slider::-webkit-slider-thumb {
+      -webkit-appearance:none; width:12px; height:24px;
+      border-radius:6px; background:var(--green); cursor:pointer; margin-top:-8px;
+    }
+    /* back button */
+    .back-button {
+      position:absolute; top:1rem; left:1rem;
+      background:none; border:none; font-size:1.5rem;
+      color:var(--green); cursor:pointer;
+    }
+    /* result message */
+    #result { text-align:center; margin-top:1rem; color:var(--green); }
+  </style>
+
+  <!-- 3) Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/9.x.x/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.x.x/firebase-firestore.js"></script>
+  <script>
+    // ← your firebaseConfig here
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    // persistence helpers (copy from app.js)
+    function loadPhone() {
+      try { return localStorage.getItem('userPhone'); } catch {}
+      const m = document.cookie.match(/(?:^|; )userPhone=(\d{10})/);
+      return m ? m[1] : null;
+    }
+  </script>
+</head>
+<body>
+  <form id="vibeQuiz" class="quiz-form">
+    <!-- 4) back arrow -->
+    <button type="button" class="back-button" onclick="location.href='index.html'">←</button>
+    <h2>Vibe Quiz</h2>
+
+    <!-- hidden phone -->
+    <input type="hidden" id="phone" name="Phone-Number" value="">
+
+    <!-- 1–20: brand-new axes -->
+    <div class="slider-wrap">
+      <div class="slider-labels"><span>Quiet</span><span>Chatty</span></div>
+      <input class="range-slider" type="range" name="q1" min="-5" max="5" step="0.1" value="0">
+    </div>
+    <div class="slider-wrap">
+      <div class="slider-labels"><span>Adrenaline</span><span>Relaxation</span></div>
+      <input class="range-slider" type="range" name="q2" min="-5" max="5" step="0.1" value="0">
+    </div>
+    <div class="slider-wrap">
+      <div class="slider-labels"><span>Social</span><span>Solo</span></div>
+      <input class="range-slider" type="range" name="q3" min="-5" max="5" step="0.1" value="0">
+    </div>
+    <div class="slider-wrap">
+      <div class="slider-labels"><span>Active</span><span>Passive</span></div>
+      <input class="range-slider" type="range" name="q4" min="-5" max="5" step="0.1" value="0">
+    </div>
+    <div class="slider-wrap">
+      <div class="slider-labels"><span>Nature</span><span>City</span></div>
+      <input class="range-slider" type="range" name="q5" min="-5" max="5" step="0.1" value="0">
+    </div>
+    <div class="slider-wrap">
+      <div class="slider-labels"><span>Daytime</span><span>Nighttime</span></div>
+      <input class="range-slider" type="range" name="q6" min="-5" max="5" step="0.1" value="0">
+    </div>
+    <div class="slider-wrap">
+      <div class="slider-labels"><span>Budget-Friendly</span><span>Splurge</span></div>
+      <input class="range-slider" type="range" name="q7" min="-5" max="5" step="0.1" value="0">
+    </div>
+    <div class="slider-wrap">
+      <div class="slider-labels"><span>Digital</span><span>Analog</span></div>
+      <input class="range-slider" type="range" name="q8" min="-5" max="5" step="0.1" value="0">
+    </div>
+    <div class="slider-wrap">
+      <div class="slider-labels"><span>Cultural</span><span>Recreational</span></div>
+      <input class="range-slider" type="range" name="q9" min="-5" max="5" step="0.1" value="0">
+    </div>
+    <div class="slider-wrap">
+      <div class="slider-labels"><span>Foodie Focus</span><span>Activity Focus</span></div>
+      <input class="range-slider" type="range" name="q10" min="-5" max="5" step="0.1" value="0">
+    </div>
+    <div class="slider-wrap">
+      <div class="slider-labels"><span>Planned</span><span>Spontaneous</span></div>
+      <input class="range-slider" type="range" name="q11" min="-5" max="5" step="0.1" value="0">
+    </div>
+    <div class="slider-wrap">
+      <div class="slider-labels"><span>Structured</span><span>Flexible</span></div>
+      <input class="range-slider" type="range" name="q12" min="-5" max="5" step="0.1" value="0">
+    </div>
+    <div class="slider-wrap">
+      <div class="slider-labels"><span>Fast-Paced</span><span>Slow-Paced</span></div>
+      <input class="range-slider" type="range" name="q13" min="-5" max="5" step="0.1" value="0">
+    </div>
+    <div class="slider-wrap">
+      <div class="slider-labels"><span>Hands-On</span><span>Spectating</span></div>
+      <input class="range-slider" type="range" name="q14" min="-5" max="5" step="0.1" value="0">
+    </div>
+    <div class="slider-wrap">
+      <div class="slider-labels"><span>Classic</span><span>Trendy</span></div>
+      <input class="range-slider" type="range" name="q15" min="-5" max="5" step="0.1" value="0">
+    </div>
+    <div class="slider-wrap">
+      <div class="slider-labels"><span>Photogenic</span><span>Low-Key</span></div>
+      <input class="range-slider" type="range" name="q16" min="-5" max="5" step="0.1" value="0">
+    </div>
+    <div class="slider-wrap">
+      <div class="slider-labels"><span>Minimalist</span><span>Extravagant</span></div>
+      <input class="range-slider" type="range" name="q17" min="-5" max="5" step="0.1" value="0">
+    </div>
+    <div class="slider-wrap">
+      <div class="slider-labels"><span>Local Hangout</span><span>Explore New</span></div>
+      <input class="range-slider" type="range" name="q18" min="-5" max="5" step="0.1" value="0">
+    </div>
+    <div class="slider-wrap">
+      <div class="slider-labels"><span>Educational</span><span>Entertaining</span></div>
+      <input class="range-slider" type="range" name="q19" min="-5" max="5" step="0.1" value="0">
+    </div>
+    <div class="slider-wrap">
+      <div class="slider-labels"><span>Skill-Build</span><span>Just Fun</span></div>
+      <input class="range-slider" type="range" name="q20" min="-5" max="5" step="0.1" value="0">
+    </div>
+
+    <hr style="margin:1.5rem 0; border:none; border-top:1px solid #DDD;">
+
+    <!-- 21–25: your original sliders, prefilled -->
+    <div id="originals">
+      <div class="slider-wrap">
+        <div class="slider-labels"><span>Chill</span><span>Competitive</span></div>
+        <input class="range-slider" type="range" name="chillVsCompetitive" min="-5" max="5" step="0.1" value="0">
+      </div>
+      <div class="slider-wrap">
+        <div class="slider-labels"><span>Indoors</span><span>Outdoors</span></div>
+        <input class="range-slider" type="range" name="indoorsVsOutdoors" min="-5" max="5" step="0.1" value="0">
+      </div>
+      <div class="slider-wrap">
+        <div class="slider-labels"><span>Planned</span><span>Spontaneous</span></div>
+        <input class="range-slider" type="range" name="plannedVsSpontaneous" min="-5" max="5" step="0.1" value="0">
+      </div>
+      <div class="slider-wrap">
+        <div class="slider-labels"><span>Small Group</span><span>Large Crowd</span></div>
+        <input class="range-slider" type="range" name="smallVsLarge" min="-5" max="5" step="0.1" value="0">
+      </div>
+      <div class="slider-wrap">
+        <div class="slider-labels"><span>Quiet Evenings</span><span>Vibrant Nights</span></div>
+        <input class="range-slider" type="range" name="quietVsVibrant" min="-5" max="5" step="0.1" value="0">
+      </div>
+    </div>
+
+    <button type="submit" class="w-button" style="display:block; width:100%; margin-top:1rem;">
+      Save Vibes
+    </button>
+    <div id="result"></div>
+  </form>
+
+  <!-- 5) slider gradients + Firestore logic -->
+  <script>
+    (async ()=>{
+      // a) load & guard phone
+      const phone = loadPhone();
+      if(!phone) return alert('Please enter your phone first.'), location.href='index.html';
+
+      document.getElementById('phone').value = phone;
+
+      // b) prefill originals from Firestore
+      const snap = await db.collection('members').doc(phone).get();
+      const existing = snap.exists && snap.data().vibes ? snap.data().vibes : {};
+      ['chillVsCompetitive','indoorsVsOutdoors','plannedVsSpontaneous','smallVsLarge','quietVsVibrant']
+        .forEach(key => {
+          const el = document.querySelector(`input[name="${key}"]`);
+          if(el && existing[key]!=null) el.value = existing[key];
+        });
+
+      // c) dynamic gradients
+      document.querySelectorAll('.range-slider').forEach(slider => {
+        const min = parseFloat(slider.min),
+              max = parseFloat(slider.max),
+              mid = (0 - min) / (max - min) * 100;
+        function updateBackground() {
+          const val = parseFloat(slider.value),
+                pct = (val - min) / (max - min) * 100;
+          let bg;
+          if (pct >= mid) {
+            bg = `linear-gradient(to right, #FFFFFF ${mid}%, #F7F2EA ${mid}%, #1A1A1A ${pct}%, #FFFFFF ${pct}%)`;
+          } else {
+            const rev = 100 - pct;
+            bg = `linear-gradient(to left, #FFFFFF ${100-mid}%, #F7F2EA ${100-mid}%, #1A1A1A ${rev}%, #FFFFFF ${rev}%)`;
+          }
+          slider.style.background = bg;
+        }
+        slider.addEventListener('input', updateBackground);
+        updateBackground();
+      });
+
+      // d) submit handler
+      document.getElementById('vibeQuiz').onsubmit = async e => {
+        e.preventDefault();
+        const form = e.target, vibes = {};
+        // new 20
+        for(let i=1;i<=20;i++){
+          vibes[`q${i}`] = parseFloat(form[`q${i}`].value);
+        }
+        // original 5
+        ['chillVsCompetitive','indoorsVsOutdoors','plannedVsSpontaneous','smallVsLarge','quietVsVibrant']
+          .forEach(k => { vibes[k] = parseFloat(form[k].value) });
+        try {
+          await db.collection('members').doc(phone).set({ vibes }, { merge: true });
+          document.getElementById('result').innerText = "✅ Vibes saved!";
+        } catch(err) {
+          console.error(err);
+          document.getElementById('result').innerText = "❌ Oops, try again.";
+        }
+      };
+    })();
+  </script>
+</body>
+</html>

@@ -46,15 +46,21 @@ let selectMode      = false;
 let selectedItems   = new Set();
 
 // 3) On load ----------------------------------------------------------------
-window.addEventListener('DOMContentLoaded', () => {
-  if (userPhone) fetchUserNameAndShow(userPhone);
-  else overlay.style.display = 'flex';
+window.addEventListener('DOMContentLoaded', async () => {
+  if (userPhone) {
+    // Always await this, so loadGallery() inside it definitely executes
+    await fetchUserNameAndShow(userPhone);
+  } else {
+    overlay.style.display = 'flex';
+  }
 
   btnShare.style.display = 'none';
   btnDelete.style.display = 'none';
 
   window.addEventListener('scroll', () => { autoTriggered = true; });
 });
+
+// (Remove the pageshow listener entirely—no more pageshow needed)
 
 // 4) Phone submission -------------------------------------------------------
 btnPhone.onclick = async () => {
@@ -463,16 +469,22 @@ async function renderGallery(items, append = false) {
             img.onerror = res;
           }));
         }
+        
         await Promise.all(loadPromises);
-        for (const card of groupCards) {
+        groupCards.forEach((card, idx) => {
+          // start hidden + scaled down
+          card.style.opacity   = '0';
+          card.style.transform = 'scale(0.9)';
+          card.style.transition = 'transform 0.3s ease, opacity 0.3s ease';
+
+          // append and then animate with a staggered delay
           gallery.append(card);
-        }
-        requestAnimationFrame(() => {
-          for (const card of groupCards) {
+          setTimeout(() => {
+            card.style.opacity   = '1';
             card.style.transform = 'scale(1)';
-            card.style.opacity = '1';
-          }
+          }, idx * 100);
         });
+
         startIndex = fillCount;
       }
     }
@@ -607,15 +619,20 @@ async function renderGallery(items, append = false) {
       }));
     }
     await Promise.all(loadPromises);
-    for (const card of groupCards) {
+    groupCards.forEach((card, idx) => {
+      // start hidden + scaled down
+      card.style.opacity   = '0';
+      card.style.transform = 'scale(0.9)';
+      card.style.transition = 'transform 0.3s ease, opacity 0.3s ease';
+
+      // append and then animate with a staggered delay
       gallery.append(card);
-    }
-    requestAnimationFrame(() => {
-      for (const card of groupCards) {
+      setTimeout(() => {
+        card.style.opacity   = '1';
         card.style.transform = 'scale(1)';
-        card.style.opacity = '1';
-      }
+      }, idx * 100);
     });
+
   }
 }
 
