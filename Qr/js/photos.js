@@ -303,7 +303,7 @@ async function loadGallery() {
 
   gallery.innerHTML = '<p style="grid-column:1/-1;text-align:center;color:var(--green);">Loading…</p>';
 
-  const res = await fetch('/api/drive/list');
+  const res = await fetch(`/api/drive/list?t=${Date.now()}`, { cache: 'no-store' });
   if (!res.ok) {
     gallery.innerHTML = '<p style="grid-column:1/-1;color:red;">Error loading gallery</p>';
     return;
@@ -464,8 +464,13 @@ async function renderGallery(items, append = false) {
           card.style.opacity = '0';
           card.style.transition = 'transform 444ms ease, opacity 444ms ease';
           groupCards.push(card);
+          ////
           loadPromises.push(new Promise(res => {
-            img.onload = res;
+            // If the image is already in the disk-cache, onload will never fire.
+            if (img.complete) {
+              return res();
+            }
+            img.onload  = res;
             img.onerror = res;
           }));
         }
@@ -613,8 +618,13 @@ async function renderGallery(items, append = false) {
       card.style.opacity = '0';
       card.style.transition = 'transform 444ms ease, opacity 444ms ease';
       groupCards.push(card);
+      ///
       loadPromises.push(new Promise(res => {
-        img.onload = res;
+        // If the image is already in the disk-cache, onload will never fire.
+        if (img.complete) {
+          return res();
+        }
+        img.onload  = res;
         img.onerror = res;
       }));
     }
@@ -820,7 +830,7 @@ async function loadMore() {
   btnLoadMore.disabled = true;
   btnLoadMore.innerText = 'Loading...';
   try {
-    const res = await fetch('/api/drive/list?pageToken=' + encodeURIComponent(nextPageToken));
+    const res = await fetch(`/api/drive/list?pageToken=${encodeURIComponent(nextPageToken)}&t=${Date.now()}`, { cache: 'no-store' });
     if (!res.ok) throw new Error('Failed to load more');
     const data = await res.json();
     const items = data.files || data;
