@@ -39,6 +39,40 @@ firebase.initializeApp(window.firebaseConfig);
 const auth = firebase.auth();
 const db   = firebase.firestore();
 
+// === Persist phone across every browser (incl. iOS private Safari) ===
+function savePhone(phone) {
+  try { localStorage.setItem('userPhone', phone); } catch {}
+  document.cookie = `userPhone=${phone};max-age=${60*60*24*365};path=/;SameSite=Lax`;
+}
+function loadPhone() {
+  try { return localStorage.getItem('userPhone'); } catch {}
+  const m = document.cookie.match(/(?:^|; )userPhone=(\d{10})/);
+  return m ? m[1] : null;
+}
+
+/*  Auto-resume session on first paint  */
+(async () => {
+  const saved = loadPhone();
+  if (!saved) return;                                           // nothing stored
+
+  try {
+    const snap = await db.collection('members').doc(saved).get();
+    if (!snap.exists) return;                                   // stale phone
+
+    const data = snap.data();
+    testPhone    = saved;
+    memberName   = data.name || data.Name || 'No Name';
+    memberOnList = !!data.onList;
+
+    document.getElementById('user-name').innerText = memberName;
+    document.getElementById('phone-entry').style.display = 'none';
+    document.getElementById('app').style.display        = 'block';
+  } catch (e) {
+    console.error('auto-resume failed', e);
+  }
+})();
+
+
 // 2. Phone-entry + SMS auth
 let testPhone = '';
 let memberName = '';
@@ -66,7 +100,7 @@ document.getElementById('phone-submit').onclick = async () => {
     document.getElementById('phone-entry').style.display = 'none';
     document.getElementById('app').style.display = 'block';
     // *** ADD: store phone for Photos page ***
-    localStorage.setItem('userPhone', testPhone);
+    savePhone(testPhone);
     return;
   }
 
@@ -96,7 +130,7 @@ document.getElementById('otp-submit').onclick = async () => {
     const user = cred.user;
     testPhone = user.phoneNumber.replace('+1','');
     // *** ADD: store phone for Photos page ***
-    localStorage.setItem('userPhone', testPhone);
+    savePhone(testPhone);
 
     const snap  = await db.collection('members').doc(testPhone).get();
     if (!snap.exists) {
@@ -295,6 +329,13 @@ window.addEventListener('load', () => {
   document.getElementById('btn-photos').onclick  = openPhotos;
   document.getElementById('btn-chat').onclick    = openChat;
   document.getElementById('btn-suggest').onclick = suggestActivity;
+  // after openPhotos, openChat, suggestActivity…
+  document.getElementById('btn-vibe').onclick = () => {
+    if (!testPhone) {
+      return alert('Enter your phone first.');
+    }
+    window.location.href = 'vibes.html';
+  };
   document.getElementById('link-scan').onclick   = e => {
     e.preventDefault();
     const pwd = prompt("Enter admin password to scan QR:");

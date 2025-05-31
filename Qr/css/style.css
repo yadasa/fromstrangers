@@ -624,3 +624,15 @@ header #user-name {
   color: var(--green);
   font-size: 1rem;
 }
+/* back arrow in photos header */
+.back-arrow {
+  font-size: 1.8rem;          /* make it easy to tap */
+  line-height: 1;             /* align nicely */
+  text-decoration: none;      /* no underline */
+  margin-right: .75rem;       /* little spacing before title */
+  color: var(--green);        /* match your palette */
+}
+.back-arrow:hover,
+.back-arrow:focus {
+  color: var(--gold);         /* optional hover effect */
+}
