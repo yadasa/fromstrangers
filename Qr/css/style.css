@@ -636,3 +636,24 @@ header #user-name {
 .back-arrow:focus {
   color: var(--gold);         /* optional hover effect */
 }
+
+#sign-out {
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.5rem;
+  background: var(--green);
+  color: var(--gold);
+  border: none;
+  border-radius: 0.5rem;
+  box-shadow: var(--button-shadow);
+  cursor: pointer;
+  z-index: 1500;
+  transition: transform 200ms var(--ease), background 200ms var(--ease);
+}
+
+#sign-out:hover:not(:disabled) {
+  transform: translateY(-2px);
+  background: var(--green-light);
+}

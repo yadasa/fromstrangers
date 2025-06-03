@@ -90,7 +90,8 @@ document.getElementById('phone-submit').onclick = async () => {
     // direct membership lookup
     const snap = await db.collection('members').doc(raw).get();
     if (!snap.exists) {
-      return alert('No RSVP found.');
+      showSignupPopup();
+      return;
     }
     const data = snap.data();
     testPhone     = raw;
@@ -134,7 +135,8 @@ document.getElementById('otp-submit').onclick = async () => {
 
     const snap  = await db.collection('members').doc(testPhone).get();
     if (!snap.exists) {
-      return alert('No RSVP found.');
+      showSignupPopup();
+      return;
     }
     const data = snap.data();
     memberName   = data.name || data.Name || 'No Name';
@@ -341,5 +343,32 @@ window.addEventListener('load', () => {
     const pwd = prompt("Enter admin password to scan QR:");
     if (pwd === 'prix') startQRScan();
     else alert('Incorrect password.');
+  };
+});
+
+window.addEventListener('load', () => {
+  document.getElementById('btn-display').onclick = toggleQRDisplay;
+  document.getElementById('btn-photos').onclick  = openPhotos;
+  document.getElementById('btn-chat').onclick    = openChat;
+  document.getElementById('btn-suggest').onclick = suggestActivity;
+  document.getElementById('link-scan').onclick   = e => {
+    e.preventDefault();
+    const pwd = prompt("Enter admin password to scan QR:");
+    if (pwd === 'prix') startQRScan();
+    else alert('Incorrect password.');
+  };
+
+  // Sign Up iframe popup
+  document.getElementById('sign-up').onclick     = showSignupPopup;
+  document.getElementById('signup-close').onclick = hideSignupPopup;
+
+  // Sign Out logic
+  document.getElementById('sign-out').onclick = () => {
+    // Clear stored phone from localStorage and cookie
+    try { localStorage.removeItem('userPhone'); } catch {}
+    document.cookie = 'userPhone=; max-age=0; path=/;';
+
+    // Reload page to show phone-entry again
+    location.reload();
   };
 });
