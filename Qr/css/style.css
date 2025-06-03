@@ -657,3 +657,25 @@ header #user-name {
   transform: translateY(-2px);
   background: var(--green-light);
 }
+
+.main-logo {
+  width: 50px;
+  height: auto;
+}
+/* Ensure the photos page header is positioned relative */
+#photos-app header {
+  position: relative;
+}
+
+/* Pin the back arrow to the top‐left corner */
+#photos-app .back-arrow {
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+}
+
+/* Center the logo horizontally without affecting the back arrow */
+#photos-app .main-logo {
+  display: block;
+  margin: 1rem auto;
+}

@@ -1,3 +1,4 @@
+// app.js
 /*
   js/app.js
 
@@ -7,7 +8,6 @@
   - Scan-only link (pwd protected)
   - View/Add Photos, Group Chat, Suggest Activity buttons
 */
-
 
 const _0x3e4b = true;  
 
@@ -39,7 +39,7 @@ firebase.initializeApp(window.firebaseConfig);
 const auth = firebase.auth();
 const db   = firebase.firestore();
 
-// === Persist phone across every browser (incl. iOS private Safari) ===
+// === Persist phone across sessions ===
 function savePhone(phone) {
   try { localStorage.setItem('userPhone', phone); } catch {}
   document.cookie = `userPhone=${phone};max-age=${60*60*24*365};path=/;SameSite=Lax`;
@@ -53,17 +53,17 @@ function loadPhone() {
 /*  Auto-resume session on first paint  */
 (async () => {
   const saved = loadPhone();
-  if (!saved) return;                                           // nothing stored
+  if (!saved) return;
 
   try {
     const snap = await db.collection('members').doc(saved).get();
-    if (!snap.exists) return;                                   // stale phone
+    if (!snap.exists) return;
 
     const data = snap.data();
-    testPhone    = saved;
-    memberName   = data.name || data.Name || 'No Name';
-    memberOnList = !!data.onList;
+    if (!data.onList) return;  // ensure approved
 
+    const testPhone    = saved;
+    const memberName   = data.name || data.Name || 'No Name';
     document.getElementById('user-name').innerText = memberName;
     document.getElementById('phone-entry').style.display = 'none';
     document.getElementById('app').style.display        = 'block';
@@ -71,7 +71,6 @@ function loadPhone() {
     console.error('auto-resume failed', e);
   }
 })();
-
 
 // 2. Phone-entry + SMS auth
 let testPhone = '';
@@ -87,20 +86,22 @@ document.getElementById('phone-submit').onclick = async () => {
 
   // *** ADD: skip SMS/recaptcha when flag is true ***
   if (_0x3e4b) {
-    // direct membership lookup
     const snap = await db.collection('members').doc(raw).get();
     if (!snap.exists) {
       showSignupPopup();
       return;
     }
     const data = snap.data();
+    if (!data.onList) {
+      alert('Your membership is not approved for this feature.');
+      return;
+    }
     testPhone     = raw;
     memberName    = data.name || data.Name || 'No Name';
     memberOnList  = !!data.onList;
     document.getElementById('user-name').innerText = memberName;
     document.getElementById('phone-entry').style.display = 'none';
-    document.getElementById('app').style.display = 'block';
-    // *** ADD: store phone for Photos page ***
+    document.getElementById('app').style.display        = 'block';
     savePhone(testPhone);
     return;
   }
@@ -130,7 +131,6 @@ document.getElementById('otp-submit').onclick = async () => {
     const cred = await window.confirmationResult.confirm(code);
     const user = cred.user;
     testPhone = user.phoneNumber.replace('+1','');
-    // *** ADD: store phone for Photos page ***
     savePhone(testPhone);
 
     const snap  = await db.collection('members').doc(testPhone).get();
@@ -139,6 +139,10 @@ document.getElementById('otp-submit').onclick = async () => {
       return;
     }
     const data = snap.data();
+    if (!data.onList) {
+      alert('Your membership is not approved for this feature.');
+      return;
+    }
     memberName   = data.name || data.Name || 'No Name';
     memberOnList = !!data.onList;
     document.getElementById('user-name').innerText = memberName;
@@ -326,25 +330,8 @@ async function suggestActivity() {
 }
 
 // 8. Wire up controls
-window.addEventListener('load', () => {
-  document.getElementById('btn-display').onclick = toggleQRDisplay;
-  document.getElementById('btn-photos').onclick  = openPhotos;
-  document.getElementById('btn-chat').onclick    = openChat;
-  document.getElementById('btn-suggest').onclick = suggestActivity;
-  // after openPhotos, openChat, suggestActivity…
-  document.getElementById('btn-vibe').onclick = () => {
-    if (!testPhone) {
-      return alert('Enter your phone first.');
-    }
-    window.location.href = 'vibes.html';
-  };
-  document.getElementById('link-scan').onclick   = e => {
-    e.preventDefault();
-    const pwd = prompt("Enter admin password to scan QR:");
-    if (pwd === 'prix') startQRScan();
-    else alert('Incorrect password.');
-  };
-});
+
+
 
 window.addEventListener('load', () => {
   document.getElementById('btn-display').onclick = toggleQRDisplay;
@@ -364,6 +351,8 @@ window.addEventListener('load', () => {
 
   // Sign Out logic
   document.getElementById('sign-out').onclick = () => {
+    // Firebase sign-out
+    auth.signOut().catch(console.error);
     // Clear stored phone from localStorage and cookie
     try { localStorage.removeItem('userPhone'); } catch {}
     document.cookie = 'userPhone=; max-age=0; path=/;';
