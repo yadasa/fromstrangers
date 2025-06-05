@@ -1,4 +1,3 @@
-<!-- photos.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -6,16 +5,23 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Our Pics</title>
   <link rel="stylesheet" href="css/style.css" />
-  <!-- Firebase -->
+
+  <!-- Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js" defer></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js" defer></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js" defer></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-storage-compat.js" defer></script>
+
   <!-- Your config & logic -->
   <script src="js/firebaseConfig.js" defer></script>
   <script src="js/photos.js" defer></script>
 </head>
 <body>
-  <!-- 1) Phone-entry overlay (from index.html) -->
+
+  <!-- ── reCAPTCHA container (invisible widget will render here) ──────────── -->
+  <div id="recaptcha-container"></div>
+
+  <!-- 1) Phone-entry overlay (copied from index.html) -->
   <div id="phone-entry">
     <div class="phone-box">
       <h2>Enter your phone number</h2>
@@ -24,11 +30,12 @@
       <button
         id="sign-up"
         class="btn-small"
+        style="margin-top: 0.5rem;"
         onclick="window.location.href='https://fromstrangers.social/join';"
-        >Sign Up
+      >
+        Sign Up
       </button>
 
-      <div id="recaptcha-container"></div>
       <div id="otp-entry" style="display:none; margin-top:1rem;">
         <input id="otp-input" type="text" placeholder="123456" maxlength="6" />
         <button id="otp-submit">Verify Code</button>
@@ -36,7 +43,7 @@
     </div>
   </div>
 
-  <!-- Hidden overlay for Sign Up iframe -->
+  <!-- Hidden overlay for Sign Up iframe (kept if needed) -->
   <div
     id="signup-overlay"
     style="
@@ -82,7 +89,7 @@
     </div>
   </div>
 
-  <!-- 2) Photos app -->
+  <!-- 2) Photos app (hidden until login/OTP verified) -->
   <div id="photos-app" style="display:none;">
     <header>
       <img class="main-logo" src="assets/mainlogo.png" alt="Main Logo" />
@@ -134,7 +141,7 @@
     </div>
   </div>
 
-  <!-- JS libraries for download (if needed by legacy code) -->
+  <!-- JS library (if needed) -->
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 </body>
 </html>
