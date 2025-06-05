@@ -1,0 +1,1568 @@
+/* events/css/event.css */
+
+/* -----------------------------------------------
+   Reuse main variables from ../css/style.css
+   (colors, fonts, etc.)
+------------------------------------------------ */
+:root {
+  --muted-color1-start: rgba(166,162,158, 0.5);   /* #a6a29e @50% */
+  --muted-color1-end:   rgba(224,215,222, 0.3);   /* #e0d7de @30% */
+
+  --muted-color2-start: rgba(193,176,152, 0.5);   /* #c1b098 @50% */
+  --muted-color2-end:   rgba(229,214,197, 0.3);   /* #e5d6c5 @30% */
+
+  --muted-color3-start: rgba(156,154,156, 0.5);   /* #9c9a9c @50% */
+  --muted-color3-end:   rgba(217,214,219, 0.3);   /* #d9d6db @30% */
+
+  --brown:              #8b5e3c;
+
+  --green:              #3e2f1b;
+  --green-light:        #5a4025;
+  --gold:               #b49e85;
+  --gold-light:         #d9c0a1;
+
+  --bg-start:           #f5efde;
+  --bg-end:             #e8d6bb;
+
+  --button-shadow:      0 4px 8px rgba(0,0,0,0.1);
+  --card-shadow:        0 8px 16px rgba(0,0,0,0.1);
+  --text:               #3e2f1b; /* for general text */
+}
+
+/* ------------------------------------------------------------------
+   1) Base moving linear gradient (fills entire viewport, behind everything).
+      We animate background-position to slowly shift colors.
+   2) Three blurred radial “spots” drift on top (body::before, body::after, .gradient-layer-3).
+   3) A dark vignette (<div class="vignette"></div>) sits above the radials, below the content.
+   4) Three additional “dark-shape” layers drift and scale randomly to add subtle dark blobs.
+------------------------------------------------------------------ */
+
+/* Allow vertical scrolling; set up base gradient animation */
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  min-height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+  position: relative;
+
+  /* Base linear gradient (multi‐stop), then animate background-position */
+  background: linear-gradient(
+    45deg,
+    rgba(164,158,150,0.8) 0%,
+    rgba(224,215,222,0.8) 25%,
+    rgba(193,176,152,0.8) 50%,
+    rgba(156,154,156,0.8) 75%,
+    rgba(224,215,222,0.8) 100%
+  );
+  background-size: 600% 600%;
+  animation: gradientBG 20s ease infinite;
+}
+
+/* Dark vignette overlay sits above all gradient layers */
+body > .vignette {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: radial-gradient(
+    ellipse at center,
+    transparent 60%,
+    rgba(0,0,0,0.7) 100%
+  );
+  pointer-events: none;
+  z-index: -1; /* above gradient-layer-3 but beneath page content */
+}
+
+/* Keyframes for the moving base gradient */
+@keyframes gradientBG {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* Layer #1: large blurred radial at center, drifting diagonally */
+body::before {
+  content: "";
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  z-index: -3;
+  pointer-events: none;
+
+  background: radial-gradient(circle at center,
+    var(--muted-color1-start) 0%,
+    var(--muted-color1-end)   60%,
+    transparent 100%
+  );
+  background-size: 250% 250%;
+  background-position: 50% 50%;
+  filter: blur(80px);
+
+  animation: driftSpot1 30s ease-in-out infinite;
+}
+
+/* Layer #2: medium blurred radial at center, drifting opposite */
+body::after {
+  content: "";
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  z-index: -2;
+  pointer-events: none;
+
+  background: radial-gradient(circle at center,
+    var(--muted-color2-start) 0%,
+    var(--muted-color2-end)   60%,
+    transparent 100%
+  );
+  background-size: 200% 200%;
+  background-position: 50% 50%;
+  filter: blur(100px);
+
+  animation: driftSpot2 35s ease-in-out infinite;
+}
+
+/* Layer #3: subtle, more diffuse radial, drifting more slowly */
+.gradient-layer-3 {
+  /* If you cannot use a pseudo-element, create:
+       <div class="gradient-layer-3"></div>
+     as first child of <body>. */
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  z-index: -1;
+  pointer-events: none;
+
+  background: radial-gradient(circle at center,
+    var(--muted-color3-start) 0%,
+    var(--muted-color3-end)   80%,
+    transparent 100%
+  );
+  background-size: 300% 300%;
+  background-position: 50% 50%;
+  filter: blur(120px);
+
+  animation: driftSpot3 40s ease-in-out infinite;
+}
+
+/* Keyframes for drifting each blurred radial */
+@keyframes driftSpot1 {
+  0%   { background-position: 50% 50%; }
+  25%  { background-position: 30% 20%; }
+  50%  { background-position: 20% 30%; }
+  75%  { background-position: 40% 60%; }
+  100% { background-position: 50% 50%; }
+}
+@keyframes driftSpot2 {
+  0%   { background-position: 50% 50%; }
+  25%  { background-position: 70% 80%; }
+  50%  { background-position: 80% 60%; }
+  75%  { background-position: 60% 40%; }
+  100% { background-position: 50% 50%; }
+}
+@keyframes driftSpot3 {
+  0%   { background-position: 50% 50%; }
+  25%  { background-position: 55% 25%; }
+  50%  { background-position: 30% 50%; }
+  75%  { background-position: 65% 70%; }
+  100% { background-position: 50% 50%; }
+}
+
+/* ---------- Dark Blurred Shapes (three layers) ----------- */
+
+/* Common rules */
+.dark-shape {
+  position: fixed;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.3);
+  filter: blur(60px);
+  pointer-events: none;
+  z-index: -4; /* behind the radial layers */
+}
+
+/* Shape 1: rotates and scales */
+.dark-shape1 {
+  width: 200px;
+  height: 200px;
+  top: 10%;
+  left: 15%;
+  animation: moveShape1 28s ease-in-out infinite;
+}
+@keyframes moveShape1 {
+  0% {
+    transform: translate(0, 0) scale(1);
+    opacity: 0.4;
+  }
+  33% {
+    transform: translate(40vw, 10vh) scale(1.5);
+    opacity: 0.5;
+  }
+  66% {
+    transform: translate(20vw, 50vh) scale(0.8);
+    opacity: 0.3;
+  }
+  100% {
+    transform: translate(0, 0) scale(1);
+    opacity: 0.4;
+  }
+}
+
+/* Shape 2: moves in an opposite path, jitter in scale */
+.dark-shape2 {
+  width: 250px;
+  height: 250px;
+  top: 60%;
+  left: 70%;
+  background: rgba(0, 0, 0, 0.25);
+  filter: blur(80px);
+  animation: moveShape2 32s ease-in-out infinite;
+}
+@keyframes moveShape2 {
+  0% {
+    transform: translate(0, 0) scale(1);
+    opacity: 0.3;
+  }
+  25% {
+    transform: translate(-40vw, -20vh) scale(1.4);
+    opacity: 0.35;
+  }
+  50% {
+    transform: translate(-20vw, -60vh) scale(0.7);
+    opacity: 0.25;
+  }
+  75% {
+    transform: translate(-10vw, -30vh) scale(1.2);
+    opacity: 0.3;
+  }
+  100% {
+    transform: translate(0, 0) scale(1);
+    opacity: 0.3;
+  }
+}
+
+/* Shape 3: slower drift with more subtle scaling */
+.dark-shape3 {
+  width: 180px;
+  height: 180px;
+  top: 30%;
+  left: 80%;
+  background: rgba(0, 0, 0, 0.2);
+  filter: blur(50px);
+  animation: moveShape3 36s ease-in-out infinite;
+}
+@keyframes moveShape3 {
+  0% {
+    transform: translate(0, 0) scale(1);
+    opacity: 0.2;
+  }
+  20% {
+    transform: translate(-30vw, 20vh) scale(1.3);
+    opacity: 0.25;
+  }
+  40% {
+    transform: translate(-50vw, 40vh) scale(0.6);
+    opacity: 0.15;
+  }
+  60% {
+    transform: translate(-20vw, 10vh) scale(1.1);
+    opacity: 0.22;
+  }
+  80% {
+    transform: translate(-40vw, 50vh) scale(0.9);
+    opacity: 0.2;
+  }
+  100% {
+    transform: translate(0, 0) scale(1);
+    opacity: 0.2;
+  }
+}
+
+/* -------------------- Phone‐entry overlay -------------------- */
+#phone-entry {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+.phone-box {
+  background: #fff;
+  padding: 2rem 1rem;
+  border-radius: 1rem;
+  text-align: center;
+  width: 90%;
+  max-width: 320px;
+}
+.phone-box input {
+  width: 100%;
+  padding: 0.75rem;
+  font-size: 1rem;
+  margin-bottom: 1rem;
+  border: 1px solid var(--green-light);
+  border-radius: 0.5rem;
+}
+.phone-box button {
+  width: 100%;
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  background: var(--green);
+  color: var(--gold);
+  border: none;
+  border-radius: 0.5rem;
+  box-shadow: var(--button-shadow);
+}
+
+/* ---------------------- Main wrapper ----------------------- */
+#app {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  padding: env(safe-area-inset-top) 1rem env(safe-area-inset-bottom) 1rem;
+  box-sizing: border-box;
+}
+
+/* Top-right “Signed in as {name}” */
+#signed-in {
+  position: absolute;
+  top: 0.3rem;
+  right: 1rem;
+  font-size: 0.6rem;
+  color: var(--green);
+  z-index: 100;
+}
+
+/* -------------------- Event header -------------------- */
+#event-header {
+  width: 100%;
+  max-width: 500px;
+  background: rgba(0,0,0,0.1);
+  border-radius: 8px;
+  margin: 1rem 0;
+  padding: 1rem 1rem 0.5rem;
+  text-align: center;
+  box-sizing: border-box;
+}
+/* Shrinked title font size */
+#event-title {
+  margin: 0;
+  font-size: 1.5rem;
+  color: var(--green);
+  word-break: break-word;
+}
+/* “Hosted by” moved under title box, smaller */
+/* Make hosted‐by light beige with dark‐brown drop shadow */
+#event-host {
+  margin-top: 0.25rem;
+  font-size: 0.85rem;
+  color: #F5EFDE; /* very light beige */
+  text-shadow: 1px 1px 2px var(--brown);
+}
+
+/* -------------------- Event image -------------------- */
+#event-image-container {
+  width: 100%;
+  max-width: 500px;
+  margin-bottom: 1rem;
+}
+#event-image {
+  width: 100%;
+  max-height: 200px;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+/* -------------- “Add to Calendar” & “Share” -------------- */
+#actions-container {
+  width: 58%;
+  max-width: 500px;
+  display: flex;
+  gap: 0.5rem;
+  margin: 0.5rem 0;
+  box-sizing: border-box;
+}
+#actions-container button {
+  padding: 0.4rem 0.8rem;
+  background: var(--green);
+  color: var(--gold);
+  border: none;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  box-shadow: var(--button-shadow);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+#actions-container svg {
+  width: 0.9rem;
+  height: 0.9rem;
+  fill: var(--gold);
+}
+
+/* ------------ Event date & time (left‐aligned) ---------- */
+#event-datetime {
+  width: 100%;
+  max-width: 500px;
+  text-align: left;
+  margin-bottom: 0.5rem;
+  box-sizing: border-box;
+}
+#event-datetime p {
+  margin: 0.2rem 0;
+  font-size: 0.95rem;
+  color: var(--text);
+}
+#event-date.bold {
+  font-weight: bold;
+}
+
+/* -------- Event details (location + description) --------- */
+#event-details {
+  width: 100%;
+  max-width: 500px;
+  margin-bottom: 1rem;
+  text-align: left;
+  box-sizing: border-box;
+}
+#event-location {
+  margin: 0.2rem 0;
+  font-size: 0.95rem;
+  color: var(--text);
+}
+#event-description {
+  margin: 0.2rem 0;
+  font-size: 0.9rem;
+  color: var(--text);
+  white-space: pre-wrap;
+  word-break: break-word; /* ensure long text (links) wrap */
+  overflow-wrap: break-word;
+}
+
+/* ---------------- Guest List Section ---------------- */
+#guest-list-section {
+  width: 100%;
+  max-width: 500px;
+  margin-bottom: 1rem;
+  box-sizing: border-box;
+}
+#guest-list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+#guest-list-header h2 {
+  font-size: 1.2rem;
+  color: var(--green);
+  margin: 0;
+}
+#guest-list-header button {
+  background: none;
+  border: none;
+  color: var(--green);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+#guest-list-preview {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+  overflow: hidden;
+}
+/* Generic avatar rule: JS will assign class="avatar–USERID" or inline style */
+.avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  color: var(--gold);
+  font-size: 0.8rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.avatar img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+}
+/* “+X” avatar style (brown with white text) */
+.avatar.plus {
+  background: var(--brown);
+  color: white;
+}
+/* Tooltip for guest name */
+.guest-tooltip {
+  position: absolute;
+  top: -1.6rem;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0,0,0,0.8);
+  color: white;
+  padding: 0.2rem 0.4rem;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 200ms ease;
+  pointer-events: none;
+  z-index: 10;
+}
+.avatar:hover .guest-tooltip,
+.avatar.tooltip-visible .guest-tooltip {
+  opacity: 1;
+}
+
+/* ---------------- RSVP buttons container ---------------- */
+#rsvp-container {
+  display: flex;
+  justify-content: space-evenly;
+  width: 100%;
+  max-width: 500px;
+  margin-bottom: 1rem;
+  box-sizing: border-box;
+}
+.rsvp-button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+}
+.rsvp-circle {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: #f5f5f5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.3rem;
+  border: 2px solid transparent;
+  transition: background 200ms ease, border-color 200ms ease;
+}
+.rsvp-label {
+  margin-top: 0.2rem;
+  font-size: 0.85rem;
+  color: var(--text);
+}
+.rsvp-button.active .rsvp-circle {
+  background: var(--gold-light);
+  border-color: var(--green);
+}
+.rsvp-button.maybe.active .rsvp-circle {
+  background: var(--gold-light);
+  border-color: var(--gold);
+}
+.rsvp-button.notgoing.active .rsvp-circle {
+  background: var(--gold-light);
+  border-color: #d9534f;
+}
+
+/* ---------------- “Pay Now” button ---------------- */
+#btn-pay {
+  display: none;
+  width: 100%;
+  max-width: 500px;
+  padding: 0.6rem 1rem;
+  background: var(--green);
+  color: var(--gold);
+  border: none;
+  border-radius: 4px;
+  font-size: 0.95rem;
+  box-shadow: var(--button-shadow);
+  cursor: pointer;
+  margin-bottom: 1rem;
+  opacity: 0;
+  transition: opacity 300ms ease;
+}
+#btn-pay.fade-in {
+  display: block;
+  opacity: 1 !important;
+}
+
+/* --------------- Comments Section --------------- */
+#comments-section {
+  width: 100%;
+  max-width: 500px;
+  margin-bottom: 1rem;
+  box-sizing: border-box;
+}
+#comments-section h2 {
+  font-size: 1.3rem;
+  margin-bottom: 0.5rem;
+  color: var(--green);
+}
+#comments-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin-bottom: 0.5rem;
+}
+
+/* Each comment (and reply) “bubble” */
+.comment {
+  position: relative;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: var(--card-shadow);
+  padding: 0.75rem 1rem;
+  margin-bottom: 0.5rem;
+  display: flex;
+  gap: 0.6rem;
+  word-break: break-word;      /* Prevent extremely long links from overflowing */
+  overflow-wrap: break-word;   /* Allow line breaks at any point if necessary */
+}
+.comment.reply {
+  /* Slight indent for replies */
+  margin-left: 1.5rem;
+  margin-bottom: 0.4rem;
+}
+
+/* Avatar inside comment */
+.comment-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--bg-end);
+  color: var(--green);
+  font-size: 0.8rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.comment-avatar img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+/* The “content” container inside each comment bubble */
+.comment-content {
+  position: relative; /* for delete‐link absolute positioning */
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+/* The “Delete” link inside each comment/reply (smaller, muted-beige‐red, shifted up) */
+.comment-content .delete-link {
+  font-size: 0.65rem;
+  color: #D18E8E;    /* muted reddish‐beige */
+  position: absolute;
+  top: 0.05rem; /* shifted up to avoid overlapping with timestamp */
+  right: 0.6rem;
+  cursor: pointer;
+  text-decoration: none;
+}
+.comment-content .delete-link:hover {
+  text-decoration: underline;
+}
+
+/* Header (name + timestamp) */
+.comment-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+.comment-name {
+  font-weight: bold;
+  font-size: 0.85rem;
+  color: var(--green);
+}
+.comment-timestamp {
+  font-size: 0.7rem;
+  color: var(--text);
+}
+
+/* Text body inside comment */
+.comment-text {
+  font-size: 0.85rem;
+  color: var(--text);
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+
+/* “Reply” button/link under each comment */
+.comment-actions {
+  margin-top: 0.2rem;
+}
+.comment-actions button {
+  background: none;
+  border: none;
+  color: var(--green);
+  font-size: 0.75rem;
+  cursor: pointer;
+  padding: 0;
+}
+
+/* Replies container under each comment */
+.comment-replies {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-top: 0.4rem;
+}
+
+/* ------------- Comment reply input ------------- */
+.reply-input-container {
+  position: relative;
+  margin-top: 0.4rem;
+  padding-bottom: 2.5rem;  /* leave space for the icons at bottom-right */
+}
+.reply-input-container .reply-input {
+  width: 100%;
+  padding: 0.6rem;
+  font-size: 0.85rem;
+  color: var(--text);
+  border: 1px solid var(--green-light);
+  border-radius: 8px;
+  min-height: 36px;
+  resize: none;
+  background: #fff;
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+
+/* Hide the “choose file” input inside reply; we only use icon buttons */
+.reply-input-container input[type="file"] {
+  display: none;
+}
+
+/* Container for image/GIF/Post icons inside reply box, at bottom-right */
+.reply-icons {
+  position: absolute;
+  bottom: 0.5rem;
+  right: 0.5rem;
+  display: flex;
+  gap: 0.5rem;
+}
+.reply-icons button {
+  background: var(--brown);
+  color: var(--gold);
+  border: none;
+  border-radius: 4px;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: var(--button-shadow);
+}
+.reply-icons button:hover {
+  opacity: 0.9;
+}
+/* “GIF” button text styling */
+.reply-icons .btn-gif-reply {
+  font-size: 0.75rem;
+  font-weight: bold;
+}
+/* “Post” button inside reply icons is a bit wider */
+.reply-icons .btn-post-reply {
+  width: auto;
+  padding: 0 1rem;
+  font-size: 0.85rem;
+  border-radius: 4px;
+  background: var(--brown);
+  color: var(--gold);
+}
+
+/* Placeholder styling for reply input */
+.reply-input[data-placeholder]:empty::before {
+  content: attr(data-placeholder);
+  color: #999;
+  pointer-events: none;
+}
+
+/* -------- Comment form (main, with photo + GIF + Post) -------- */
+/* Hide the built-in file input for main comments; we only show icon */
+#comment-file-input {
+  display: none;
+}
+
+/* Main comment “widget” wrapper */
+#comment-widget {
+  position: relative;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: var(--card-shadow);
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  width: 100%;
+  max-width: 500px;
+}
+
+/* The contenteditable box for main comments */
+#comment-input {
+  width: 100%;
+  min-height: 40px;
+  padding: 0.6rem;
+  font-size: 0.85rem;
+  color: var(--text);
+  border: 1px solid var(--green-light);
+  border-radius: 8px;
+  background: #fff;
+  resize: none;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  position: relative;
+  padding-bottom: 2.5rem; /* make room for icons at bottom-right */
+  box-sizing: border-box;
+}
+
+/* Main comment icons container (image, GIF, Post) at bottom-right inside the same box */
+#comment-icons {
+  position: absolute;
+  bottom: 0.5rem;
+  right: 0.5rem;
+  display: flex;
+  gap: 0.5rem;
+}
+#comment-icons button {
+  background: var(--brown);
+  color: var(--gold);
+  border: none;
+  border-radius: 4px;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: var(--button-shadow);
+}
+#comment-icons button:hover {
+  opacity: 0.9;
+}
+/* “GIF” button: use SVG path and display “GIF” text if needed */
+#comment-icons .btn-gif {
+  font-size: 0.75rem;
+  font-weight: bold;
+}
+/* “Post” button inside main comment icons is a bit wider */
+#comment-icons #btn-post-comment {
+  width: auto;
+  padding: 0 1rem;
+  font-size: 0.85rem;
+  border-radius: 4px;
+  background: var(--brown);
+  color: var(--gold);
+}
+
+/* Change placeholder text color & style inside contenteditable */
+/* (Note: contenteditable placeholders are usually handled in JS, but we ensure the grey shade here) */
+#comment-input[data-placeholder]:empty::before {
+  content: attr(data-placeholder);
+  color: #999;
+  pointer-events: none;
+}
+
+/* -------------- Giphy Search Modal -------------- */
+#giphy-modal {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.6);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+}
+#giphy-content {
+  background: #fff;
+  padding: 1rem 1.2rem;
+  border-radius: 8px;
+  max-width: 90%;
+  width: 350px;
+  max-height: 80%;
+  overflow-y: auto;
+  box-shadow: var(--card-shadow);
+  position: relative;
+  box-sizing: border-box;
+}
+#giphy-close {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.6rem;
+  font-size: 1.25rem;
+  cursor: pointer;
+}
+#giphy-search-input {
+  width: 100%;
+  padding: 0.5rem;
+  font-size: 0.9rem;
+  border: 1px solid var(--green-light);
+  border-radius: 4px;
+  margin-bottom: 0.5rem;
+}
+/* Two-column grid for Giphy results */
+#giphy-results {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.5rem;
+}
+.giphy-thumb {
+  width: 100%;
+  border-radius: 4px;
+  object-fit: cover;
+  cursor: pointer;
+  transition: transform 150ms ease;
+}
+.giphy-thumb:hover {
+  transform: scale(1.05);
+}
+
+/* ------------------ See All Modal ------------------ */
+.modal {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.6);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+}
+.modal-content {
+  background: #fff;
+  padding: 1rem 1.2rem;
+  border-radius: 8px;
+  max-width: 90%;
+  width: 340px;
+  max-height: 80%;
+  overflow-y: auto;
+  box-shadow: var(--card-shadow);
+  position: relative;
+  box-sizing: border-box;
+}
+.modal-close {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.6rem;
+  font-size: 1.1rem;
+  cursor: pointer;
+}
+.tabs {
+  display: flex;
+  gap: 0.4rem;
+  margin: 0.8rem 0;
+}
+.tab-button {
+  flex: 1;
+  padding: 0.4rem;
+  background: #f0f0f0;
+  border: none;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  text-align: center;
+}
+.tab-button.active {
+  background: var(--green);
+  color: var(--gold);
+}
+#see-all-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.see-all-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.see-all-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--bg-end);
+  color: var(--green);
+  font-size: 0.8rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.see-all-avatar img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+/* -------------- Ticket Modal (reuses .modal) -------------- */
+
+/* --------------- Create Dummy Event button --------------- */
+#btn-create-dummy {
+  margin: 1rem 0;
+  padding: 0.6rem 1.2rem;
+  background: var(--green);
+  color: var(--gold);
+  border: none;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  width: 70%;
+  max-width: 280px;
+  text-align: center;
+  box-shadow: var(--button-shadow);
+}
+
+/* -------------- 7vh bottom spacer -------------- */
+.bottom-spacer {
+  height: 7vh;
+}
+
+/* Ensure SVG icons within buttons remain sized correctly */
+#comment-widget button svg,
+.reply-icons button svg {
+  width: 1rem;
+  height: 1rem;
+  fill: var(--green);
+  pointer-events: none;
+}
+/* ----------------------------------------------------------------------
+   1) Make the entire comment widget a positioning context
+------------------------------------------------------------------------ */
+#comment-widget {
+  position: relative;
+}
+
+/* ----------------------------------------------------------------------
+   2) Shift the image / GIF icons left so there’s space for “Post” on the right
+   NOTE: We’re assuming the “Post” button (approx. 3rem wide) needs ~4.5rem total.
+------------------------------------------------------------------------ */
+#comment-icons {
+  position: absolute;
+  bottom: 0.5rem;
+  right: 4.5rem;     /* pull left so “Post” can sit at right:0.5rem */
+  display: flex;
+  gap: 0.5rem;
+}
+
+/* ----------------------------------------------------------------------
+   3) Position & style the “Post” button so it lives to the right of the GIF icon
+------------------------------------------------------------------------ */
+#btn-post-comment {
+  position: absolute;
+  bottom: 0.5rem;
+  right: 0.5rem;
+  background: var(--brown);
+  color: var(--gold);
+  border: none;
+  border-radius: 4px;
+  padding: 0 1rem;
+  font-size: 0.85rem;
+  line-height: 2rem;
+  cursor: pointer;
+  box-shadow: var(--button-shadow);
+  /* match the reply‐widget’s “Post” look exactly */
+}
+
+/* ----------------------------------------------------------------------
+   4) Ensure main comment–section’s “GIF” and “Image” buttons match the reply widget’s SVG style
+------------------------------------------------------------------------ */
+/* 4a) Give each icon button a uniform background, color, size, and shadow */
+#comment-icons button {
+  background: var(--brown);
+  color: var(--gold);
+  border: none;
+  border-radius: 4px;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: var(--button-shadow);
+}
+
+/* 4b) Reuse the same SVG‐fill and dimensions that the reply widget’s GIF uses */
+#comment-icons button svg {
+  width: 20px;   /* same as reply widget’s SVG size */
+  height: 20px;
+  fill: currentColor; /* so that color: var(--gold) applies */
+}
+
+/* 4c) If the reply‐widget’s GIF icon has a special path (it usually does), override the default path here.
+      In other words, replace the <svg> inside #btn-giphy-open with the reply‐widget’s SVG. */
+#btn-giphy-open > svg {
+  /* Copy‐and‐paste the exact <svg> element from your reply widget here.
+     For example, if the reply‐widget’s GIF icon is this:
+     <svg viewBox="0 0 24 24" fill="currentColor" …>
+       <path d="… (different path data) …" />
+     </svg>
+     then you would delete everything between <svg>…</svg> below and paste the reply‐widget’s entire SVG. */
+  /* Example placeholder: */
+  width: 20px;
+  height: 20px;
+  fill: currentColor;
+}
+
+/* ----------------------------------------------------------------------
+   5) (Optional) If you still see an old “hide” rule for #btn-post-comment, remove or comment it out:
+   #btn-post-comment { display: none; }
+------------------------------------------------------------------------ */
+
+/* ----------------------------------------------------------------------
+   6) (Bonus) Make sure “Write a reply…” keeps no black outline and no extra spacing
+------------------------------------------------------------------------ */
+.reply-input,
+.reply-input:focus {
+  outline: none !important;
+  margin-bottom: 0 !important;
+}
+
+/* ----------------------------------------------------------------------
+   7) (Bonus) If you want the “Write a comment…” input to keep the same look,
+   you can re‐apply these (they were in earlier snippets) and they won’t break the Post/GIF layout:
+------------------------------------------------------------------------ */
+#comment-input-container {
+  position: relative;       /* already set above implicitly by #comment-widget */
+  margin-top: 0.4rem;       /* same as reply */
+  padding-bottom: 2.5rem;   /* reserve room for the icons row */
+}
+
+#comment-input {
+  width: 100%;
+  padding: 0.6rem;
+  font-size: 0.85rem;
+  color: var(--text);
+  border: 1px solid var(--green-light);
+  border-radius: 8px;
+  min-height: 36px;
+  background: #fff;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  resize: none;
+  outline: none;
+}
+/* -----------------------------------------------
+   1) Disable the old #comment-icons rules entirely,
+      so it cannot overlap with the Post button.
+----------------------------------------------- */
+#comment-icons {
+  display: none !important;
+}
+
+/* -----------------------------------------------
+   2) Position #comment-buttons absolutely at
+      bottom-right of the comment box
+----------------------------------------------- */
+#comment-input-container {
+  position: relative; /* ensure a positioning context */
+  margin-top: 0.4rem;
+  padding-bottom: 2.5rem; /* leave room for buttons */
+}
+
+#comment-buttons {
+  position: absolute;
+  bottom: 0.5rem;
+  right: 0.5rem;
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+/* -----------------------------------------------
+   3) Make each button inside #comment-buttons match
+      the same brown/gold style & size
+----------------------------------------------- */
+#comment-buttons button {
+  background: var(--brown);
+  color: var(--gold);
+  border: none;
+  border-radius: 4px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: var(--button-shadow);
+}
+
+/* 3a) Force “Image” + “GIF” icons to be exact squares */
+#comment-buttons #btn-image-upload,
+#comment-buttons #btn-giphy-open {
+  width: 36px;
+}
+
+/* 3b) Force “Post” to expand horizontally (auto-width + padding) */
+#comment-buttons #btn-post-comment {
+  width: auto;
+  padding: 0 1rem;
+  font-size: 0.85rem;
+  line-height: 36px;
+}
+
+/* -----------------------------------------------
+   4) Ensure the new #comment-buttons always wins
+      over any earlier conflicting rules
+----------------------------------------------- */
+#comment-buttons,
+#comment-buttons button,
+#btn-post-comment {
+  /* We add !important here only in case other
+     rules are still trying to reposition them. */
+  position: relative !important;
+  bottom: auto !important;
+  right: auto !important;
+}
+
+/* -----------------------------------------------
+   5) If you still see any leftover gap between the
+      text input and the button row, collapse it:
+----------------------------------------------- */
+#comment-input-container > #comment-input {
+  margin-bottom: 0 !important;
+}
+/* -------------------------------------------------------------------
+   Remove the black outline/box when “Write a reply…” or “Write a comment…” is focused
+------------------------------------------------------------------- */
+
+/* If your reply‐box uses a class (e.g. .reply-input), target it here.
+   Otherwise, adjust the selector to match whatever container holds “Write a reply…”. */
+.reply-input,
+.reply-input:focus {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* Target the bottom “Write a comment…” box */
+#comment-input,
+#comment-input:focus {
+  outline: none !important;
+  box-shadow: none !important;
+}
+/*─────────────────────────────────────────────────────────────────────────────
+  1) REMOVE BLACK OUTLINES AROUND “Write a reply…” AND “Write a comment…” 
+─────────────────────────────────────────────────────────────────────────────*/
+
+/* Target reply‐widget input (replace “.reply-input” with whatever class/ID you actually use) */
+.reply-input,
+.reply-input:focus {
+  outline: none !important;
+  box-shadow: none !important;
+  /* (If you want to re‐enforce your original brown border on focus, add this:) */
+  border: 1px solid var(--green-light) !important;
+}
+
+/* Target comment‐widget input (#comment-input) */
+#comment-input,
+#comment-input:focus {
+  outline: none !important;
+  box-shadow: none !important;
+  border: 1px solid var(--green-light) !important;
+}
+
+
+/*─────────────────────────────────────────────────────────────────────────────
+  2) MANUAL “DELETE” BUTTON OFFSET VARIABLES
+     You can change these two values to shift every “✕” up/down or left/right.
+─────────────────────────────────────────────────────────────────────────────*/
+
+/* Step A: Define default offsets (4px from top/right).  You can override these in one place. */
+:root {
+  --delete-offset-top:   -0.7rem;   /* change this to move all “✕” buttons up/down */
+  --delete-offset-right: -0.7rem;   /* change this to move all “✕” buttons left/right */
+}
+
+/* Step B: Apply those variables to every .delete-link inside a comment bubble */
+.comment-content .delete-link {
+  position: absolute; /* ensure absolutely positioned relative to .comment-content */
+  top:    var(--delete-offset-top)   !important;
+  right:  var(--delete-offset-right) !important;
+}
+
+/* (Optional) If your HTML uses a slightly different selector for “delete” links, 
+   adjust the selector above to match. E.g. replace “.comment-content .delete-link” 
+   with whatever your markup actually uses. */
+
+/*─────────────────────────────────────────────────────────────────────────────
+  A) STYLE FOR “Create New Event” BUTTON (brown/gold)
+─────────────────────────────────────────────────────────────────────────────*/
+#btn-create-event {
+  font-size: 1rem;
+  letter-spacing: 0.5px;
+}
+
+/*─────────────────────────────────────────────────────────────────────────────
+  B) “Create Event” MODAL BASE STYLES
+─────────────────────────────────────────────────────────────────────────────*/
+#event-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);  /* semi-transparent overlay */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+#event-modal .modal-content {
+  background: #fff;
+  border-radius: 8px;
+  padding: 1.5rem;
+  width: 90%;
+  max-width: 400px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+  position: relative;
+}
+
+/* Close “×” in top-right corner */
+#event-modal .modal-close {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.75rem;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: #666;
+}
+
+/*─────────────────────────────────────────────────────────────────────────────
+  C) FORM ELEMENT STYLES INSIDE “Create Event” MODAL
+  (inputs, labels, textarea, button)
+─────────────────────────────────────────────────────────────────────────────*/
+#create-event-form label {
+  font-size: 0.9rem;
+  margin-bottom: 0.25rem;
+  display: block;
+  color: #333;
+}
+
+#create-event-form input,
+#create-event-form textarea {
+  width: 100%;
+  padding: 0.5rem;
+  font-size: 0.95rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+  box-sizing: border-box;
+}
+
+#create-event-form button[type="submit"] {
+  background: var(--brown);
+  color: var(--gold);
+  font-size: 1rem;
+  padding: 0.75rem;
+  width: 100%;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+#create-event-form button[type="submit"]:hover {
+  background: #8c5a2c;  /* slightly darker brown on hover */
+}
+
+/*─────────────────────────────────────────────────────────────────────────────
+  D) TICKET ROW “Pay” BUTTON
+─────────────────────────────────────────────────────────────────────────────*/
+.ticket-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem;
+  border-bottom: 1px solid #eee;
+}
+
+.ticket-row h3 {
+  font-size: 1rem;
+  margin: 0;
+  color: #333;
+}
+
+.ticket-row p {
+  font-size: 0.9rem;
+  margin: 0;
+  color: #555;
+}
+
+.ticket-row button.btn-pay-ticket {
+  background: var(--brown);
+  color: var(--gold);
+  border: none;
+  border-radius: 4px;
+  padding: 0.5rem 1rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+  box-shadow: var(--button-shadow);
+  margin-left: 1rem;
+}
+
+.ticket-row button.btn-pay-ticket:hover {
+  background: #8c5a2c;
+}
+
+/*─────────────────────────────────────────────────────────────────────────────
+  E) UTILITY – HIDE ANY BLACK OUTLINES WHEN FOCUSED ON INPUTS
+─────────────────────────────────────────────────────────────────────────────*/
+input:focus,
+textarea:focus,
+.reply-input:focus,
+#comment-input:focus {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/*─────────────────────────────────────────────────────────────────────────────
+  F) OPTIONAL – ADJUST “Pay Now” BUTTON (just in case you want spacing)
+─────────────────────────────────────────────────────────────────────────────*/
+#btn-pay {
+  margin-top: 1rem;
+  background: var(--brown);
+  color: var(--gold);
+  border: none;
+  border-radius: 4px;
+  padding: 0.75rem;
+  font-size: 1rem;
+  width: 100%;
+  cursor: pointer;
+  box-shadow: var(--button-shadow);
+}
+/*─────────────────────────────────────────────────────────────────────────────
+  Styles for Ticket‐Option Rows in the “Create New Event” Modal
+─────────────────────────────────────────────────────────────────────────────*/
+.ticket-row-input {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  align-items: center;
+}
+
+/* Each input inside a ticket row already has inline styles for 
+   padding, border, border‐radius, flex basis, etc. */
+
+/* Style for the “Remove” (×) button in each ticket row */
+.ticket-row-input .remove-ticket {
+  background: #e74c3c;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  width: 32px;
+  height: 32px;
+  font-size: 1rem;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.ticket-row-input .remove-ticket:hover {
+  background: #c0392b;
+}
+
+/* Style for the “+ Add Ticket Option” button to match brown/gold theme */
+#add-ticket-option {
+  letter-spacing: 0.5px;
+}
+
+/* Make sure the modal content doesn’t overflow on smaller screens */
+#event-modal .modal-content {
+  overflow-y: auto;
+  max-height: 90vh;
+}
+
+/* Optional: Slightly reduce bottom margin on the last ticket row
+   when there’s only one (initial) row to keep things tight */
+#ticket-options-container .ticket-row-input:last-child {
+  margin-bottom: 0.75rem;
+}
+/*─────────────────────────────────────────────────────────────────────────────
+  COMMENTS BLUR + OVERLAY (visible until user logs in)
+─────────────────────────────────────────────────────────────────────────────*/
+
+/* 1) Make sure the comments‐section container is `position: relative;` */
+/*    (already set inline in the HTML). */
+
+/* 2) The overlay that sits on top of #comments-list until sign-in: */
+#comments-blur-overlay {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+
+/* 3) Centered box inside overlay */
+.comments-overlay-content {
+  background: rgba(255, 255, 255, 0.85);
+  padding: 1rem 1.5rem;
+  border-radius: 8px;
+  text-align: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.comments-overlay-content p {
+  margin: 0 0 0.75rem;
+  color: var(--text);
+  font-size: 1rem;
+}
+
+/* 4) Hide the reply widget until login */
+#comment-widget {
+  display: none;
+}
+/* -------------------- Phone‐entry overlay -------------------- */
+#phone-entry {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+.phone-box {
+  background: #fff;
+  padding: 2rem 1rem;
+  border-radius: 1rem;
+  text-align: center;
+  width: 90%;
+  max-width: 320px;
+}
+.phone-box input {
+  width: 100%;
+  padding: 0.75rem;
+  font-size: 1rem;
+  margin-bottom: 1rem;
+  border: 1px solid var(--green-light);
+  border-radius: 0.5rem;
+}
+.phone-box button {
+  width: 100%;
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  background: var(--green);
+  color: var(--gold);
+  border: none;
+  border-radius: 0.5rem;
+  box-shadow: var(--button-shadow);
+}
+/* make both buttons full‐width and stack with some space */
+#phone-entry .phone-box button {
+  display: block;
+  width: 100%;
+}
+
+/* add spacing above the “Sign Up” button */
+#phone-entry .phone-box button#sign-up {
+  margin-top: 0.75rem; /* adjust as needed */
+}

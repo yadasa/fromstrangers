@@ -1,4 +1,3 @@
-// app.js
 /*
   js/app.js
 
@@ -9,7 +8,8 @@
   - View/Add Photos, Group Chat, Suggest Activity buttons
 */
 
-const _0x3e4b = true;  
+const SKIP_SMS = false;      // if true, skip SMS + reCAPTCHA
+const LOCAL_OVERRIDE = true; // force 127.0.0.1 when running on localhost
 
 // 0. Fade-in setup
 document.addEventListener('DOMContentLoaded', () => {
@@ -19,16 +19,20 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('link-scan')
   ];
   elems.forEach(el => {
+    if (!el) return;
     el.style.opacity = '0';
     el.style.transition = 'opacity 500ms ease';
   });
-  elems.forEach((el, i) =>
-    setTimeout(() => el.style.opacity = '1', i * 100)
-  );
+  elems.forEach((el, i) => {
+    if (!el) return;
+    setTimeout(() => (el.style.opacity = '1'), i * 100);
+  });
 
   const wrapper = document.getElementById('qr-wrapper');
-  wrapper.style.opacity = '0';
-  wrapper.style.transition = 'opacity 300ms ease';
+  if (wrapper) {
+    wrapper.style.opacity = '0';
+    wrapper.style.transition = 'opacity 300ms ease';
+  }
 });
 
 // 1. Initialize Firebase
@@ -38,6 +42,12 @@ if (!window.firebaseConfig) {
 firebase.initializeApp(window.firebaseConfig);
 const auth = firebase.auth();
 const db   = firebase.firestore();
+
+// 1a. If on "localhost", redirect to "127.0.0.1" (Chrome sometimes rejects localhost reCAPTCHA)
+if (LOCAL_OVERRIDE && location.hostname === 'localhost') {
+  const newHref = location.href.replace('localhost', '127.0.0.1');
+  location.replace(newHref);
+}
 
 // === Persist phone across sessions ===
 function savePhone(phone) {
@@ -54,16 +64,13 @@ function loadPhone() {
 (async () => {
   const saved = loadPhone();
   if (!saved) return;
-
   try {
     const snap = await db.collection('members').doc(saved).get();
     if (!snap.exists) return;
-
     const data = snap.data();
     if (!data.onList) return;  // ensure approved
 
-    const testPhone    = saved;
-    const memberName   = data.name || data.Name || 'No Name';
+    const memberName = data.name || data.Name || 'No Name';
     document.getElementById('user-name').innerText = memberName;
     document.getElementById('phone-entry').style.display = 'none';
     document.getElementById('app').style.display        = 'block';
@@ -72,10 +79,39 @@ function loadPhone() {
   }
 })();
 
-// 2. Phone-entry + SMS auth
-let testPhone = '';
-let memberName = '';
-let memberOnList = false;
+// 2. Invisible reCAPTCHA initialization helper
+async function initRecaptcha() {
+  // Clear any existing verifier
+  if (window.recaptchaVerifier) {
+    try { window.recaptchaVerifier.clear(); }
+    catch (_) { /* ignore */ }
+  }
+
+  // Create a brand-new invisible reCAPTCHA bound to the container
+  window.recaptchaVerifier = new firebase.auth.RecaptchaVerifier(
+    'recaptcha-container',
+    {
+      size: 'invisible',
+      callback: token => {
+        console.log('reCAPTCHA solved, token:', token);
+      },
+      'expired-callback': () => {
+        console.warn('reCAPTCHA expired; clearing & reinitializing');
+        initRecaptcha();
+      }
+    }
+  );
+
+  // Render the widget and wait for it to be ready
+  await window.recaptchaVerifier.render();
+  // Immediately trigger verification to obtain a fresh token
+  await window.recaptchaVerifier.verify();
+}
+
+// 3. Phone-entry + SMS auth
+let testPhone     = '';
+let memberName    = '';
+let memberOnList  = false;
 
 document.getElementById('phone-submit').onclick = async () => {
   let raw = document.getElementById('phone-input').value.replace(/\D/g, '');
@@ -84,32 +120,44 @@ document.getElementById('phone-submit').onclick = async () => {
     return alert('Enter a valid 10-digit phone.');
   }
 
-  // *** ADD: skip SMS/recaptcha when flag is true ***
-  if (_0x3e4b) {
-    const snap = await db.collection('members').doc(raw).get();
-    if (!snap.exists) {
-      showSignupPopup();
+  // *** Skip SMS/recaptcha when flag is true ***
+  if (SKIP_SMS) {
+    try {
+      const snap = await db.collection('members').doc(raw).get();
+      if (!snap.exists) {
+        // Redirect to Sign Up page
+        window.location.href = 'https://fromstrangers.social/join';
+        return;
+      }
+      const data = snap.data();
+      if (!data.onList) {
+        alert('Your membership is not approved for this feature.');
+        return;
+      }
+      testPhone    = raw;
+      memberName   = data.name || data.Name || 'No Name';
+      memberOnList = !!data.onList;
+      document.getElementById('user-name').innerText   = memberName;
+      document.getElementById('phone-entry').style.display = 'none';
+      document.getElementById('app').style.display        = 'block';
+      savePhone(testPhone);
+      return;
+    } catch (err) {
+      console.error(err);
+      alert('Error checking membership.');
       return;
     }
-    const data = snap.data();
-    if (!data.onList) {
-      alert('Your membership is not approved for this feature.');
-      return;
-    }
-    testPhone     = raw;
-    memberName    = data.name || data.Name || 'No Name';
-    memberOnList  = !!data.onList;
-    document.getElementById('user-name').innerText = memberName;
-    document.getElementById('phone-entry').style.display = 'none';
-    document.getElementById('app').style.display        = 'block';
-    savePhone(testPhone);
-    return;
   }
 
-  window.recaptchaVerifier = new firebase.auth.RecaptchaVerifier(
-    'recaptcha-container',
-    { size: 'invisible' }
-  );
+  // 3a. Initialize & wait for a fresh reCAPTCHA token
+  try {
+    await initRecaptcha();
+  } catch (err) {
+    console.error('Error initializing reCAPTCHA:', err);
+    return alert('reCAPTCHA setup failed. Please reload and try again.');
+  }
+
+  // 3b. Now request SMS via Firebase
   try {
     const confirmation = await auth.signInWithPhoneNumber(
       '+1' + raw,
@@ -118,12 +166,16 @@ document.getElementById('phone-submit').onclick = async () => {
     window.confirmationResult = confirmation;
     document.getElementById('otp-entry').style.display = 'block';
   } catch (err) {
-    console.error(err);
-    alert('SMS not sent: ' + err.message);
+    console.error('signInWithPhoneNumber error:', err);
+    if (err.code === 'auth/invalid-app-credential') {
+      alert('reCAPTCHA token invalid/expired; please try again.');
+    } else {
+      alert('SMS not sent: ' + err.message);
+    }
   }
 };
 
-// 3. OTP verification
+// 4. OTP verification
 document.getElementById('otp-submit').onclick = async () => {
   const code = document.getElementById('otp-input').value.trim();
   if (code.length !== 6) return alert('Enter the 6-digit code.');
@@ -133,9 +185,10 @@ document.getElementById('otp-submit').onclick = async () => {
     testPhone = user.phoneNumber.replace('+1','');
     savePhone(testPhone);
 
-    const snap  = await db.collection('members').doc(testPhone).get();
+    // ** Changed behavior: if no Firestore doc, just alert instead of redirect **
+    const snap = await db.collection('members').doc(testPhone).get();
     if (!snap.exists) {
-      showSignupPopup();
+      alert('No membership record found for this phone. Please sign up first.');
       return;
     }
     const data = snap.data();
@@ -147,14 +200,14 @@ document.getElementById('otp-submit').onclick = async () => {
     memberOnList = !!data.onList;
     document.getElementById('user-name').innerText = memberName;
     document.getElementById('phone-entry').style.display = 'none';
-    document.getElementById('app').style.display = 'block';
+    document.getElementById('app').style.display        = 'block';
   } catch (err) {
-    console.error(err);
+    console.error('OTP confirm error:', err);
     alert('Code incorrect: ' + err.message);
   }
 };
 
-// 4. QR & encryption
+// 5. QR & encryption
 const QR_REFRESH    = 4;
 const SCAN_COOLDOWN = 35 * 60 * 1000;
 const COLORS        = { green:"#5c5146", gold:"#b49e85" };
@@ -162,8 +215,8 @@ let qrCode, qrInterval, timerInterval, countdown;
 
 function randomNoise(n) {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  return Array.from({length:n}, () =>
-    chars.charAt(Math.floor(Math.random()*chars.length))
+  return Array.from({ length: n }, () =>
+    chars.charAt(Math.floor(Math.random() * chars.length))
   ).join('');
 }
 function encryptText(txt) {
@@ -173,69 +226,83 @@ function decryptText(noisy) {
   if (noisy.length <= 10) throw 'Invalid payload';
   return atob(noisy.slice(5, -5));
 }
-function pad2(n){ return String(n).padStart(2,'0'); }
-function nowStr(){
+function pad2(n) { return String(n).padStart(2, '0'); }
+function nowStr() {
   const d = new Date();
-  return `${pad2(d.getMonth()+1)}${pad2(d.getDate())}`
-       + `${pad2(d.getHours())}${pad2(d.getMinutes())}${pad2(d.getSeconds())}`;
+  return (
+    `${pad2(d.getMonth() + 1)}${pad2(d.getDate())}` +
+    `${pad2(d.getHours())}${pad2(d.getMinutes())}${pad2(d.getSeconds())}`
+  );
 }
 
-// 5. Modal backdrop & QR positioning
+// 6. Modal backdrop & QR positioning
 let qrOverlay = null;
 function ensureOverlay() {
   if (!qrOverlay) {
     qrOverlay = document.createElement('div');
     qrOverlay.id = 'qr-overlay';
     Object.assign(qrOverlay.style, {
-      position: 'fixed', top:0, left:0,
-      width:'100%', height:'100%',
-      background:'rgba(0,0,0,0.5)',
-      display:'none', zIndex:1000
+      position: 'fixed', top: 0, left: 0,
+      width: '100%', height: '100%',
+      background: 'rgba(0,0,0,0.5)',
+      display: 'none', zIndex: 1000
     });
     document.body.appendChild(qrOverlay);
     qrOverlay.addEventListener('click', hideQR);
   }
 }
 
-function toggleQRDisplay(){
+function toggleQRDisplay() {
   const w = document.getElementById('qr-wrapper');
-  w.style.display==='block' ? hideQR() : showQR();
+  if (!w) return;
+  w.style.display === 'block' ? hideQR() : showQR();
 }
-function showQR(){
+
+function showQR() {
   clearInterval(qrInterval);
   clearInterval(timerInterval);
-  document.getElementById('scan-result').innerText = '';
+  const scanResult = document.getElementById('scan-result');
+  if (scanResult) scanResult.innerText = '';
 
   ensureOverlay();
   qrOverlay.style.display = 'block';
 
   const w = document.getElementById('qr-wrapper');
+  if (!w) return;
   w.style.display = 'block';
   w.style.opacity = '0';
-  requestAnimationFrame(() => w.style.opacity = '1');
+  requestAnimationFrame(() => (w.style.opacity = '1'));
 
   generateAndFadeQR();
   startTimer();
   qrInterval = setInterval(generateAndFadeQR, QR_REFRESH * 1000);
 }
-function hideQR(){
+
+function hideQR() {
   clearInterval(qrInterval);
   clearInterval(timerInterval);
   if (qrOverlay) qrOverlay.style.display = 'none';
+
   const w = document.getElementById('qr-wrapper');
+  if (!w) return;
   w.style.opacity = '0';
   setTimeout(() => {
     w.style.display = 'none';
-    document.getElementById('qr-close').style.display = 'none';
+    const closeBtn = document.getElementById('qr-close');
+    if (closeBtn) closeBtn.style.display = 'none';
   }, 300);
 }
 
-function generateAndFadeQR(){
+function generateAndFadeQR() {
   countdown = QR_REFRESH;
-  document.getElementById('qr-timer').innerText = `Refreshing in ${countdown}s`;
+  const timerEl = document.getElementById('qr-timer');
+  if (timerEl) timerEl.innerText = `Refreshing in ${countdown}s`;
+
   const payload = `${nowStr()}R${testPhone}`;
   const cipher  = encryptText(payload);
-  const disp = document.getElementById('qr-display');
+  const disp    = document.getElementById('qr-display');
+  if (!disp) return;
+
   disp.innerHTML = '';
   qrCode = new QRCode(disp, {
     text:       cipher,
@@ -244,65 +311,76 @@ function generateAndFadeQR(){
     colorDark:  COLORS.green,
     colorLight: COLORS.gold
   });
+
   const qrElem = disp.querySelector('canvas, img, table');
   if (qrElem) {
     qrElem.style.opacity = '0';
     qrElem.style.transition = 'opacity 300ms ease';
-    requestAnimationFrame(() => qrElem.style.opacity = '1');
+    requestAnimationFrame(() => (qrElem.style.opacity = '1'));
   }
-  document.getElementById('qr-close').style.display = 'block';
+  const closeBtn = document.getElementById('qr-close');
+  if (closeBtn) closeBtn.style.display = 'block';
 }
 
-function startTimer(){
+function startTimer() {
   clearInterval(timerInterval);
   timerInterval = setInterval(() => {
     countdown--;
-    document.getElementById('qr-timer').innerText = `Refreshing in ${countdown}s`;
+    const timerEl = document.getElementById('qr-timer');
+    if (timerEl) timerEl.innerText = `Refreshing in ${countdown}s`;
   }, 1000);
 }
-document.getElementById('qr-close').onclick = hideQR;
 
-// 6. Scan QR (password protected)
 const scannedMap = {};
-async function startQRScan(){
+async function startQRScan() {
   clearInterval(qrInterval);
   clearInterval(timerInterval);
   hideQR();
 
-  document.getElementById('scan-result').innerText = '';
+  const scanResult = document.getElementById('scan-result');
+  if (scanResult) scanResult.innerText = '';
+
   const scanner = new Html5Qrcode('qr-scanner');
-  await scanner.start(
-    { facingMode:'environment' },
-    { fps:10, qrbox:250 },
-    async raw => {
-      await scanner.stop();
-      let decoded;
-      try { decoded = decryptText(raw); }
-      catch { return alert('Invalid QR'); }
+  try {
+    await scanner.start(
+      { facingMode:'environment' },
+      { fps:10, qrbox:250 },
+      async (raw) => {
+        await scanner.stop();
+        let decoded;
+        try { decoded = decryptText(raw); }
+        catch { return alert('Invalid QR'); }
 
-      const phone = decoded.slice(11);
-      if (scannedMap[phone] && Date.now() - scannedMap[phone] < SCAN_COOLDOWN) {
-        return alert('Already scanned recently');
-      }
-      scannedMap[phone] = Date.now();
+        const phone = decoded.slice(11);
+        if (
+          scannedMap[phone] &&
+          Date.now() - scannedMap[phone] < SCAN_COOLDOWN
+        ) {
+          return alert('Already scanned recently');
+        }
+        scannedMap[phone] = Date.now();
 
-      const docRef = db.collection('members').doc(phone);
-      const snap   = await docRef.get();
-      if (!snap.exists) {
-        return alert(`No record for ${phone}`);
-      }
-      const { name, onList } = snap.data();
-      if (!onList) {
-        return alert(`❌ Sorry, ${name}, not on the list.`);
-      }
+        const docRef = db.collection('members').doc(phone);
+        const snap   = await docRef.get();
+        if (!snap.exists) {
+          return alert(`No record for ${phone}`);
+        }
+        const { name, onList } = snap.data();
+        if (!onList) {
+          return alert(`❌ Sorry, ${name}, not on the list.`);
+        }
 
-      await docRef.update({
-        sPoints: firebase.firestore.FieldValue.increment(7)
-      });
-      alert(`✅ Welcome, ${name}!`);
-    },
-    _ => {}
-  );
+        await docRef.update({
+          sPoints: firebase.firestore.FieldValue.increment(7)
+        });
+        alert(`✅ Welcome, ${name}!`);
+      },
+      (_) => {}
+    );
+  } catch (err) {
+    console.error('Error starting QR scan:', err);
+    alert('Cannot start scanner.');
+  }
 }
 
 // 7. Other actions
@@ -330,34 +408,49 @@ async function suggestActivity() {
 }
 
 // 8. Wire up controls
-
-
-
 window.addEventListener('load', () => {
-  document.getElementById('btn-display').onclick = toggleQRDisplay;
-  document.getElementById('btn-photos').onclick  = openPhotos;
-  document.getElementById('btn-chat').onclick    = openChat;
-  document.getElementById('btn-suggest').onclick = suggestActivity;
-  document.getElementById('link-scan').onclick   = e => {
-    e.preventDefault();
-    const pwd = prompt("Enter admin password to scan QR:");
-    if (pwd === 'prix') startQRScan();
-    else alert('Incorrect password.');
-  };
+  const btnDisplay  = document.getElementById('btn-display');
+  const btnPhotos   = document.getElementById('btn-photos');
+  const btnChat     = document.getElementById('btn-chat');
+  const btnSuggest  = document.getElementById('btn-suggest');
+  const linkScan    = document.getElementById('link-scan');
+  const btnQrClose  = document.getElementById('qr-close');
+  const btnSignOut  = document.getElementById('sign-out');
+  const btnSignUp   = document.getElementById('sign-up');  // just redirects
 
-  // Sign Up iframe popup
-  document.getElementById('sign-up').onclick     = showSignupPopup;
-  document.getElementById('signup-close').onclick = hideSignupPopup;
+  if (btnDisplay) btnDisplay.onclick = toggleQRDisplay;
+  if (btnPhotos)  btnPhotos.onclick  = openPhotos;
+  if (btnChat)    btnChat.onclick    = openChat;
+  if (btnSuggest) btnSuggest.onclick = suggestActivity;
+  if (linkScan) {
+    linkScan.onclick = (e) => {
+      e.preventDefault();
+      const pwd = prompt("Enter admin password to scan QR:");
+      if (pwd === 'prix') startQRScan();
+      else alert('Incorrect password.');
+    };
+  }
+  if (btnQrClose) btnQrClose.onclick = hideQR;
+
+  // Sign Up button simply redirects
+  if (btnSignUp) {
+    btnSignUp.onclick = () => {
+      window.location.href = 'https://fromstrangers.social/join';
+    };
+  }
 
   // Sign Out logic
-  document.getElementById('sign-out').onclick = () => {
-    // Firebase sign-out
-    auth.signOut().catch(console.error);
-    // Clear stored phone from localStorage and cookie
-    try { localStorage.removeItem('userPhone'); } catch {}
-    document.cookie = 'userPhone=; max-age=0; path=/;';
+  if (btnSignOut) {
+    btnSignOut.onclick = () => {
+      // Firebase sign-out
+      auth.signOut().catch(console.error);
 
-    // Reload page to show phone-entry again
-    location.reload();
-  };
+      // Clear stored phone from localStorage and cookie
+      try { localStorage.removeItem('userPhone'); } catch {}
+      document.cookie = 'userPhone=; max-age=0; path=/;';
+
+      // Reload page to show phone-entry again
+      location.reload();
+    };
+  }
 });
