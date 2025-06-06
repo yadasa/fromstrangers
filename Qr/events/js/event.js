@@ -131,7 +131,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const snap = await db.collection('members').doc(saved).get();
       if (!snap.exists) return;
       const data = snap.data();
-      if (!data.onList) return;
+      //if (!data.onList) return;
       currentPhone = saved;
       currentName  = data.name || data.Name || 'No Name';
       isFirstLogin = false;
@@ -221,10 +221,10 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
       const data = snap.data();
-      if (!data.onList) {
-        alert('Your membership is not approved yet.');
-        return;
-      }
+      //if (!data.onList) {
+        //alert('Your membership is not approved yet.');
+        //return;
+      //}
 
       // 4) SET currentName + hide login overlay + show main app
       currentName = data.name || data.Name || 'No Name';
