@@ -105,7 +105,15 @@
 
     <main>
       <div id="controls">
+        <!-- Existing buttons -->
         <button id="btn-display">Display QR Code</button>
+
+        <!-- New button added below -->
+        <button id="btn-events"
+                onclick="window.location.href='https://portal.fromstrangers.social/events';">
+          View Events
+        </button>
+
         <button id="btn-photos">View / Add Photos</button>
         <button id="btn-chat">Group Chat</button>
         <button id="btn-suggest">Suggest Activity</button>
@@ -122,6 +130,5 @@
       <div id="scan-result"></div>
     </main>
   </div>
-  <div id="app" style="display:none"> … </div>
 </body>
 </html>

@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Events – From Strangers</title>
+  <link rel="stylesheet" href="css/style.css" />
+
+  <!-- Firebase (compat) -->
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js" defer></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js" defer></script>
+
+  <!-- Your Firebase config (must define window.firebaseConfig) -->
+  <script src="js/firebaseConfig.js" defer></script>
+
+  <style>
+    :root {
+      --gold:          #b49e85;
+      --green:         #3e2f1b;
+      --green-light:   #5a4025;
+      --button-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      --ease:          ease;
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+      background: linear-gradient(to top, #f5efde, #e8d6bb);
+      background-attachment: fixed;
+      color: var(--green);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin: 0;
+      padding: 0;
+    }
+    main {
+      width: 100%;
+      max-width: 400px;
+      padding: 1rem;
+    }
+
+    /* Back arrow/link */
+    .back-link {
+      display: inline-block;
+      margin: 1rem;
+      text-decoration: none;
+      color: var(--green);
+      font-size: 1rem;
+    }
+    .back-link:hover {
+      color: var(--gold);
+    }
+
+    /* Tab buttons */
+    .tabs {
+      display: flex;
+      border-bottom: 1px solid var(--green-light);
+      margin: 0 1rem 1rem 1rem;
+    }
+    .tab {
+      padding: 0.5rem 1rem;
+      cursor: pointer;
+      background: none;
+      border: none;
+      color: var(--green-light);
+      font-size: 1rem;
+      transition: color 200ms var(--ease);
+    }
+    .tab.active {
+      color: var(--green);
+      border-bottom: 2px solid var(--green);
+      font-weight: bold;
+    }
+    .tab:hover:not(.active) {
+      color: var(--green);
+    }
+
+    /* Container for each view */
+    .view {
+      width: 100%;
+    }
+
+    /* Event buttons in list view */
+    .event-button {
+      display: block;
+      width: 100%;
+      margin-bottom: 0.5rem;
+      padding: 1rem;
+      font-size: 1.1rem;
+      background: linear-gradient(45deg, var(--green), var(--green-light));
+      color: var(--gold);
+      border: none;
+      border-radius: 0.5rem;
+      box-shadow: var(--button-shadow);
+      cursor: pointer;
+      transition: transform 200ms var(--ease), background 200ms var(--ease);
+      text-align: left;
+    }
+    .event-button:hover {
+      transform: translateY(-2px);
+      background: linear-gradient(45deg, var(--green-light), var(--green));
+    }
+
+    /* Calendar header (with Prev/Next) */
+    .calendar-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin: 0 1rem 0.5rem 1rem;
+    }
+    .calendar-header button {
+      background: linear-gradient(45deg, var(--green), var(--green-light));
+      color: var(--gold);
+      border: none;
+      border-radius: 0.5rem;
+      padding: 0.5rem 1rem;
+      box-shadow: var(--button-shadow);
+      cursor: pointer;
+      transition: transform 200ms var(--ease), background 200ms var(--ease);
+      font-size: 0.9rem;
+    }
+    .calendar-header button:hover {
+      transform: translateY(-2px);
+      background: linear-gradient(45deg, var(--green-light), var(--green));
+    }
+    .calendar-title {
+      font-size: 1.25rem;
+      color: var(--green);
+      font-weight: bold;
+    }
+
+    /* Calendar styling */
+    table.calendar {
+      border-collapse: collapse;
+      width: 100%;
+      max-width: 380px;
+      margin: 0 auto 1rem auto;
+    }
+    table.calendar th,
+    table.calendar td {
+      border: 1px solid var(--green-light);
+      width: 14.28%;
+      height: 70px;
+      text-align: center;
+      vertical-align: top;
+      padding: 4px;
+      font-size: 0.9rem;
+    }
+    table.calendar th {
+      background: var(--green-light);
+      color: var(--gold);
+      font-weight: normal;
+    }
+    .event-day {
+      background-color: var(--green);
+      color: var(--gold);
+      cursor: pointer;
+    }
+
+    /* Error text */
+    .error-text {
+      color: red;
+      margin: 1rem;
+      text-align: center;
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <a href="/index.html" class="back-link">← Back to Home</a>
+    <div class="tabs">
+      <button id="tab-list" class="tab active">List View</button>
+      <button id="tab-calendar" class="tab">Calendar View</button>
+    </div>
+  </header>
+
+  <main>
+    <!-- List View -->
+    <div id="list-view" class="view">
+      <div id="event-list"></div>
+    </div>
+
+    <!-- Calendar View (hidden by default) -->
+    <div id="calendar-view" class="view" style="display: none;">
+      <div class="calendar-header">
+        <button id="prev-month">Prev</button>
+        <div id="calendar-title" class="calendar-title"></div>
+        <button id="next-month">Next</button>
+      </div>
+      <div id="calendar-container"></div>
+    </div>
+
+    <!-- For any error messages -->
+    <p id="error-message" class="error-text"></p>
+  </main>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // Tab Switching Logic
+      const tabList      = document.getElementById('tab-list');
+      const tabCalendar  = document.getElementById('tab-calendar');
+      const listView     = document.getElementById('list-view');
+      const calendarView = document.getElementById('calendar-view');
+
+      tabList.addEventListener('click', () => {
+        tabList.classList.add('active');
+        tabCalendar.classList.remove('active');
+        listView.style.display = '';
+        calendarView.style.display = 'none';
+      });
+      tabCalendar.addEventListener('click', () => {
+        tabCalendar.classList.add('active');
+        tabList.classList.remove('active');
+        calendarView.style.display = '';
+        listView.style.display = 'none';
+      });
+
+      // Initialize Firebase
+      if (!window.firebaseConfig) {
+        console.error("Missing firebaseConfig.js or window.firebaseConfig");
+        document.getElementById('error-message').textContent =
+          'Configuration error: cannot load events.';
+        return;
+      }
+      firebase.initializeApp(window.firebaseConfig);
+      const db = firebase.firestore();
+
+      const eventListContainer = document.getElementById('event-list');
+      const calendarContainer  = document.getElementById('calendar-container');
+      const calendarTitleElem  = document.getElementById('calendar-title');
+      const errorContainer     = document.getElementById('error-message');
+      const prevBtn            = document.getElementById('prev-month');
+      const nextBtn            = document.getElementById('next-month');
+
+      // Utility: format JS Date to "YYYY-MM-DD"
+      function formatDateToString(dateObj) {
+        const y = dateObj.getFullYear();
+        const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+        const d = String(dateObj.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+      }
+
+      // Utility: format JS Date to "MM/DD/YY"
+      function formatForList(dateObj) {
+        const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+        const d = String(dateObj.getDate()).padStart(2, '0');
+        const yy = String(dateObj.getFullYear() % 100).padStart(2, '0');
+        return `${m}/${d}/${yy}`;
+      }
+
+      // Today's start (00:00:00)
+      const today = new Date();
+      const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+
+      // Current viewed month/year
+      let currentYear, currentMonth;
+      // Map of "YYYY-MM-DD" -> eventId
+      const eventMap = {};
+      // Array of { id, title, dateObj } for sorting/filtering
+      const eventsArray = [];
+
+      // Fetch all events from Firestore
+      db.collection('events').get()
+        .then(snapshot => {
+          if (snapshot.empty) {
+            const noEvents = document.createElement('p');
+            noEvents.textContent = 'No events found.';
+            eventListContainer.appendChild(noEvents);
+          } else {
+            snapshot.forEach(doc => {
+              const eventId = doc.id;
+              const data    = doc.data();
+              const title   = data.title || 'Untitled Event';
+
+              // Determine event date
+              let rawDate = data.date;
+              let dateObj;
+              if (rawDate && typeof rawDate.toDate === 'function') {
+                dateObj = rawDate.toDate();
+              } else {
+                dateObj = new Date(rawDate);
+              }
+              if (isNaN(dateObj)) {
+                return; // skip if invalid
+              }
+
+              // Push into array for list sorting/filtering
+              eventsArray.push({ id: eventId, title, dateObj });
+
+              // Build eventMap for calendar (all events, including past)
+              const dateStr = formatDateToString(dateObj);
+              eventMap[dateStr] = eventId;
+            });
+
+            // Sort eventsArray by date ascending
+            eventsArray.sort((a, b) => a.dateObj - b.dateObj);
+
+            // Build List View: only events >= startOfToday
+            eventsArray.forEach(evt => {
+              if (evt.dateObj >= startOfToday) {
+                const formattedDate = formatForList(evt.dateObj);
+                const buttonText = `${formattedDate} - ${evt.title}`;
+
+                const btn = document.createElement('button');
+                btn.className = 'event-button';
+                btn.textContent = buttonText;
+                btn.addEventListener('click', () => {
+                  window.location.href = `/events/eventid.html?e=${encodeURIComponent(evt.id)}`;
+                });
+                eventListContainer.appendChild(btn);
+              }
+            });
+
+            // If no upcoming events, show message
+            const hasUpcoming = eventsArray.some(evt => evt.dateObj >= startOfToday);
+            if (!hasUpcoming) {
+              const noUpcoming = document.createElement('p');
+              noUpcoming.textContent = 'No upcoming events.';
+              eventListContainer.appendChild(noUpcoming);
+            }
+          }
+
+          // Initialize calendar to current month
+          const now = new Date();
+          currentYear  = now.getFullYear();
+          currentMonth = now.getMonth() + 1;
+          renderCalendar(currentYear, currentMonth);
+        })
+        .catch(err => {
+          console.error('Error loading events:', err);
+          errorContainer.textContent = 'Failed to load events. Please try again later.';
+        });
+
+      // Render the calendar for a given year/month
+      function renderCalendar(year, month) {
+        calendarContainer.innerHTML = '';
+        calendarTitleElem.textContent = 
+          `${year} – ${String(month).padStart(2, '0')}`;
+
+        const table = document.createElement('table');
+        table.className = 'calendar';
+
+        // Header row: Sun, Mon, Tue, Wed, Thu, Fri, Sat
+        const thead = document.createElement('thead');
+        const headerRow = document.createElement('tr');
+        ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].forEach(weekday => {
+          const th = document.createElement('th');
+          th.textContent = weekday;
+          headerRow.appendChild(th);
+        });
+        thead.appendChild(headerRow);
+        table.appendChild(thead);
+
+        // Compute first day and number of days
+        const firstDay    = new Date(year, month - 1, 1).getDay();
+        const daysInMonth = new Date(year, month, 0).getDate();
+
+        const tbody = document.createElement('tbody');
+        let dateNum  = 1;
+        let rowIndex = 0;
+
+        while (dateNum <= daysInMonth) {
+          const tr = document.createElement('tr');
+          for (let col = 0; col < 7; col++) {
+            const td = document.createElement('td');
+
+            if (rowIndex === 0 && col < firstDay) {
+              td.textContent = '';
+            } else if (dateNum > daysInMonth) {
+              td.textContent = '';
+            } else {
+              td.textContent = dateNum;
+
+              const cellDateStr = 
+                `${year}-${String(month).padStart(2,'0')}-${String(dateNum).padStart(2,'0')}`;
+              if (eventMap[cellDateStr]) {
+                td.classList.add('event-day');
+                td.addEventListener('click', () => {
+                  window.location.href = 
+                    `/events/eventid.html?e=${encodeURIComponent(eventMap[cellDateStr])}`;
+                });
+              }
+
+              dateNum++;
+            }
+            tr.appendChild(td);
+          }
+          tbody.appendChild(tr);
+          rowIndex++;
+        }
+
+        table.appendChild(tbody);
+        calendarContainer.appendChild(table);
+      }
+
+      // Prev/Next month navigation
+      prevBtn.addEventListener('click', () => {
+        currentMonth--;
+        if (currentMonth < 1) {
+          currentMonth = 12;
+          currentYear--;
+        }
+        renderCalendar(currentYear, currentMonth);
+      });
+      nextBtn.addEventListener('click', () => {
+        currentMonth++;
+        if (currentMonth > 12) {
+          currentMonth = 1;
+          currentYear++;
+        }
+        renderCalendar(currentYear, currentMonth);
+      });
+    });
+  </script>
+</body>
+</html>
