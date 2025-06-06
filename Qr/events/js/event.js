@@ -9,6 +9,38 @@ const auth    = firebase.auth();
 const db      = firebase.firestore();
 const storage = firebase.storage();
 
+// ─────────────────────────────────────────────────────────────────────
+// INITIATE INVISIBLE RECAPTCHA FOR PHONE AUTH
+// ─────────────────────────────────────────────────────────────────────
+async function initRecaptcha() {
+  // If an older verifier exists, clear it first
+  if (window.recaptchaVerifier) {
+    try {
+      window.recaptchaVerifier.clear();
+    } catch (_e) { /* ignore any errors */ }
+  }
+
+  window.recaptchaVerifier = new firebase.auth.RecaptchaVerifier(
+    'recaptcha-container',
+    {
+      size: 'invisible',
+      callback: (token) => {
+        console.log('reCAPTCHA solved, token:', token);
+      },
+      'expired-callback': () => {
+        console.warn('reCAPTCHA expired; re-initializing');
+        initRecaptcha();
+      }
+    }
+  );
+
+  // Render the invisible widget
+  await window.recaptchaVerifier.render();
+  // Immediately verify so that a token is ready when we call signInWithPhoneNumber
+  await window.recaptchaVerifier.verify();
+}
+
+
 /**
  * Given a day‐of‐month integer (1–31), returns the appropriate English
  * ordinal suffix (1st, 2nd, 3rd, 4th, …).
@@ -112,37 +144,102 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   })();
 
-  // 4c) Phone submission (skip SMS flow)
-  const skipSMS = true;
+  // ─────────────────────────────────────────────────────────────────────
+  // 4c) PHONE SUBMISSION → SEND SMS (REAL FLOW)
+  // ─────────────────────────────────────────────────────────────────────
+  const skipSMS = false;
+
   document.getElementById('phone-submit').onclick = async () => {
+    // 1) Normalize phone: strip non-digits, drop leading '1' if present
     let raw = document.getElementById('phone-input').value.replace(/\D/g, '');
-    if (raw.length === 11 && raw.startsWith('1')) raw = raw.slice(1);
+    if (raw.length === 11 && raw.startsWith('1')) {
+      raw = raw.slice(1);
+    }
     if (raw.length !== 10) {
       alert('Enter a valid 10-digit phone.');
       return;
     }
-    if (skipSMS) {
-      const snap = await db.collection('members').doc(raw).get();
+
+    // 2) If we ever want to skip SMS in dev, we could keep old logic here.
+    //    But now skipSMS=false, so we always go to the OTP flow below.
+
+    // 3) INITIATE reCAPTCHA
+    try {
+      await initRecaptcha();
+    } catch (err) {
+      console.error('Error initializing reCAPTCHA:', err);
+      alert('reCAPTCHA setup failed; reload and try again.');
+      return;
+    }
+
+    // 4) CALL Firebase PHONE AUTH
+    try {
+      const confirmation = await auth.signInWithPhoneNumber(
+        '+1' + raw,
+        window.recaptchaVerifier
+      );
+      // Store the confirmation object so otp-submit can use it
+      window.confirmationResult = confirmation;
+
+      // 5) SHOW the previously‐hidden OTP input group
+      document.getElementById('otp-entry').style.display = 'block';
+    } catch (err) {
+      console.error('signInWithPhoneNumber error:', err);
+      if (err.code === 'auth/invalid-app-credential') {
+        alert('reCAPTCHA token invalid/expired; please try again.');
+      } else {
+        alert('SMS not sent: ' + err.message);
+      }
+    }
+  };
+
+  // ─────────────────────────────────────────────────────────────────────
+  // 4c-2) VERIFY OTP CODE
+  // ─────────────────────────────────────────────────────────────────────
+  document.getElementById('otp-submit').onclick = async () => {
+    const code = document.getElementById('otp-input').value.trim();
+    if (code.length !== 6) {
+      alert('Enter the 6-digit code.');
+      return;
+    }
+
+    try {
+      // 1) CONFIRM the OTP with Firebase
+      const cred = await window.confirmationResult.confirm(code);
+      const user = cred.user; // e.g. { phoneNumber: "+11234567890", … }
+      // Strip the "+1" to get "1234567890"
+      const phoneDigits = user.phoneNumber.replace('+1', '');
+      currentPhone = phoneDigits;
+
+      // 2) SAVE to localStorage + cookie so next visit auto-resumes
+      savePhone(currentPhone);
+
+      // 3) LOOK UP Firestore “members/<phone>” to confirm onList
+      const snap = await db.collection('members').doc(currentPhone).get();
       if (!snap.exists) {
-        alert('Phone not found in members.');
+        alert('No membership record found. Please sign up first.');
         return;
       }
       const data = snap.data();
       if (!data.onList) {
-        alert('Membership not approved.');
+        alert('Your membership is not approved yet.');
         return;
       }
-      currentPhone = raw;
-      currentName  = data.name || data.Name || 'No Name';
-      savePhone(currentPhone);
+
+      // 4) SET currentName + hide login overlay + show main app
+      currentName = data.name || data.Name || 'No Name';
+      isFirstLogin = false;
       document.getElementById('signed-in').innerText = `Signed in as ${currentName}`;
       document.getElementById('phone-entry').style.display = 'none';
       unlockCommentsAndRSVP();
       await loadEventData();
-      return;
+    } catch (err) {
+      console.error('OTP confirm error:', err);
+      alert('Code incorrect: ' + err.message);
     }
-    // (OTP flow would go here if not skipping)
   };
+
+
 
   // 4d) Create Dummy Event (temporary)
   document.getElementById('btn-create-dummy').onclick = async () => {
