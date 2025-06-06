@@ -5,8 +5,8 @@
    (colors, fonts, etc.)
 ------------------------------------------------ */
 :root {
-  --muted-color1-start: rgba(166,162,158, 0.5);   /* #a6a29e @50% */
-  --muted-color1-end:   rgba(224,215,222, 0.3);   /* #e0d7de @30% */
+  --muted-color1-start: rgba(172, 143, 114, 0.5);   /* #a6a29e @50% */
+  --muted-color1-end:   rgba(190, 139, 179, 0.3);   /* #e0d7de @30% */
 
   --muted-color2-start: rgba(193,176,152, 0.5);   /* #c1b098 @50% */
   --muted-color2-end:   rgba(229,214,197, 0.3);   /* #e5d6c5 @30% */
@@ -366,7 +366,7 @@ body::after {
 }
 #event-image {
   width: 100%;
-  max-height: 200px;
+  max-height: 500px;
   object-fit: cover;
   border-radius: 8px;
 }

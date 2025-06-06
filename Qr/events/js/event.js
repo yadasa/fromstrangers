@@ -772,56 +772,93 @@ async function handleRSVP(status) {
 
 // 10. Load comments (only after login)
 function loadComments() {
-  const commentsRef = db.collection('events')
+  const commentsRef = db
+    .collection('events')
     .doc(eventId)
     .collection('comments')
+    // NOTE: this just makes sure Firestore returns them roughly in timestamp order.
     .orderBy('timestamp', 'desc');
-  commentsRef.onSnapshot(snapshot => {
+
+  commentsRef.onSnapshot(async (snapshot) => {
     const list = document.getElementById('comments-list');
-    list.innerHTML = '';
-    snapshot.forEach(async doc => {
+    list.innerHTML = ''; // clear out old comments
+
+    // 1) Turn each Firestore doc into a promise that fetches memberData (if needed)
+    const promises = snapshot.docs.map(async (doc) => {
       const c = doc.data();
+      // Extract a numeric timestamp (in ms) for sorting:
+      const ts = c.timestamp && c.timestamp.toMillis ? c.timestamp.toMillis() : 0;
+
+      let memberData = null;
+      if (c.user) {
+        // fetch the member doc exactly once
+        const memSnap = await db.collection('members').doc(c.user).get();
+        memberData = memSnap.exists ? memSnap.data() : null;
+      }
+
+      return {
+        id: doc.id,
+        comment: c,
+        member: memberData,
+        ts,
+      };
+    });
+
+    // 2) Wait for ALL lookups to finish before touching the DOM
+    const allComments = await Promise.all(promises);
+
+    // 3) Sort by ts (descending); change to (a.ts - b.ts) if you want ascending
+    allComments.sort((a, b) => b.ts - a.ts);
+
+    // 4) Now build & append each comment in that exact order
+    allComments.forEach(({ id, comment: c, member, ts }) => {
       const row = document.createElement('div');
       row.className = 'comment';
-      row.dataset.commentId = doc.id;
+      row.dataset.commentId = id;
 
-      // Avatar
+      // ── Avatar ──
       const avatarEl = document.createElement('div');
       avatarEl.className = 'comment-avatar';
-      if (c.user) {
-        const memSnap = await db.collection('members').doc(c.user).get();
-        if (memSnap.exists && memSnap.data().profileImage) {
-          avatarEl.innerHTML = '';
-          const img = document.createElement('img');
-          img.src = memSnap.data().profileImage;
-          avatarEl.appendChild(img);
-        } else {
-          const name = memSnap.exists
-                       ? (memSnap.data().name || memSnap.data().Name)
-                       : '??';
-          const pick = (parseInt(c.user.slice(-2)) % 3) + 1;
-          const gradient = getComputedStyle(document.documentElement)
-                            .getPropertyValue(`--muted-color${pick}-start`).trim()
-                            + ',\n'
-                            + getComputedStyle(document.documentElement)
-                            .getPropertyValue(`--muted-color${pick}-end`).trim();
-          avatarEl.style.background = `radial-gradient(circle at center, ${gradient})`;
-          const initials = name.split(' ')
-                               .map(s => s[0]).join('').toUpperCase();
-          avatarEl.textContent = initials;
-        }
+
+      if (c.user && member && member.profileImage) {
+        avatarEl.innerHTML = '';
+        const img = document.createElement('img');
+        img.src = member.profileImage;
+        avatarEl.appendChild(img);
+      } else if (c.user) {
+        // no profileImage → show initials on a gradient
+        const name = member
+          ? (member.name || member.Name || 'Unknown')
+          : 'Unknown';
+
+        const pick = (parseInt(c.user.slice(-2)) % 3) + 1;
+        const gradient =
+          getComputedStyle(document.documentElement)
+            .getPropertyValue(`--muted-color${pick}-start`).trim() +
+          ',\n' +
+          getComputedStyle(document.documentElement)
+            .getPropertyValue(`--muted-color${pick}-end`).trim();
+        avatarEl.style.background = `radial-gradient(circle at center, ${gradient})`;
+        const initials = name
+          .split(' ')
+          .map((s) => s[0])
+          .join('')
+          .toUpperCase();
+        avatarEl.textContent = initials;
       } else {
+        // system comment → a little gear icon
         avatarEl.style.background = 'rgba(0,0,0,0.1)';
         avatarEl.textContent = '⚙';
       }
+
       row.appendChild(avatarEl);
 
-      // Content container
+      // ── Content container ──
       const content = document.createElement('div');
       content.className = 'comment-content';
       content.style.position = 'relative';
 
-      // Delete link if owned by currentPhone
+      // Delete link if current user owns it
       if (c.user === currentPhone) {
         const delLink = document.createElement('span');
         delLink.textContent = 'x';
@@ -832,23 +869,30 @@ function loadComments() {
         delLink.style.cursor = 'pointer';
         delLink.style.fontSize = '0.75rem';
         delLink.addEventListener('click', async () => {
-          if (!confirm("Are you sure you want to delete this?")) return;
-          await db.collection('events')
-                  .doc(eventId)
-                  .collection('comments')
-                  .doc(doc.id)
-                  .delete();
+          if (!confirm('Are you sure you want to delete this?')) return;
+          await db
+            .collection('events')
+            .doc(eventId)
+            .collection('comments')
+            .doc(id)
+            .delete();
         });
         content.appendChild(delLink);
       }
 
-      // Header (name + timestamp)
+      // ── Header (name + timestamp) ──
       const header = document.createElement('div');
       header.className = 'comment-header';
+
       const nameSpan = document.createElement('span');
       nameSpan.className = 'comment-name';
-      nameSpan.textContent = c.system ? 'System' : (c.name || 'Unknown');
+      nameSpan.textContent = c.system
+        ? 'System'
+        : member
+        ? (member.name || member.Name || 'Unknown')
+        : (c.name || 'Unknown');
       header.appendChild(nameSpan);
+
       const tsSpan = document.createElement('span');
       tsSpan.className = 'comment-timestamp';
       if (c.timestamp && c.timestamp.toDate) {
@@ -859,11 +903,12 @@ function loadComments() {
         tsSpan.textContent = '';
       }
       header.appendChild(tsSpan);
+
       content.appendChild(header);
 
-      // Images (if any)
+      // ── Images (if any) ──
       if (c.imageUrls && Array.isArray(c.imageUrls)) {
-        c.imageUrls.forEach(url => {
+        c.imageUrls.forEach((url) => {
           const imgEl = document.createElement('img');
           imgEl.src = url;
           imgEl.style.maxWidth = '100%';
@@ -873,7 +918,7 @@ function loadComments() {
         });
       }
 
-      // GIF (if any)
+      // ── GIF (if any) ──
       if (c.gifUrl) {
         const gifImg = document.createElement('img');
         gifImg.src = c.gifUrl;
@@ -884,7 +929,7 @@ function loadComments() {
         content.appendChild(gifImg);
       }
 
-      // Text
+      // ── Text ──
       if (c.text) {
         const textDiv = document.createElement('div');
         textDiv.className = 'comment-text';
@@ -892,24 +937,24 @@ function loadComments() {
         content.appendChild(textDiv);
       }
 
-      // Reply link (if not system)
+      // ── Reply button (unless it's a system comment) ──
       if (!c.system) {
         const actions = document.createElement('div');
         actions.className = 'comment-actions';
         const replyBtn = document.createElement('button');
         replyBtn.textContent = 'Reply';
-        replyBtn.onclick = () => showReplyInput(doc.id, content);
+        replyBtn.onclick = () => showReplyInput(id, content);
         actions.appendChild(replyBtn);
         content.appendChild(actions);
       }
 
-      // Replies container
+      // ── “Replies” container ──
       const repliesContainer = document.createElement('div');
       repliesContainer.className = 'comment-replies';
       content.appendChild(repliesContainer);
 
-      // Load replies under this comment
-      loadReplies(doc.id, repliesContainer);
+      // Kick off loading replies for this comment:
+      loadReplies(id, repliesContainer);
 
       row.appendChild(content);
       list.appendChild(row);
