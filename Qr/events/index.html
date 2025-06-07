@@ -277,12 +277,19 @@
               let rawDate = data.date;
               let dateObj;
               if (rawDate && typeof rawDate.toDate === 'function') {
-                dateObj = rawDate.toDate();
+                // Firestore Timestamp → grab UTC Y/M/D to avoid TZ shift
+                const dt = rawDate.toDate();
+                dateObj   = new Date(dt.getUTCFullYear(), dt.getUTCMonth(), dt.getUTCDate());
+              } else if (typeof rawDate === 'string') {
+                // ISO "YYYY-MM-DD" → treat as local date
+                const [y, m, d] = rawDate.split('-').map(Number);
+                dateObj = new Date(y, m - 1, d);
               } else {
+                // fallback (Date object, etc.)
                 dateObj = new Date(rawDate);
               }
               if (isNaN(dateObj)) {
-                return; // skip if invalid
+                return; // skip invalid
               }
 
               // Push into array for list sorting/filtering
@@ -300,7 +307,7 @@
             eventsArray.forEach(evt => {
               if (evt.dateObj >= startOfToday) {
                 const formattedDate = formatForList(evt.dateObj);
-                const buttonText = `${formattedDate} - ${evt.title}`;
+                const buttonText    = `${formattedDate} - ${evt.title}`;
 
                 const btn = document.createElement('button');
                 btn.className = 'event-button';
@@ -335,24 +342,24 @@
       // Render the calendar for a given year/month
       function renderCalendar(year, month) {
         calendarContainer.innerHTML = '';
-        calendarTitleElem.textContent = 
+        calendarTitleElem.textContent =
           `${year} – ${String(month).padStart(2, '0')}`;
 
         const table = document.createElement('table');
         table.className = 'calendar';
 
-        // Header row: Sun, Mon, Tue, Wed, Thu, Fri, Sat
+        // Header row
         const thead = document.createElement('thead');
         const headerRow = document.createElement('tr');
-        ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].forEach(weekday => {
+        ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].forEach(day => {
           const th = document.createElement('th');
-          th.textContent = weekday;
+          th.textContent = day;
           headerRow.appendChild(th);
         });
         thead.appendChild(headerRow);
         table.appendChild(thead);
 
-        // Compute first day and number of days
+        // Compute first day and days in month
         const firstDay    = new Date(year, month - 1, 1).getDay();
         const daysInMonth = new Date(year, month, 0).getDate();
 
@@ -371,17 +378,13 @@
               td.textContent = '';
             } else {
               td.textContent = dateNum;
-
-              const cellDateStr = 
-                `${year}-${String(month).padStart(2,'0')}-${String(dateNum).padStart(2,'0')}`;
+              const cellDateStr = `${year}-${String(month).padStart(2,'0')}-${String(dateNum).padStart(2,'0')}`;
               if (eventMap[cellDateStr]) {
                 td.classList.add('event-day');
                 td.addEventListener('click', () => {
-                  window.location.href = 
-                    `/events/eventid.html?e=${encodeURIComponent(eventMap[cellDateStr])}`;
+                  window.location.href = `/events/eventid.html?e=${encodeURIComponent(eventMap[cellDateStr])}`;
                 });
               }
-
               dateNum++;
             }
             tr.appendChild(td);
