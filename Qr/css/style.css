@@ -679,3 +679,102 @@ header #user-name {
   display: block;
   margin: 1rem auto;
 }
+
+:root {
+  --gold-light:  #d4b38c;
+  --gold-dark:   #b4976e;
+  --silver-light:#d3d3d3;
+  --silver-dark: #a8a8a8;
+  --bronze-light:#c09964;
+  --bronze-dark: #996f44;
+  --noise-opacity: 0.03;    /* optional noise overlay */
+}
+
+/* center the page title */
+#leaderboard-title {
+  text-align: center;
+}
+
+/* container gets a soft drop-shadow instead of a hard border */
+#leaderboard-list {
+  background: #f9f7f0;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  overflow: hidden;
+}
+
+/* each row with a gentle inner separator, no hard borders */
+.leaderboard-item {
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  padding: 1rem 1.5rem;
+  background: #fff;
+  box-shadow: inset 0 -1px rgba(0,0,0,0.05);
+}
+
+/* remove any leftover bottom-border rules */
+.leaderboard-item:last-child {
+  box-shadow: inset 0 0 rgba(0,0,0,0); 
+}
+
+/* noise overlay pseudo-element (optional) */
+
+.leaderboard-item::before {
+  content: '';
+  position: absolute;
+  top:0;left:0;right:0;bottom:0;
+  background: url('path/to/noise.png') repeat;
+  opacity: var(--noise-opacity);
+  pointer-events: none;
+}
+
+
+/* 3D gradient + highlight + shadow on top 3 rows */
+.leaderboard-item.first {
+  background: linear-gradient(
+    145deg,
+    var(--gold-light),
+    var(--gold-dark)
+  );
+  box-shadow:
+    0 4px 8px rgba(0,0,0,0.15),        /* drop shadow */
+    inset 0 1px 0 rgba(255,255,255,0.4) /* inner highlight */
+  ;
+  color: #000;
+  text-shadow: 0 1px 1px rgba(255,255,255,0.5);
+}
+
+.leaderboard-item.second {
+  background: linear-gradient(
+    145deg,
+    var(--silver-light),
+    var(--silver-dark)
+  );
+  box-shadow:
+    0 4px 8px rgba(0,0,0,0.15),
+    inset 0 1px 0 rgba(255,255,255,0.4)
+  ;
+  color: #000;
+  text-shadow: 0 1px 1px rgba(255,255,255,0.5);
+}
+
+.leaderboard-item.third {
+  background: linear-gradient(
+    145deg,
+    var(--bronze-light),
+    var(--bronze-dark)
+  );
+  box-shadow:
+    0 4px 8px rgba(0,0,0,0.15),
+    inset 0 1px 0 rgba(255,255,255,0.4)
+  ;
+  color: #000;
+  text-shadow: 0 1px 1px rgba(255,255,255,0.5);
+}
+
+/* keep the “…” placeholder simple */
+.leaderboard-item.placeholder span:first-child {
+  font-style: italic;
+  color: var(--green-light);
+}
