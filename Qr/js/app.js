@@ -69,8 +69,10 @@ function loadPhone() {
     if (!snap.exists) return;
     const data = snap.data();
     if (!data.onList) return;  // ensure approved
+    testPhone    = saved;
+    memberOnList = true;
 
-    const memberName = data.name || data.Name || 'No Name';
+    memberName = data.name || data.Name || 'No Name';
     document.getElementById('user-name').innerText = memberName;
     document.getElementById('phone-entry').style.display = 'none';
     document.getElementById('app').style.display        = 'block';
@@ -453,4 +455,15 @@ window.addEventListener('load', () => {
       location.reload();
     };
   }
+
+    const btnLeaderboard = document.getElementById('btn-leaderboard');
+    if (btnLeaderboard) {
+      btnLeaderboard.onclick = () => {
+        if (!testPhone) {
+          return alert('Enter your phone first.');
+        }
+        window.location.href = 'leaderboard.html';
+      };
+    }
+
 });

@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Leaderboard</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js" defer></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js" defer></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js" defer></script>
+  <script src="js/firebaseConfig.js" defer></script>
+  <script src="js/leaderboard.js" defer></script>
+</head>
+<body>
+  <div id="recaptcha-container"></div>
+  <!-- Phone-entry same as index.html -->
+  <div id="phone-entry">…</div>
+
+  <div id="app" style="display:none; max-width:400px; margin:2rem auto;">
+    <a class="back-arrow" href="index.html">←</a>
+    <h1 id="leaderboard-title">Leaderboard</h1>
+    <!--<a id="link-rubric" href="#" style="font-size:.9rem; display:block; margin-bottom:1rem;">
+      How to earn points
+    </a>-->
+    <div id="leaderboard-list"></div>
+  </div>
+
+  <!-- Rubric modal -->
+  <div id="rubric-overlay" style="display:none;
+       position:fixed; top:0;left:0;right:0;bottom:0;
+       background:rgba(0,0,0,0.5);
+       align-items:center; justify-content:center; z-index:1000;">
+    <div style="background:#fff;padding:1.5rem;border-radius:8px; max-width:320px; width:90%;">
+      <h2>Points Rubric</h2>
+      <ul id="rubric-list" style="margin:1rem 0;"></ul>
+      <button id="rubric-close" style="padding:.5rem 1rem;">Close</button>
+    </div>
+  </div>
+</body>
+</html>
