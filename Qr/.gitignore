@@ -7,3 +7,4 @@ package-lock.json
 
 # ignore service account key
 /api/drive/service-account.json
+.env.local
