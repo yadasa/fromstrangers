@@ -39,6 +39,24 @@ export default async function handler(req, res) {
   });
   const drive = google.drive({ version: 'v3', auth });
 
+  // 1) pull down metadata so we know if this is a video
+  let meta;
+  try {
+    const m = await drive.files.get({
+      fileId: id,
+      fields: 'mimeType,thumbnailLink'
+    });
+    meta = m.data;
+  } catch (err) {
+    console.error('failed to fetch metadata for thumb:', err);
+    // fall through and attempt to stream file
+  }
+
+  // 2) if it’s a video and Drive gave us a thumbnailLink, redirect there
+  if (meta && meta.mimeType?.startsWith('video/') && meta.thumbnailLink) {
+    return res.redirect(meta.thumbnailLink);
+  }
+
   try {
     /* Drive has no official “thumbnailSize” param for files.get alt=media.
        We simply grab the file bytes and let the <img> element scale it.
