@@ -443,20 +443,50 @@ async function loadGallery() {
 
 // renderGallery remains unchanged, but ensure it uses item.ownerPhone or item.appProperties.owner to check ownership, and looks up uploaderName via Firestore when creating captions.
 
-// 10) renderGallery (unchanged except uploaderName lookup) -----------------
+// 10) renderGallery (full, with visibility filter)
 async function renderGallery(items, append = false) {
+  const cutoff = new Date('2025-06-09T23:59:59Z');
+  const visibleItems = [];
+  for (const item of items) {
+    try {
+      const snap = await db.collection('photos').doc(item.id).get();
+
+      if (snap.exists) {
+        // if visibility explicitly false → skip
+        if (snap.data().visibility === false) {
+          continue;
+        }
+      } else {
+        // no doc at all → skip only if createdTime is after cutoff
+        if (new Date(item.createdTime) > cutoff) {
+          continue;
+        }
+      }
+    } catch (e) {
+      console.error('visibility/filter error for', item.id, e);
+      // on error, fall back to showing it
+    }
+    visibleItems.push(item);
+  }
+  items = visibleItems;
+
+  // 2) Clear gallery if not appending
   if (!append) {
     gallery.innerHTML = '';
   }
+  // 3) Handle no items
   if (!items.length) {
     if (!append) {
-      gallery.innerHTML = '<p style="grid-column:1/-1;text-align:center;color:var(--green-light);">No media yet</p>';
+      gallery.innerHTML = 
+        '<p style="grid-column:1/-1;text-align:center;color:var(--green-light);">No media yet</p>';
     }
     return;
   }
 
   let lastWeekLabel = '';
   let startIndex = 0;
+
+  // 4) If appending, fill up to the next multiple of 3
   if (append) {
     const existingCards = gallery.querySelectorAll('.photo-card').length;
     const remainder = existingCards % 3;
@@ -466,13 +496,17 @@ async function renderGallery(items, append = false) {
         const groupItems = items.slice(0, fillCount);
         const groupCards = [];
         const loadPromises = [];
+
         for (const item of groupItems) {
+          // compute week divider
           const createdDate = new Date(item.createdTime);
           const day = createdDate.getDay();
           const offset = day === 0 ? 6 : day - 1;
           const monday = new Date(createdDate);
           monday.setDate(createdDate.getDate() - offset);
-          const weekOf = monday.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+          const weekOf = monday.toLocaleDateString('en-US', {
+            year: 'numeric', month: 'short', day: 'numeric'
+          });
           const weekLabel = `Week of ${weekOf}`;
           if (weekLabel !== lastWeekLabel) {
             const divider = document.createElement('div');
@@ -481,11 +515,19 @@ async function renderGallery(items, append = false) {
             gallery.append(divider);
             lastWeekLabel = weekLabel;
           }
+
+          // create card
           const card = document.createElement('div');
           card.className = 'photo-card';
           if (selectMode) card.classList.add('select-mode');
-          const isVideo = item.mimeType ? item.mimeType.startsWith('video/') : /\.(mp4|mov|avi|webm)$/i.test(item.name);
+
+          // is it a video?
+          const isVideo = item.mimeType
+            ? item.mimeType.startsWith('video/')
+            : /\.(mp4|mov|avi|webm)$/i.test(item.name);
           if (isVideo) card.classList.add('video');
+
+          // checkbox
           const cb = document.createElement('input');
           cb.type = 'checkbox';
           cb.className = 'photo-checkbox';
@@ -498,10 +540,13 @@ async function renderGallery(items, append = false) {
               card.classList.remove('selected');
             }
             btnShare.disabled = selectedItems.size === 0;
-            const canDelete = Array.from(selectedItems).every(it => it.ownerPhone === userPhone);
+            const canDelete = Array.from(selectedItems)
+              .every(it => it.ownerPhone === userPhone);
             btnDelete.disabled = !canDelete || selectedItems.size === 0;
           };
           card.append(cb);
+
+          // img or video thumbnail
           const img = document.createElement('img');
           if (isVideo) {
             img.src = item.thumbnailLink;
@@ -515,32 +560,48 @@ async function renderGallery(items, append = false) {
             showMedia(item);
           };
           card.append(img);
+
+          // video play icon
           if (isVideo) {
             const playIcon = document.createElement('div');
             playIcon.className = 'play-icon';
             playIcon.innerText = '▶';
             card.append(playIcon);
           }
+
+          // caption
           const cap = document.createElement('div');
           cap.className = 'photo-caption';
-          cap.appendChild(document.createElement('div')).innerText = new Date(item.createdTime).toLocaleDateString();
+          cap.appendChild(document.createElement('div'))
+            .innerText = new Date(item.createdTime)
+              .toLocaleDateString();
+
+          // uploaderName lookup
           let uploaderName = 'Strangers';
           try {
-            const itemSnap = await db.collection('photos').doc(item.id).get();
+            const itemSnap = await db.collection('photos')
+              .doc(item.id).get();
             if (itemSnap.exists) {
               uploaderName = itemSnap.data().ownerName || uploaderName;
             }
           } catch (e) {
             console.error('Failed to fetch ownerName', e);
           }
-          cap.appendChild(document.createElement('div')).innerText = `From ${uploaderName}`;
+          cap.appendChild(document.createElement('div'))
+            .innerText = `From ${uploaderName}`;
+
           card.append(cap);
+
+          // like button
           const likeBtn = document.createElement('button');
           likeBtn.className = 'photo-like-btn';
           likeBtn.innerText = '♡ 0';
           likeBtn.onclick = async () => {
             if (likeBtn.dataset.liked === 'true') {
-              await db.collection('photos').doc(item.id).collection('likes').doc(userPhone).delete();
+              await db.collection('photos')
+                .doc(item.id)
+                .collection('likes')
+                .doc(userPhone).delete();
               likeBtn.dataset.liked = 'false';
               let count = parseInt(likeBtn.innerText.split(' ')[1]) || 0;
               count = Math.max(0, count - 1);
@@ -548,7 +609,11 @@ async function renderGallery(items, append = false) {
               likeBtn.classList.remove('liked');
               updatePoints('like', -1);
             } else {
-              await db.collection('photos').doc(item.id).collection('likes').doc(userPhone).set({ liked: true });
+              await db.collection('photos')
+                .doc(item.id)
+                .collection('likes')
+                .doc(userPhone)
+                .set({ liked: true });
               likeBtn.dataset.liked = 'true';
               let count = parseInt(likeBtn.innerText.split(' ')[1]) || 0;
               count = count + 1;
@@ -557,14 +622,20 @@ async function renderGallery(items, append = false) {
               updatePoints('like', 1);
             }
           };
-          db.collection('photos').doc(item.id).collection('likes').get().then(snap => {
-            const count = snap.size;
-            const liked = snap.docs.some(doc => doc.id === userPhone);
-            likeBtn.textContent = count > 0 ? `♥ ${count}` : '♥';
-            likeBtn.dataset.liked = liked ? 'true' : 'false';
-            likeBtn.classList.toggle('liked', liked);
-          });
+          db.collection('photos')
+            .doc(item.id)
+            .collection('likes')
+            .get()
+            .then(snap => {
+              const count = snap.size;
+              const liked = snap.docs.some(doc => doc.id === userPhone);
+              likeBtn.textContent = count > 0 ? `♥ ${count}` : '♥';
+              likeBtn.dataset.liked = liked ? 'true' : 'false';
+              likeBtn.classList.toggle('liked', liked);
+            });
           card.append(likeBtn);
+
+          // delete button if owner
           if (item.ownerPhone === userPhone) {
             const delBtn = document.createElement('button');
             delBtn.className = 'photo-delete';
@@ -579,41 +650,50 @@ async function renderGallery(items, append = false) {
             };
             card.append(delBtn);
           }
+
+          // initial CSS for animation
           card.style.transform = 'scale(0.9)';
           card.style.opacity = '0';
           card.style.transition = 'transform 0.3s ease, opacity 0.3s ease';
+
           groupCards.push(card);
           loadPromises.push(new Promise(res => {
-            if (img.complete) {
-              return res();
-            }
-            img.onload  = res;
+            if (img.complete) return res();
+            img.onload = res;
             img.onerror = res;
           }));
         }
+
         await Promise.all(loadPromises);
         groupCards.forEach((card, idx) => {
           gallery.append(card);
           setTimeout(() => {
-            card.style.opacity   = '1';
+            card.style.opacity = '1';
             card.style.transform = 'scale(1)';
           }, idx * 100);
         });
+
         startIndex = fillCount;
       }
     }
   }
+
+  // 5) Main loop for rows of 3
   for (let index = startIndex; index < items.length; index += 3) {
     const groupItems = items.slice(index, index + 3);
     const groupCards = [];
     const loadPromises = [];
+
     for (const item of groupItems) {
+      // repeat exactly the same card‐building code as above...
       const createdDate = new Date(item.createdTime);
       const day = createdDate.getDay();
       const offset = day === 0 ? 6 : day - 1;
       const monday = new Date(createdDate);
       monday.setDate(createdDate.getDate() - offset);
-      const weekOf = monday.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+      const weekOf = monday.toLocaleDateString('en-US', {
+        year: 'numeric', month: 'short', day: 'numeric'
+      });
       const weekLabel = `Week of ${weekOf}`;
       if (weekLabel !== lastWeekLabel) {
         const divider = document.createElement('div');
@@ -622,11 +702,16 @@ async function renderGallery(items, append = false) {
         gallery.append(divider);
         lastWeekLabel = weekLabel;
       }
+
       const card = document.createElement('div');
       card.className = 'photo-card';
       if (selectMode) card.classList.add('select-mode');
-      const isVideo = item.mimeType ? item.mimeType.startsWith('video/') : /\.(mp4|mov|avi|webm)$/i.test(item.name);
+
+      const isVideo = item.mimeType
+        ? item.mimeType.startsWith('video/')
+        : /\.(mp4|mov|avi|webm)$/i.test(item.name);
       if (isVideo) card.classList.add('video');
+
       const cb = document.createElement('input');
       cb.type = 'checkbox';
       cb.className = 'photo-checkbox';
@@ -639,10 +724,12 @@ async function renderGallery(items, append = false) {
           card.classList.remove('selected');
         }
         btnShare.disabled = selectedItems.size === 0;
-        const canDelete = Array.from(selectedItems).every(it => it.ownerPhone === userPhone);
+        const canDelete = Array.from(selectedItems)
+          .every(it => it.ownerPhone === userPhone);
         btnDelete.disabled = !canDelete || selectedItems.size === 0;
       };
       card.append(cb);
+
       const img = document.createElement('img');
       if (isVideo) {
         img.src = item.thumbnailLink;
@@ -656,32 +743,43 @@ async function renderGallery(items, append = false) {
         showMedia(item);
       };
       card.append(img);
+
       if (isVideo) {
         const playIcon = document.createElement('div');
         playIcon.className = 'play-icon';
         playIcon.innerText = '▶';
         card.append(playIcon);
       }
+
       const cap = document.createElement('div');
       cap.className = 'photo-caption';
-      cap.appendChild(document.createElement('div')).innerText = new Date(item.createdTime).toLocaleDateString();
+      cap.appendChild(document.createElement('div'))
+        .innerText = new Date(item.createdTime)
+          .toLocaleDateString();
+
       let uploaderName = 'Strangers';
       try {
-        const itemSnap = await db.collection('photos').doc(item.id).get();
+        const itemSnap = await db.collection('photos')
+          .doc(item.id).get();
         if (itemSnap.exists) {
           uploaderName = itemSnap.data().ownerName || uploaderName;
         }
       } catch (e) {
         console.error('Failed to fetch ownerName', e);
       }
-      cap.appendChild(document.createElement('div')).innerText = `From ${uploaderName}`;
+      cap.appendChild(document.createElement('div'))
+        .innerText = `From ${uploaderName}`;
       card.append(cap);
+
       const likeBtn = document.createElement('button');
       likeBtn.className = 'photo-like-btn';
       likeBtn.innerText = '♡ 0';
       likeBtn.onclick = async () => {
         if (likeBtn.dataset.liked === 'true') {
-          await db.collection('photos').doc(item.id).collection('likes').doc(userPhone).delete();
+          await db.collection('photos')
+            .doc(item.id)
+            .collection('likes')
+            .doc(userPhone).delete();
           likeBtn.dataset.liked = 'false';
           let count = parseInt(likeBtn.innerText.split(' ')[1]) || 0;
           count = Math.max(0, count - 1);
@@ -689,7 +787,11 @@ async function renderGallery(items, append = false) {
           likeBtn.classList.remove('liked');
           updatePoints('like', -1);
         } else {
-          await db.collection('photos').doc(item.id).collection('likes').doc(userPhone).set({ liked: true });
+          await db.collection('photos')
+            .doc(item.id)
+            .collection('likes')
+            .doc(userPhone)
+            .set({ liked: true });
           likeBtn.dataset.liked = 'true';
           let count = parseInt(likeBtn.innerText.split(' ')[1]) || 0;
           count = count + 1;
@@ -698,14 +800,19 @@ async function renderGallery(items, append = false) {
           updatePoints('like', 1);
         }
       };
-      db.collection('photos').doc(item.id).collection('likes').get().then(snap => {
-        const count = snap.size;
-        const liked = snap.docs.some(doc => doc.id === userPhone);
-        likeBtn.textContent = count > 0 ? `♥ ${count}` : '♥';
-        likeBtn.dataset.liked = liked ? 'true' : 'false';
-        likeBtn.classList.toggle('liked', liked);
-      });
+      db.collection('photos')
+        .doc(item.id)
+        .collection('likes')
+        .get()
+        .then(snap => {
+          const count = snap.size;
+          const liked = snap.docs.some(doc => doc.id === userPhone);
+          likeBtn.textContent = count > 0 ? `♥ ${count}` : '♥';
+          likeBtn.dataset.liked = liked ? 'true' : 'false';
+          likeBtn.classList.toggle('liked', liked);
+        });
       card.append(likeBtn);
+
       if (item.ownerPhone === userPhone) {
         const delBtn = document.createElement('button');
         delBtn.className = 'photo-delete';
@@ -720,28 +827,30 @@ async function renderGallery(items, append = false) {
         };
         card.append(delBtn);
       }
+
       card.style.transform = 'scale(0.9)';
       card.style.opacity = '0';
       card.style.transition = 'transform 0.3s ease, opacity 0.3s ease';
+
       groupCards.push(card);
       loadPromises.push(new Promise(res => {
-        if (img.complete) {
-          return res();
-        }
-        img.onload  = res;
+        if (img.complete) return res();
+        img.onload = res;
         img.onerror = res;
       }));
     }
+
     await Promise.all(loadPromises);
     groupCards.forEach((card, idx) => {
       gallery.append(card);
       setTimeout(() => {
-        card.style.opacity   = '1';
+        card.style.opacity = '1';
         card.style.transform = 'scale(1)';
       }, idx * 100);
     });
   }
 }
+
 
 // 11) Select-multiple toggle --------------------------------------------------
 btnSelect.innerText = 'Select multiple';

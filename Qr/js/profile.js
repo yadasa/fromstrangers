@@ -5,6 +5,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const auth = firebase.auth();
   const db   = firebase.firestore();
 
+  // Your profile‐only Drive folder ID
+  const PROFILE_DRIVE_FOLDER_ID = '1zmOhvhrskbhtnot2RD86MNU__6bmuxo2';
+
   const appEl       = document.getElementById('profile-app');
   const hdrTitle    = document.getElementById('header-title');
   const backArrow   = document.getElementById('back-arrow');
@@ -36,7 +39,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   async function hashHex(str) {
     const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
-    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+    return Array.from(new Uint8Array(buf))
+      .map(b => b.toString(16).padStart(2,'0')).join('');
   }
 
   async function generateProfileId(phone) {
@@ -78,12 +82,12 @@ document.addEventListener('DOMContentLoaded', () => {
     profileDocId = doc.id;
     const data = doc.data();
 
-    originalName      = data.name || '';
-    originalInsta     = data.instagramHandle || '';
-    nameView.innerText   = originalName;
-    nameInput.value      = originalName;
-    instaView.innerText  = originalInsta;
-    instaInput.value     = originalInsta;
+    originalName    = data.name || '';
+    originalInsta   = data.instagramHandle || '';
+    nameView.innerText  = originalName;
+    nameInput.value     = originalName;
+    instaView.innerText = originalInsta;
+    instaInput.value    = originalInsta;
 
     hdrTitle.innerText = `Profile: ${originalName}`;
     profileImg.src     = data.profilePic
@@ -92,12 +96,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (profileDocId !== me) editBtn.style.display = 'none';
 
-    // mark dirty on edits
     [nameInput, instaInput, pinInput, confirmPin].forEach(el => {
       el.addEventListener('input', () => {
         dirty = true;
         if (el === pinInput || el === confirmPin) {
-          pwError.style.display = (confirmPin.value && pinInput.value !== confirmPin.value) ? 'block' : 'none';
+          pwError.style.display = (confirmPin.value && pinInput.value !== confirmPin.value)
+            ? 'block' : 'none';
         }
       });
     });
@@ -118,7 +122,6 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   cancelBtn.onclick = () => {
-    // revert to original
     nameInput.value  = originalName;
     instaInput.value = originalInsta;
     pinInput.value   = '';
@@ -128,7 +131,7 @@ document.addEventListener('DOMContentLoaded', () => {
     appEl.classList.remove('editing');
   };
 
-  // Cropping
+  // Cropping + upload
   changePicBtn.onclick = () => imgInput.click();
   imgInput.onchange = () => {
     const f = imgInput.files[0];
@@ -139,30 +142,47 @@ document.addEventListener('DOMContentLoaded', () => {
       boundary:{width:300,height:300}
     });
     const r = new FileReader();
-    r.onload = () => cropper.bind({url:r.result});
+    r.onload = () => cropper.bind({url: r.result});
     r.readAsDataURL(f);
-    cropOverlay.style.display='flex';
+    cropOverlay.style.display = 'flex';
   };
   cropCancel.onclick = () => {
-    cropOverlay.style.display='none';
-    cropper.destroy(); cropper=null;
-    imgInput.value='';
+    cropOverlay.style.display = 'none';
+    cropper.destroy(); cropper = null;
+    imgInput.value = '';
   };
   cropConfirm.onclick = async () => {
     if (!cropper) return;
     const blob = await cropper.result('blob');
-    cropOverlay.style.display='none';
-    cropper.destroy(); cropper=null;
+    cropOverlay.style.display = 'none';
+    cropper.destroy(); cropper = null;
+
+    // build FormData with folderId override
     const fd = new FormData();
     fd.append('owner', localStorage.getItem('userPhone'));
     fd.append('ownerName', nameInput.value);
     fd.append('file', blob);
+    fd.append('folderId', PROFILE_DRIVE_FOLDER_ID);
+
     const xhr = new XMLHttpRequest();
-    xhr.open('POST','/api/drive/upload');
+    xhr.open('POST', '/api/drive/upload');
     xhr.onload = async () => {
-      if (xhr.status!==200) return alert('Upload failed');
+      if (xhr.status !== 200) {
+        console.error('Upload failed:', xhr.responseText);
+        return alert('Upload failed');
+      }
       const res = JSON.parse(xhr.responseText);
-      await db.collection('members').doc(profileDocId).update({profilePic:res.id});
+
+      // 1) update member record with new profilePic
+      await db.collection('members').doc(profileDocId)
+              .update({ profilePic: res.id });
+
+      // 2) create a Firestore doc for this file with visibility=false
+      await db.collection('photos').doc(res.id).set({
+        visibility: false
+      }, { merge: true });
+
+      // 3) update the UI
       profileImg.src = `/api/drive/thumb?id=${res.id}&sz=128`;
     };
     xhr.send(fd);
@@ -176,7 +196,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const pw = pinInput.value.trim();
     if (pw) {
       if (pw.length < 6 || !/[A-Z]/.test(pw)) {
-        return alert('Password must be ≥6 chars & include 1 uppercase.');
+        return alert('Password must be ≥6 characters and include 1 uppercase letter.');
       }
       if (pw !== confirmPin.value.trim()) {
         return alert('Passwords do not match.');
@@ -196,11 +216,9 @@ document.addEventListener('DOMContentLoaded', () => {
       await db.collection('members').doc(profileDocId).update(updates);
       saved = true; dirty = false;
       appEl.classList.remove('editing');
-      // refresh view
-      originalName = nameView.innerText = updates.name || originalName;
+      originalName  = nameView.innerText  = updates.name || originalName;
       originalInsta = instaView.innerText = updates.instagramHandle || originalInsta;
-      pinView.innerText = pw ? '••••••' : pinView.innerText;
-      hdrTitle.innerText= `Profile: ${originalName}`;
+      hdrTitle.innerText = `Profile: ${originalName}`;
       alert('Profile saved.');
     } catch (err) {
       console.error(err);

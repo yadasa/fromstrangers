@@ -142,6 +142,28 @@
     }
     .edit-buttons button { flex:1; }
 
+    .avatar-container {
+    position: relative;
+    width: 140px;
+    height: 140px;
+    border-radius: 50%;
+    /* outer light-brown ring, inner darker fade */
+    background:
+      /* outer pale brown glow */
+      radial-gradient(circle at center,
+        rgba(181,147,105,0.3) 60%,
+        rgba(181,147,105,0) 100%),
+      /* inner shadow gradient */
+      radial-gradient(circle at center,
+        rgba(0,0,0,0.25) 0%,
+        rgba(0,0,0,0) 50%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 0.5rem;
+  }
+
+
     /* Password fields hidden in view mode (span removed entirely) */
   </style>
 </head>

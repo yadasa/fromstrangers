@@ -15,7 +15,11 @@ export default async function handler(req, res) {
     return res.status(405).end('Method Not Allowed');
   }
 
-  const form = new IncomingForm({ keepExtensions: true, maxFileSize: 20 * 1024 * 1024 });
+  const form = new IncomingForm({
+    keepExtensions: true,
+    maxFileSize: 20 * 1024 * 1024
+  });
+
   form.parse(req, async (err, fields, files) => {
     if (err) {
       console.error('Form parse error:', err);
@@ -24,18 +28,16 @@ export default async function handler(req, res) {
 
     // — pull the first file out of the array Formidable gives us —
     let raw = files.file ?? files[Object.keys(files)[0]];
-    let fileArr = Array.isArray(raw) ? raw : [raw];
+    const fileArr = Array.isArray(raw) ? raw : [raw];
     const fileObj = fileArr[0];
-
     if (!fileObj) {
       return res.status(400).json({ error: 'No file uploaded' });
     }
 
     // — robust fallback for the temp filepath —
-    const filePath = fileObj.filepath 
-                ?? fileObj.filePath 
-                ?? fileObj.path;
-
+    const filePath = fileObj.filepath
+                  ?? fileObj.filePath
+                  ?? fileObj.path;
     if (!filePath) {
       console.error('Missing temp file path in upload:', fileObj);
       return res.status(500).json({ error: 'Temporary file missing' });
@@ -70,12 +72,21 @@ export default async function handler(req, res) {
     });
     const drive = google.drive({ version: 'v3', auth });
 
+    // pick folder: PROFILE_DRIVE_FOLDER_ID, else DRIVE_FOLDER_ID, else dev fallback
+    const FOLDER_ID = process.env.PROFILE_DRIVE_FOLDER_ID
+                    || process.env.DRIVE_FOLDER_ID
+                    || '1zmOhvhrskbhtnot2RD86MNU__6bmuxo2';
+    if (!FOLDER_ID) {
+      console.error('No DRIVE_FOLDER_ID or PROFILE_DRIVE_FOLDER_ID configured');
+      return res.status(500).json({ error: 'Missing folder ID' });
+    }
+
     try {
       // —————— upload to Drive ——————
       const driveRes = await drive.files.create({
         requestBody: {
           name: filename,
-          parents: [process.env.DRIVE_FOLDER_ID],
+          parents: [FOLDER_ID],
           appProperties: {
             owner:     fields.owner     || '',
             ownerName: fields.ownerName || ''
