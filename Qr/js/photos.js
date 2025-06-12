@@ -280,10 +280,13 @@ async function uploadFiles(files) {
         }
         // Record metadata in Firestore
         try {
+          const thumb = data.thumbnailLink
+            ? data.thumbnailLink
+            : `/api/drive/thumb?id=${data.id}`;
           await db.collection('photos').doc(data.id).set({
             name:          data.name,
             url:           data.webContentLink,
-            thumbnailLink: data.thumbnailLink,
+            thumbnailLink: thumb,
             ownerPhone:    userPhone,
             ownerName:     userName,
             uploaderPhone: userPhone,
@@ -305,7 +308,7 @@ async function uploadFiles(files) {
         // For video, set thumbnail image
         if (isVideo && data.thumbnailLink) {
           const thumbImg = document.createElement('img');
-          thumbImg.src = data.thumbnailLink;
+          thumbImg.src = `/api/drive/thumb?id=${item.id}`;
           thumbImg.alt = data.name;
           thumbImg.onclick = () => {
             if (selectMode) return;
@@ -548,11 +551,9 @@ async function renderGallery(items, append = false) {
 
           // img or video thumbnail
           const img = document.createElement('img');
-          if (isVideo) {
-            img.src = item.thumbnailLink;
-          } else {
-            img.src = `/api/drive/thumb?id=${item.id}`;
-          }
+          // always pull a thumbnail via your thumb API (works for images & videos)
+          img.src = `/api/drive/thumb?id=${item.id}`;
+          
           img.decoding = 'async';
           img.alt = item.name;
           img.onclick = () => {
@@ -732,8 +733,31 @@ async function renderGallery(items, append = false) {
 
       const img = document.createElement('img');
       if (isVideo) {
-        img.src = item.thumbnailLink;
+        // first, show a loading placeholder if you like
+        img.src = '/assets/video-placeholder.png';
+
+        // now create an off-DOM video to capture its first frame
+        const thumbVideo = document.createElement('video');
+        thumbVideo.crossOrigin = 'anonymous';
+        thumbVideo.src = `/api/drive/thumb?id=${item.id}`;  // your existing stream proxy
+        thumbVideo.muted = true;
+        thumbVideo.playsInline = true;
+        thumbVideo.addEventListener('loadeddata', () => {
+          // draw first frame into a canvas
+          const canvas = document.createElement('canvas');
+          canvas.width  = thumbVideo.videoWidth;
+          canvas.height = thumbVideo.videoHeight;
+          canvas.getContext('2d').drawImage(thumbVideo, 0, 0);
+          // replace placeholder with the actual frame
+          img.src = canvas.toDataURL('image/jpeg');
+          thumbVideo.remove();
+        });
+        thumbVideo.addEventListener('error', () => {
+          console.error('Could not generate thumbnail for', item.id);
+          thumbVideo.remove();
+        });
       } else {
+        // images stay the same
         img.src = `/api/drive/thumb?id=${item.id}`;
       }
       img.decoding = 'async';
