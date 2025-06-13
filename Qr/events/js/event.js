@@ -833,10 +833,17 @@ function loadComments() {
       row.dataset.commentId = id;
 
       const isGreenComment = c.green === true;
+      const isSysComment = c.system === true;
 
       // Apply special styling directly to the main row container
       if (isGreenComment) {
         row.style.backgroundColor = '#01796F'; // Pine Green
+        row.style.color = 'white';
+        row.style.borderRadius = '8px'; // Ensure consistent border-radius
+      }
+
+      if (isSysComment) {
+        row.style.backgroundColor = '#8c7e68'; // Dark tan
         row.style.color = 'white';
         row.style.borderRadius = '8px'; // Ensure consistent border-radius
       }
