@@ -732,34 +732,16 @@ async function renderGallery(items, append = false) {
       card.append(cb);
 
       const img = document.createElement('img');
+      // unified thumbnail for images *and* videos
+      img.src = `/api/drive/thumb?id=${item.id}`;
       if (isVideo) {
-        // first, show a loading placeholder if you like
-        img.src = '/assets/video-placeholder.png';
-
-        // now create an off-DOM video to capture its first frame
-        const thumbVideo = document.createElement('video');
-        thumbVideo.crossOrigin = 'anonymous';
-        thumbVideo.src = `/api/drive/thumb?id=${item.id}`;  // your existing stream proxy
-        thumbVideo.muted = true;
-        thumbVideo.playsInline = true;
-        thumbVideo.addEventListener('loadeddata', () => {
-          // draw first frame into a canvas
-          const canvas = document.createElement('canvas');
-          canvas.width  = thumbVideo.videoWidth;
-          canvas.height = thumbVideo.videoHeight;
-          canvas.getContext('2d').drawImage(thumbVideo, 0, 0);
-          // replace placeholder with the actual frame
-          img.src = canvas.toDataURL('image/jpeg');
-          thumbVideo.remove();
-        });
-        thumbVideo.addEventListener('error', () => {
-          console.error('Could not generate thumbnail for', item.id);
-          thumbVideo.remove();
-        });
-      } else {
-        // images stay the same
-        img.src = `/api/drive/thumb?id=${item.id}`;
+        const playIcon = document.createElement('div');
+        playIcon.className = 'play-icon';
+        playIcon.innerText = '▶';
+        card.append(playIcon);
       }
+
+
       img.decoding = 'async';
       img.alt = item.name;
       img.onclick = () => {
