@@ -843,7 +843,7 @@ function loadComments() {
       }
 
       if (isSysComment) {
-        row.style.backgroundColor = '#8c7e68'; // Dark tan
+        row.style.backgroundColor = '#e6d0ae'; // Dark tan
         row.style.color = 'white';
         row.style.borderRadius = '8px'; // Ensure consistent border-radius
       }
