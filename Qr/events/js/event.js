@@ -9,6 +9,15 @@ const auth    = firebase.auth();
 const db      = firebase.firestore();
 const storage = firebase.storage();
 
+// If we’re on localhost, point to the emulators, not prod
+if (location.hostname === 'localhost') {
+  // Firestore emulator
+  firebase.firestore().useEmulator('127.0.0.1', 8080);
+  // Functions emulator
+  firebase.functions().useEmulator('127.0.0.1', 5001);
+}
+
+
 // ─────────────────────────────────────────────────────────────────────
 // INITIATE INVISIBLE RECAPTCHA FOR PHONE AUTH
 // ─────────────────────────────────────────────────────────────────────
@@ -378,17 +387,20 @@ async function loadEventData() {
   }
 
   // 6b. Wire up “Create Event” button & modal
-  document.getElementById('btn-create-event').addEventListener('click', () => {
-    document.getElementById('event-modal').style.display = 'flex';
-  });
-  document.getElementById('event-modal-close').addEventListener('click', () => {
-    document.getElementById('event-modal').style.display = 'none';
-  });
-  document.getElementById('event-modal').addEventListener('click', (e) => {
-    if (e.target.id === 'event-modal') {
+  document.getElementById('btn-create-event')
+    .addEventListener('click', () => {
+      document.getElementById('event-modal').style.display = 'flex';
+    });
+  document.getElementById('event-modal-close')
+    .addEventListener('click', () => {
       document.getElementById('event-modal').style.display = 'none';
-    }
-  });
+    });
+  document.getElementById('event-modal')
+    .addEventListener('click', (e) => {
+      if (e.target.id === 'event-modal') {
+        document.getElementById('event-modal').style.display = 'none';
+      }
+    });
 
   // 6c. Fetch event document
   const eventSnap = await db.collection('events').doc(eventId).get();
@@ -415,13 +427,35 @@ async function loadEventData() {
       'Hosted by ' + (e.host || 'Strangers');
   }
 
-  // Image & meta tags
+  // Image & dynamic gradient + meta tags
   if (e.imageUrl) {
-    document.getElementById('event-image').src = e.imageUrl;
+    const eventImageEl = document.getElementById('event-image');
+
+    // Dynamic background gradient once the image loads
+    eventImageEl.onload = () => {
+      try {
+        const colorThief = new ColorThief();
+        const palette = colorThief.getPalette(eventImageEl, 5);
+        const top4 = palette.slice(0, 4).map(
+          (c) => `rgb(${c[0]},${c[1]},${c[2]})`
+        );
+        const gradient = `linear-gradient(to right, ${top4.join(', ')})`;
+        const appEl = document.getElementById('app');
+        appEl.style.setProperty('--event-gradient', gradient);
+        appEl.classList.add('event-gradient-active');
+      } catch (err) {
+        console.error('Gradient extraction failed:', err);
+      }
+    };
+
+    // Set image and meta tags
+    eventImageEl.src = e.imageUrl;
     document.title = e.title || 'Event Page';
     document.getElementById('page-title').innerText = e.title || 'Event Page';
-    document.querySelector("meta[property='og:title']").setAttribute("content", e.title || '');
-    document.querySelector("meta[property='og:image']").setAttribute("content", e.imageUrl);
+    document.querySelector("meta[property='og:title']")
+      .setAttribute("content", e.title || '');
+    document.querySelector("meta[property='og:image']")
+      .setAttribute("content", e.imageUrl);
   }
 
   // Date & time
@@ -502,80 +536,76 @@ async function loadEventData() {
     });
 
   // 6e. Create Event form submission
-  document.getElementById('create-event-form').addEventListener('submit', (e) => {
-    e.preventDefault();
+  document.getElementById('create-event-form')
+    .addEventListener('submit', (e) => {
+      e.preventDefault();
 
-    // Collect event fields
-    const name        = document.getElementById('new-event-name').value.trim();
-    const date        = document.getElementById('new-event-date').value;  // "YYYY-MM-DD"
-    const time        = document.getElementById('new-event-time').value;  // "HH:MM"
-    const address     = document.getElementById('new-event-address').value.trim();
-    const description = document.getElementById('new-event-description').value.trim();
-    const imageLink   = document.getElementById('new-event-image').value.trim();
+      // Collect event fields
+      const name        = document.getElementById('new-event-name').value.trim();
+      const date        = document.getElementById('new-event-date').value;
+      const time        = document.getElementById('new-event-time').value;
+      const address     = document.getElementById('new-event-address').value.trim();
+      const description = document.getElementById('new-event-description').value.trim();
+      const imageLink   = document.getElementById('new-event-image').value.trim();
 
-    if (!name || !date || !time || !address || !description || !imageLink) {
-      alert('Please fill in all event fields.');
-      return;
-    }
-
-    // Collect all ticket‐option rows
-    const ticketRows = ticketContainer.querySelectorAll('.ticket-row-input');
-    const tickets    = []; // will hold { name, description, price, paymentlink }
-    ticketRows.forEach(row => {
-      const tName  = row.querySelector('.ticket-name').value.trim();
-      const tDesc  = row.querySelector('.ticket-desc').value.trim();
-      const tPrice = parseFloat(row.querySelector('.ticket-price').value);
-      const tLink  = row.querySelector('.ticket-link').value.trim();
-      if (tName && tDesc && !isNaN(tPrice) && tLink) {
-        tickets.push({
-          name:        tName,
-          description: tDesc,
-          price:       tPrice,
-          paymentlink: tLink
-        });
+      if (!name || !date || !time || !address || !description || !imageLink) {
+        alert('Please fill in all event fields.');
+        return;
       }
-    });
 
-    db.collection('events')
-      .add({
-        title:       name,
-        host:        currentName || '',
-        imageUrl:    imageLink,
-        date:        date,
-        time:        time,
-        location:    address,
-        description: description,
-        calendarLink: '',
-        createdAt:   firebase.firestore.FieldValue.serverTimestamp(),
-        createdBy:   currentPhone
-      })
-      .then(docRef => {
-        const newEventId = docRef.id;
-        const batch = db.batch();
-        tickets.forEach((t) => {
-          const ticketDocRef = db
-            .collection('events')
-            .doc(newEventId)
-            .collection('tickets')
-            .doc();
-          batch.set(ticketDocRef, {
-            name:        t.name,
-            description: t.description,
-            price:       t.price,
-            paymentlink: t.paymentlink
-          });
-        });
-        return batch.commit().then(() => newEventId);
-      })
-      .then((newEventId) => {
-        alert('Event and tickets created successfully!');
-        document.getElementById('event-modal').style.display = 'none';
-      })
-      .catch(err => {
-        console.error('Error creating event or tickets:', err);
-        alert('Failed to create event. Check console for details.');
+      // Collect ticket options
+      const ticketRows = ticketContainer.querySelectorAll('.ticket-row-input');
+      const tickets    = [];
+      ticketRows.forEach(row => {
+        const tName  = row.querySelector('.ticket-name').value.trim();
+        const tDesc  = row.querySelector('.ticket-desc').value.trim();
+        const tPrice = parseFloat(row.querySelector('.ticket-price').value);
+        const tLink  = row.querySelector('.ticket-link').value.trim();
+        if (tName && tDesc && !isNaN(tPrice) && tLink) {
+          tickets.push({ name: tName, description: tDesc, price: tPrice, paymentlink: tLink });
+        }
       });
-  });
+
+      db.collection('events')
+        .add({
+          title:        name,
+          host:         currentName || '',
+          imageUrl:     imageLink,
+          date:         date,
+          time:         time,
+          location:     address,
+          description:  description,
+          calendarLink: '',
+          createdAt:    firebase.firestore.FieldValue.serverTimestamp(),
+          createdBy:    currentPhone
+        })
+        .then(docRef => {
+          const newEventId = docRef.id;
+          const batch = db.batch();
+          tickets.forEach(t => {
+            const ticketDocRef = db
+              .collection('events')
+              .doc(newEventId)
+              .collection('tickets')
+              .doc();
+            batch.set(ticketDocRef, {
+              name:        t.name,
+              description: t.description,
+              price:       t.price,
+              paymentlink: t.paymentlink
+            });
+          });
+          return batch.commit().then(() => newEventId);
+        })
+        .then(newEventId => {
+          alert('Event and tickets created successfully!');
+          document.getElementById('event-modal').style.display = 'none';
+        })
+        .catch(err => {
+          console.error('Error creating event or tickets:', err);
+          alert('Failed to create event. Check console for details.');
+        });
+    });
 }
 
 // 7. Load Guest List Preview
@@ -771,111 +801,96 @@ async function handleRSVP(status) {
 }
 
 // 10. Load comments (only after login)
+// 10. Load comments (only after login)
 function loadComments() {
   const commentsRef = db
     .collection('events')
     .doc(eventId)
     .collection('comments')
-    // NOTE: this just makes sure Firestore returns them roughly in timestamp order.
     .orderBy('timestamp', 'desc');
 
   commentsRef.onSnapshot(async (snapshot) => {
     const list = document.getElementById('comments-list');
-    list.innerHTML = ''; // clear out old comments
+    list.innerHTML = ''; 
 
-    // 1) Turn each Firestore doc into a promise that fetches memberData (if needed)
     const promises = snapshot.docs.map(async (doc) => {
       const c = doc.data();
-      // Extract a numeric timestamp (in ms) for sorting:
       const ts = c.timestamp && c.timestamp.toMillis ? c.timestamp.toMillis() : 0;
-
       let memberData = null;
       if (c.user) {
-        // fetch the member doc exactly once
         const memSnap = await db.collection('members').doc(c.user).get();
         memberData = memSnap.exists ? memSnap.data() : null;
       }
-
-      return {
-        id: doc.id,
-        comment: c,
-        member: memberData,
-        ts,
-      };
+      return { id: doc.id, comment: c, member: memberData, ts };
     });
 
-    // 2) Wait for ALL lookups to finish before touching the DOM
     const allComments = await Promise.all(promises);
-
-    // 3) Sort by ts (descending); change to (a.ts - b.ts) if you want ascending
     allComments.sort((a, b) => b.ts - a.ts);
 
-    // 4) Now build & append each comment in that exact order
     allComments.forEach(({ id, comment: c, member, ts }) => {
       const row = document.createElement('div');
       row.className = 'comment';
       row.dataset.commentId = id;
 
-      // ── Avatar ──
-      const avatarEl = document.createElement('div');
-      avatarEl.className = 'comment-avatar';
+      const isGreenComment = c.green === true;
 
-      if (c.user && member && member.profileImage) {
-        avatarEl.innerHTML = '';
-        const img = document.createElement('img');
-        img.src = member.profileImage;
-        avatarEl.appendChild(img);
-      } else if (c.user) {
-        // no profileImage → show initials on a gradient
-        const name = member
-          ? (member.name || member.Name || 'Unknown')
-          : 'Unknown';
-
-        const pick = (parseInt(c.user.slice(-2)) % 3) + 1;
-        const gradient =
-          getComputedStyle(document.documentElement)
-            .getPropertyValue(`--muted-color${pick}-start`).trim() +
-          ',\n' +
-          getComputedStyle(document.documentElement)
-            .getPropertyValue(`--muted-color${pick}-end`).trim();
-        avatarEl.style.background = `radial-gradient(circle at center, ${gradient})`;
-        const initials = name
-          .split(' ')
-          .map((s) => s[0])
-          .join('')
-          .toUpperCase();
-        avatarEl.textContent = initials;
-      } else {
-        // system comment → a little gear icon
-        avatarEl.style.background = 'rgba(0,0,0,0.1)';
-        avatarEl.textContent = '⚙';
+      // Apply special styling directly to the main row container
+      if (isGreenComment) {
+        row.style.backgroundColor = '#01796F'; // Pine Green
+        row.style.color = 'white';
+        row.style.borderRadius = '8px'; // Ensure consistent border-radius
       }
 
-      row.appendChild(avatarEl);
+      // ── Avatar (conditionally rendered) ──
+      if (!isGreenComment) {
+        const avatarEl = document.createElement('div');
+        avatarEl.className = 'comment-avatar';
+
+        if (c.user && member && member.profileImage) {
+          avatarEl.innerHTML = '';
+          const img = document.createElement('img');
+          img.src = member.profileImage;
+          avatarEl.appendChild(img);
+        } else if (c.user) {
+          const name = member ? (member.name || member.Name || 'Unknown') : 'Unknown';
+          const pick = (parseInt(c.user.slice(-2)) % 3) + 1;
+          const gradient =
+            getComputedStyle(document.documentElement).getPropertyValue(`--muted-color${pick}-start`).trim() +
+            ', ' +
+            getComputedStyle(document.documentElement).getPropertyValue(`--muted-color${pick}-end`).trim();
+          avatarEl.style.background = `radial-gradient(circle at center, ${gradient})`;
+          const initials = name.split(' ').map((s) => s[0]).join('').toUpperCase();
+          avatarEl.textContent = initials;
+        } else {
+          avatarEl.style.background = 'rgba(0,0,0,0.1)';
+          avatarEl.textContent = '⚙';
+        }
+        row.appendChild(avatarEl);
+      }
 
       // ── Content container ──
       const content = document.createElement('div');
       content.className = 'comment-content';
       content.style.position = 'relative';
 
-      // Delete link if current user owns it
+      if (isGreenComment) {
+        // Reset styles for the inner content div to prevent conflicts
+        content.style.padding = '0';
+        content.style.marginLeft = '0';
+      }
+
       if (c.user === currentPhone) {
         const delLink = document.createElement('span');
         delLink.textContent = 'x';
         delLink.style.position = 'absolute';
-        delLink.style.top = 'var(--delete-offset-top, 4px)';
-        delLink.style.right = 'var(--delete-offset-right, 4px)';
-        delLink.style.color = 'red';
+        delLink.style.top = '4px';
+        delLink.style.right = '4px';
+        delLink.style.color = isGreenComment ? 'white' : 'red';
         delLink.style.cursor = 'pointer';
         delLink.style.fontSize = '0.75rem';
         delLink.addEventListener('click', async () => {
           if (!confirm('Are you sure you want to delete this?')) return;
-          await db
-            .collection('events')
-            .doc(eventId)
-            .collection('comments')
-            .doc(id)
-            .delete();
+          await db.collection('events').doc(eventId).collection('comments').doc(id).delete();
         });
         content.appendChild(delLink);
       }
@@ -884,14 +899,20 @@ function loadComments() {
       const header = document.createElement('div');
       header.className = 'comment-header';
 
-      const nameSpan = document.createElement('span');
-      nameSpan.className = 'comment-name';
-      nameSpan.textContent = c.system
-        ? 'System'
-        : member
-        ? (member.name || member.Name || 'Unknown')
-        : (c.name || 'Unknown');
-      header.appendChild(nameSpan);
+      if (!isGreenComment) {
+        const nameSpan = document.createElement('span');
+        nameSpan.className = 'comment-name';
+        if (c.system && c.type === 'payment_confirmation') {
+          header.classList.add('payment-confirmation');
+          row.classList.add('comment-system', 'payment-confirmation');
+          nameSpan.textContent = c.text;
+        } else if (c.system) {
+          nameSpan.textContent = 'System';
+        } else {
+          nameSpan.textContent = member ? (member.name || member.Name || 'Unknown') : (c.name || 'Unknown');
+        }
+        header.appendChild(nameSpan);
+      }
 
       const tsSpan = document.createElement('span');
       tsSpan.className = 'comment-timestamp';
@@ -899,62 +920,59 @@ function loadComments() {
         const d = c.timestamp.toDate();
         const opts = { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' };
         tsSpan.textContent = d.toLocaleString('en-US', opts);
-      } else {
-        tsSpan.textContent = '';
+        if (isGreenComment) {
+          tsSpan.style.color = 'rgba(255, 255, 255, 0.8)';
+          tsSpan.style.width = '100%';
+          tsSpan.style.textAlign = 'right';
+        }
       }
       header.appendChild(tsSpan);
-
       content.appendChild(header);
 
-      // ── Images (if any) ──
+      // ── Media & Text ──
       if (c.imageUrls && Array.isArray(c.imageUrls)) {
         c.imageUrls.forEach((url) => {
           const imgEl = document.createElement('img');
           imgEl.src = url;
           imgEl.style.maxWidth = '100%';
           imgEl.style.borderRadius = '4px';
-          imgEl.style.marginBottom = '0.3rem';
+          imgEl.style.marginTop = '0.3rem';
           content.appendChild(imgEl);
         });
       }
-
-      // ── GIF (if any) ──
       if (c.gifUrl) {
         const gifImg = document.createElement('img');
         gifImg.src = c.gifUrl;
-        gifImg.setAttribute('data-giphy', 'true');
         gifImg.style.maxWidth = '100%';
         gifImg.style.borderRadius = '4px';
-        gifImg.style.marginBottom = '0.3rem';
+        gifImg.style.marginTop = '0.3rem';
         content.appendChild(gifImg);
       }
-
-      // ── Text ──
-      if (c.text) {
+      if (c.text && !(c.system && c.type === 'payment_confirmation')) {
         const textDiv = document.createElement('div');
         textDiv.className = 'comment-text';
         textDiv.textContent = c.text;
+        if (isGreenComment) {
+          textDiv.style.color = 'white';
+        }
         content.appendChild(textDiv);
       }
-
-      // ── Reply button (unless it's a system comment) ──
-      if (!c.system) {
+      
+      // ── Actions & Replies (conditionally rendered) ──
+      if (!c.system && !isGreenComment) {
         const actions = document.createElement('div');
         actions.className = 'comment-actions';
         const replyBtn = document.createElement('button');
         replyBtn.textContent = 'Reply';
-        replyBtn.onclick = () => showReplyInput(id, content);
+        replyBtn.addEventListener('click', () => showReplyInput(id, content));
         actions.appendChild(replyBtn);
         content.appendChild(actions);
+
+        const repliesContainer = document.createElement('div');
+        repliesContainer.className = 'comment-replies';
+        content.appendChild(repliesContainer);
+        loadReplies(id, repliesContainer);
       }
-
-      // ── “Replies” container ──
-      const repliesContainer = document.createElement('div');
-      repliesContainer.className = 'comment-replies';
-      content.appendChild(repliesContainer);
-
-      // Kick off loading replies for this comment:
-      loadReplies(id, repliesContainer);
 
       row.appendChild(content);
       list.appendChild(row);

@@ -1566,3 +1566,28 @@ textarea:focus,
 #phone-entry .phone-box button#sign-up {
   margin-top: 0.75rem; /* adjust as needed */
 }
+/* Payment-confirmation system comment */
+.comment-system.payment-confirmation {
+  background-color: #28a745;    /* green background */
+  color: #fff;                  /* white text */
+  border-radius: 4px;
+  padding: 0.5rem 1rem;
+  margin-bottom: 0.5rem;
+}
+#app {
+  position: relative; /* ensure pseudo-element can sit behind */
+}
+
+#app::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-image: var(--event-gradient);
+  opacity: 0;
+  transition: opacity 0.7s ease-in-out;
+  z-index: -1;
+}
+
+#app.event-gradient-active::before {
+  opacity: 1;
+}
