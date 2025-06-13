@@ -20,6 +20,9 @@
   <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js" defer></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js" defer></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-storage-compat.js" defer></script>
+  <script src="../js/firebaseConfig.js" defer></script>
+  <!-- ColorThief for dynamic gradient extraction -->
+  <script src="https://unpkg.com/colorthief/dist/color-thief.umd.js" defer></script>
 
   <!-- Firebase config & Event logic -->
   <script src="../js/firebaseConfig.js" defer></script>
@@ -199,9 +202,8 @@
     <!-- Comments Section -->
     <section id="comments-section">
       <h2>Comments</h2>
-      <div id="comments-list">
-        <!-- Each comment row: avatar + name + timestamp + image/GIF + text + reply link + replies -->
-      </div>
+      
+      
 
       <!-- Modern‐styled comment “widget” -->
       <div id="comment-widget">
@@ -279,6 +281,10 @@
               Post
             </button>
           </div>
+        </div>
+
+        <div id="comments-list">
+        <!-- Each comment row: avatar + name + timestamp + image/GIF + text + reply link + replies -->
         </div>
       </div>
     </section>
