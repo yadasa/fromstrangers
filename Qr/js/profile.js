@@ -34,6 +34,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const cropConfirm   = document.getElementById('crop-confirm');
   const cropCancel    = document.getElementById('crop-cancel');
 
+  const instagramLink = document.getElementById('instagram-link');
+
   let profileDocId = null, originalName = '', originalInsta = '';
   let dirty = false, saved = false;
 
@@ -88,6 +90,9 @@ document.addEventListener('DOMContentLoaded', () => {
     nameInput.value     = originalName;
     instaView.innerText = originalInsta;
     instaInput.value    = originalInsta;
+
+    // Add this line
+    instagramLink.href = `https://instagram.com/${originalInsta.replace('@', '')}`;
 
     hdrTitle.innerText = `Profile: ${originalName}`;
     profileImg.src     = data.profilePic
