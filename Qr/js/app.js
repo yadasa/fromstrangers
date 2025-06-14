@@ -32,6 +32,21 @@ document.addEventListener('DOMContentLoaded', () => {
   if (wrapper) {
     wrapper.style.opacity = '0';
     wrapper.style.transition = 'opacity 300ms ease';
+    // === FIX STARTS HERE ===
+    // These styles ensure the modal is bigger and appears on top of the overlay.
+    Object.assign(wrapper.style, {
+        position: 'fixed',
+        top: '50%',
+        left: '50%',
+        transform: 'translate(-50%, -50%)',
+        zIndex: '2001', // Higher than the overlay's z-index of 1000
+        width: '320px', // Making the modal bigger
+        height: '320px',
+        padding: '20px',
+        borderRadius: '10px',
+        boxShadow: '0 5px 20px rgba(0,0,0,0.3)'
+    });
+    // === FIX ENDS HERE ===
   }
 });
 
@@ -246,6 +261,7 @@ function ensureOverlay() {
     Object.assign(qrOverlay.style, {
       position: 'fixed', top: 0, left: 0,
       width: '100%', height: '100%',
+
       background: 'rgba(0,0,0,0.5)',
       display: 'none', zIndex: 1000
     });

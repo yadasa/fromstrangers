@@ -1,4 +1,17 @@
+/*
+=======================================================================
+EASY-EDIT GRADIENT COLORS
+- Change the 5 hex codes below to customize the animated background.
+=======================================================================
+*/
 :root {
+  --gradient-color-1: #eeceaa; /* Magenta */
+  --gradient-color-2: #ccab5f; /* Cyan */
+  --gradient-color-3: #cbc3b0; /* Lime Green */
+  --gradient-color-4: #a07e57; /* Dark Orange */
+  --gradient-color-5: #d6a66e; /* Blue Violet */
+
+  /* Original Theme Colors */
   --qr-size:       256px;
   --gold:          #b49e85;
   --gold-light:    #d9c0a1;
@@ -17,18 +30,99 @@
   box-sizing: border-box;
   margin: 0;
   padding: 0;
-  transition: all var(--fade-duration) var(--ease);
 }
-html, body { height: 100%; }
+html, body { 
+  height: 100%; 
+  overflow-x: hidden;
+  overflow-y: auto; /* Prevent scrollbars from the animated shapes */
+}
 body {
   font-family: Arial, sans-serif;
-  background: linear-gradient(to top, var(--bg-start), var(--bg-end));
-  background-attachment: fixed;
+  background-color: #68583e; /* Darker base for high-contrast colors */
   color: var(--green);
   display: flex;
   flex-direction: column;
   align-items: center;
+  transition: background-color var(--fade-duration) var(--ease); /* Added for smoothness */
 }
+
+/* -----------------------------------------------------------
+   >>> DYNAMIC ANIMATED BACKGROUND <<<
+   ----------------------------------------------------------- */
+.background-container {
+  width: 100vw;
+  height: 100vh;
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: -1;
+  filter: blur(20px); /* Blur the entire container for a softer feel */
+}
+
+@keyframes moveBlob1 {
+  0% { transform: translate(10vw, -15vh) scale(1); }
+  50% { transform: translate(-30vw, 60vh) scale(1.3); }
+  100% { transform: translate(10vw, -15vh) scale(1); }
+}
+@keyframes moveBlob2 {
+  0% { transform: translate(80vw, 10vh) scale(1); }
+  50% { transform: translate(20vw, 70vh) scale(0.8); }
+  100% { transform: translate(80vw, 10vh) scale(1); }
+}
+@keyframes moveBlob3 {
+  0% { transform: translate(50vw, 90vh) scale(1.2); }
+  50% { transform: translate(90vw, -10vh) scale(1); }
+  100% { transform: translate(50vw, 90vh) scale(1.2); }
+}
+@keyframes moveBlob4 {
+  0% { transform: translate(-10vw, 50vh) scale(1); }
+  50% { transform: translate(70vw, 20vh) scale(1.4); }
+  100% { transform: translate(-10vw, 50vh) scale(1); }
+}
+@keyframes moveBlob5 {
+  0% { transform: translate(30vw, 20vh) scale(0.9); }
+  50% { transform: translate(-10vw, -20vh) scale(1.1); }
+  100% { transform: translate(30vw, 20vh) scale(0.9); }
+}
+
+.shape-blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(60px); 
+  opacity: 0.7;
+}
+
+.shape-blob:nth-child(1) {
+  width: 450px;
+  height: 450px;
+  background: var(--gradient-color-1);
+  animation: moveBlob1 30s infinite alternate;
+}
+.shape-blob:nth-child(2) {
+  width: 350px;
+  height: 350px;
+  background: var(--gradient-color-2);
+  animation: moveBlob2 35s infinite alternate-reverse;
+}
+.shape-blob:nth-child(3) {
+  width: 300px;
+  height: 300px;
+  background: var(--gradient-color-3);
+  animation: moveBlob3 28s infinite alternate;
+}
+.shape-blob:nth-child(4) {
+  width: 400px;
+  height: 400px;
+  background: var(--gradient-color-4);
+  animation: moveBlob4 40s infinite alternate-reverse;
+}
+.shape-blob:nth-child(5) {
+  width: 250px;
+  height: 250px;
+  background: var(--gradient-color-5);
+  animation: moveBlob5 25s infinite alternate;
+}
+
 main {
   width: 100%;
   max-width: 400px;
@@ -73,6 +167,7 @@ main {
   border: none;
   border-radius: 0.5rem;
   box-shadow: var(--button-shadow);
+  transition: background-color 300ms ease;
 }
 
 /* Header */
@@ -176,6 +271,7 @@ header {
   overflow: hidden;
   border-radius: 0.5rem;
   box-shadow: var(--card-shadow);
+  transition: all 300ms ease;
 }
 .photo-card.video {
   background: #000;
@@ -186,6 +282,7 @@ header {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  transition: transform 300ms ease;
 }
 
 /* Checkbox for multi-select (hidden by default) */
@@ -260,6 +357,7 @@ header {
   color: transparent;               /* initial: outline only */
   -webkit-text-stroke: 1px white;
   text-stroke: 1px white;
+  transition: color 300ms ease;
 }
 .photo-like-btn.liked {
   color: red;                       /* filled red */
@@ -432,7 +530,7 @@ header {
   top:0; left:0; right:0; bottom:0;
   background: rgba(0,0,0,0.5);
   display:none;
-  z-index:1000;
+  z-index:999;
 }
 #qr-wrapper { /* force-centered modal */ }
 #qr-wrapper {
@@ -440,6 +538,7 @@ header {
   top:50%!important;
   left:50%!important;
   transform: translate(-50%,-50%)!important;
+  z-index:1999;
 }
 #qr-close {
   position:absolute; top:8px; right:8px;
@@ -459,19 +558,7 @@ header {
   background-color: var(--gold)!important;
   border-radius:0.5rem;
 }
-#controls a#link-scan {
-  display:block;
-  margin-top:0.5rem;
-  font-size:0.65rem;
-  color: var(--green);
-  text-decoration:underline;
-  cursor:pointer;
-  background:none; border:none; padding:0;
-  transition: color 200ms var(--ease);
-}
-#controls a#link-scan:hover {
-  color: var(--green-light);
-}
+
 #scan-container {
   position:relative;
   display:flex;
@@ -557,6 +644,7 @@ header {
 
 /* Main app wrapper */
 #app {
+  z-index: 1; /* Make sure app content is above the background */
   width: 100%;
   max-width: 400px;
   margin: 0 auto;
@@ -568,46 +656,99 @@ header {
 
 /* “Hey Stranger” title & user-name */
 header #title {
-  color: var(--gold);
+  color: #FFF;
   font-size: 2rem;
   font-weight: bold;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.3);
 }
 header #user-name {
-  color: var(--green);
+  color: #FFF;
+  opacity: 0.9;
   font-size: 1.1rem;
   margin-top: 0.25rem;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.3);
 }
 
-/* Controls (home screen) */
+/* -----------------------------------------------------------
+   >>> REVISED CONTROLS SECTION - LIQUID GLASS <<<
+   ----------------------------------------------------------- */
+
 #controls {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(75px, 1fr));
+  gap: 1.5rem 1rem; 
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+  justify-content: center;
+}
+
+.control-item {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
-  align-items: stretch;
-  margin-bottom: 1rem;
+  align-items: center;
+  text-align: center;
 }
-#controls button {
+
+/* The Liquid Glass Square */
+#controls button,
+#controls a {
   width: 100%;
-  padding: 1rem;
-  font-size: 1.1rem;
-  background: linear-gradient(45deg, var(--green), var(--green-light));
-  color: var(--gold);
-  border: none;
-  border-radius: 0.5rem;
-  box-shadow: var(--button-shadow);
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1 / 1;
+  
+  /* LIQUID GLASS EFFECT */
+  background: rgba(255, 255, 255, 0.1); /* Lighter, clearer base */
+  backdrop-filter: blur(4px); /* Less blur for a clearer, liquid look */
+  -webkit-backdrop-filter: blur(4px); /* Safari support */
+  border: 1px solid rgba(255, 255, 255, 0.2); /* Brighter edge */
+  
+  border-radius: 1.25rem; /* This will now NOT change on hover */
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2);
   cursor: pointer;
-  transition: transform 200ms var(--ease), background 200ms var(--ease);
+  text-decoration: none;
+  
+  /* REVISED TRANSITION */
+  transition: transform 369ms ease, background-color 369ms ease;
 }
-#controls button:hover:not(:disabled) {
-  transform: translateY(-2px);
-  background: linear-gradient(45deg, var(--green-light), var(--green));
+
+#controls button:hover:not(:disabled),
+#controls a:hover:not(:disabled) {
+  /* REVISED HOVER STATE */
+  transform: scale(1.1);
+  background: rgba(255, 255, 255, 0.2); /* Brighter on hover */
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.25);
 }
+
 #controls button:disabled {
   background: #ccc;
   color: #666;
   cursor: not-allowed;
   box-shadow: none;
+  transform: none;
 }
+
+/* Text label - make it stand out against the dynamic background */
+.control-item span {
+  margin-top: 0.6rem;
+  font-size: 0.75rem;
+  color: #FFFFFF; /* White text for better contrast */
+  font-weight: 500;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5); /* Drop shadow for legibility */
+}
+
+/* Icon - make it white to match the new text color */
+#controls .icon {
+  width: 50%;
+  height: 50%;
+  object-fit: contain;
+  filter: brightness(0) invert(1); /* This trick turns a black icon white */
+}
+#controls #link-scan .icon {
+  filter: brightness(100); /* Undo the double-inversion for the scan icon */
+}
+
 
 /* QR countdown timer */
 #qr-timer {
@@ -680,6 +821,8 @@ header #user-name {
   margin: 1rem auto;
 }
 
+/* Original :root variables moved here for reference if needed, but overridden above */
+/*
 :root {
   --gold-light:  #d4b38c;
   --gold-dark:   #b4976e;
@@ -687,8 +830,9 @@ header #user-name {
   --silver-dark: #a8a8a8;
   --bronze-light:#c09964;
   --bronze-dark: #996f44;
-  --noise-opacity: 0.03;    /* optional noise overlay */
+  --noise-opacity: 0.03;
 }
+*/
 
 /* center the page title */
 #leaderboard-title {
@@ -725,7 +869,7 @@ header #user-name {
   position: absolute;
   top:0;left:0;right:0;bottom:0;
   background: url('path/to/noise.png') repeat;
-  opacity: var(--noise-opacity);
+  opacity: var(--noise-opacity, 0.03);
   pointer-events: none;
 }
 
@@ -734,8 +878,8 @@ header #user-name {
 .leaderboard-item.first {
   background: linear-gradient(
     145deg,
-    var(--gold-light),
-    var(--gold-dark)
+    var(--gold-light, #d4b38c),
+    var(--gold-dark, #b4976e)
   );
   box-shadow:
     0 4px 8px rgba(0,0,0,0.15),        /* drop shadow */
@@ -748,8 +892,8 @@ header #user-name {
 .leaderboard-item.second {
   background: linear-gradient(
     145deg,
-    var(--silver-light),
-    var(--silver-dark)
+    var(--silver-light, #d3d3d3),
+    var(--silver-dark, #a8a8a8)
   );
   box-shadow:
     0 4px 8px rgba(0,0,0,0.15),
@@ -762,8 +906,8 @@ header #user-name {
 .leaderboard-item.third {
   background: linear-gradient(
     145deg,
-    var(--bronze-light),
-    var(--bronze-dark)
+    var(--bronze-light, #c09964),
+    var(--bronze-dark, #996f44)
   );
   box-shadow:
     0 4px 8px rgba(0,0,0,0.15),

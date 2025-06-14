@@ -6,26 +6,28 @@
   <title>From Strangers</title>
   <link rel="stylesheet" href="css/style.css" />
 
-  <!-- QR & camera libs -->
   <script src="js/vendor/qrcode.min.js" defer></script>
   <script src="js/vendor/html5-qrcode.min.js" defer></script>
 
-  <!-- Firebase (compat) -->
   <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js" defer></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js" defer></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js" defer></script>
 
-  <!-- Project config -->
   <script src="js/firebaseConfig.js" defer></script>
-  <!-- Main logic -->
   <script src="js/app.js" defer></script>
 </head>
 <body>
 
-  <!-- ── reCAPTCHA lives here for the entire app lifetime ───────────── -->
+  <div class="background-container">
+    <div class="shape-blob"></div>
+    <div class="shape-blob"></div>
+    <div class="shape-blob"></div>
+    <div class="shape-blob"></div>
+    <div class="shape-blob"></div>
+  </div>
+
   <div id="recaptcha-container"></div>
 
-  <!-- Phone-entry overlay -->
   <div id="phone-entry">
     <div class="phone-box">
       <h2>Enter your phone number</h2>
@@ -47,7 +49,6 @@
     </div>
   </div>
 
-  <!-- Hidden overlay for Sign Up iframe (not used, but kept if needed) -->
   <div
     id="signup-overlay"
     style="
@@ -93,38 +94,80 @@
     </div>
   </div>
 
-  <!-- Main app -->
   <div id="app" style="display:none">
     <header>
       <img class="main-logo" src="assets/mainlogo.png" alt="Main Logo" />
       <h1 id="title">Hey Stranger</h1>
       <h2 id="user-name"></h2>
-      <!-- Sign Out button -->
       <button id="sign-out">Sign Out</button>
     </header>
 
     <main>
       <div id="controls">
-        <!-- Existing buttons -->
-        <button id="btn-display">Display QR Code</button>
+        <div class="control-item">
+          <button id="btn-display">
+            <img src="/assets/icons/qr.png" class="icon"/>
+          </button>
+          <span>Display QR</span>
+        </div>
 
-        <!-- New button added below -->
-        <button id="btn-events"
-                onclick="window.location.href='/events';">
-          View Events
-        </button>
+        <div class="control-item">
+          <button id="btn-events" onclick="window.location.href='/events';">
+            <img src="/assets/icons/events.png" alt="Events" class="icon"/>
+          </button>
+          <span>View Events</span>
+        </div>
+        
+        <div class="control-item">
+          <button id="btn-photos">
+            <img src="/assets/icons/pics.png" alt="Photos" class="icon"/>
+          </button>
+          <span>Add Photos</span>
+        </div>
+        
+        <div class="control-item">
+          <button id="btn-chat">
+            <img src="/assets/icons/gc.png" alt="Chat" class="icon"/>
+          </button>
+          <span>Group Chat</span>
+        </div>
+        
+        <div class="control-item">
+          <button id="btn-suggest">
+            <img src="/assets/icons/sugg.png" alt="Suggest" class="icon"/>
+          </button>
+          <span>Suggest</span>
+        </div>
+        
+        <div class="control-item">
+          <button id="btn-vibes" onclick="window.location.href='vibes.html';">
+            <img src="/assets/icons/vibes.png" alt="Vibes" class="icon"/>
+          </button>
+          <span>Vibes</span>
+        </div>
+        
+        <div class="control-item">
+          <button id="btn-leaderboard">
+            <img src="/assets/icons/leaderboard.png" alt="Leaderboard" class="icon"/>
+          </button>
+          <span>Leaderboard</span>
+        </div>
 
-        <button id="btn-photos">View / Add Photos</button>
-        <button id="btn-chat">Group Chat</button>
-        <button id="btn-suggest">Suggest Activity</button>
-        <button id="btn-events"
-                onclick="window.location.href='vibes.html';">
-          Vibes
-        </button>
-        <button id="btn-leaderboard">Leaderboard</button>
-        <a id="link-scan" href="#">Scan QR Code</a>
+        <!-- NEW PROFILE BUTTON ADDED HERE -->
+        <div class="control-item">
+          <button id="btn-profile" onclick="window.location.href='/profile';">
+            <img src="/assets/icons/profile.png" alt="Profile" class="icon"/>
+          </button>
+          <span>Profile</span>
+        </div>
+        
+        <div class="control-item">
+          <a id="link-scan" href="#">
+            <img src="/assets/icons/qr.png" alt="Scan QR" class="icon" style="filter: invert(1);"/>
+          </a>
+          <span>Scan QR</span>
+        </div>
       </div>
-
       <div id="qr-wrapper">
         <button id="qr-close">×</button>
         <div id="qr-display"></div>
