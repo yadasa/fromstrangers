@@ -128,183 +128,19 @@ let isFirstLogin = true;
 
 // 4. Attach event listeners on DOMContentLoaded
 let currentGifTarget = null; 
-document.addEventListener('DOMContentLoaded', () => {
-  // 4a) Always show #app immediately
+// START REVISION: Restructure DOMContentLoaded to prevent race condition
+document.addEventListener('DOMContentLoaded', async () => {
+  // Always show the app shell immediately
   document.getElementById('app').style.display = 'block';
 
-  // 4b) Auto‐login if phone saved
-  (async () => {
-    const saved = loadPhone();
-    if (!saved) return;
-    try {
-      const snap = await db.collection('members').doc(saved).get();
-      if (!snap.exists) return;
-      const data = snap.data();
-      //if (!data.onList) return;
-      currentPhone = saved;
-      currentName  = data.name || data.Name || 'No Name';
-      isFirstLogin = false;
-      document.getElementById('signed-in').innerText = `Signed in as ${currentName}`;
-      document.getElementById('phone-entry').style.display = 'none';
-      unlockCommentsAndRSVP();
-      await loadEventData();
-    } catch (e) {
-      console.error('Auto-resume failed', e);
-    }
-  })();
+  // Hide elements that require a login by default
+  document.getElementById('phone-entry').style.display = 'none';
+  document.getElementById('comment-widget').style.display = 'block';
 
-  // ─────────────────────────────────────────────────────────────────────
-  // 4c) PHONE SUBMISSION → SEND SMS (REAL FLOW)
-  // ─────────────────────────────────────────────────────────────────────
-  const skipSMS = false;
-
-  document.getElementById('phone-submit').onclick = async () => {
-    // 1) Normalize phone: strip non-digits, drop leading '1' if present
-    let raw = document.getElementById('phone-input').value.replace(/\D/g, '');
-    if (raw.length === 11 && raw.startsWith('1')) {
-      raw = raw.slice(1);
-    }
-    if (raw.length !== 10) {
-      alert('Enter a valid 10-digit phone.');
-      return;
-    }
-
-    // 2) If we ever want to skip SMS in dev, we could keep old logic here.
-    //    But now skipSMS=false, so we always go to the OTP flow below.
-
-    // 3) INITIATE reCAPTCHA
-    try {
-      await initRecaptcha();
-    } catch (err) {
-      console.error('Error initializing reCAPTCHA:', err);
-      alert('reCAPTCHA setup failed; reload and try again.');
-      return;
-    }
-
-    // 4) CALL Firebase PHONE AUTH
-    try {
-      const confirmation = await auth.signInWithPhoneNumber(
-        '+1' + raw,
-        window.recaptchaVerifier
-      );
-      // Store the confirmation object so otp-submit can use it
-      window.confirmationResult = confirmation;
-
-      // 5) SHOW the previously‐hidden OTP input group
-      document.getElementById('otp-entry').style.display = 'block';
-    } catch (err) {
-      console.error('signInWithPhoneNumber error:', err);
-      if (err.code === 'auth/invalid-app-credential') {
-        alert('reCAPTCHA token invalid/expired; please try again.');
-      } else {
-        alert('SMS not sent: ' + err.message);
-      }
-    }
-  };
-
-  // ─────────────────────────────────────────────────────────────────────
-  // 4c-2) VERIFY OTP CODE
-  // ─────────────────────────────────────────────────────────────────────
-  document.getElementById('otp-submit').onclick = async () => {
-    const code = document.getElementById('otp-input').value.trim();
-    if (code.length !== 6) {
-      alert('Enter the 6-digit code.');
-      return;
-    }
-
-    try {
-      // 1) CONFIRM the OTP with Firebase
-      const cred = await window.confirmationResult.confirm(code);
-      const user = cred.user; // e.g. { phoneNumber: "+11234567890", … }
-      // Strip the "+1" to get "1234567890"
-      const phoneDigits = user.phoneNumber.replace('+1', '');
-      currentPhone = phoneDigits;
-
-      // 2) SAVE to localStorage + cookie so next visit auto-resumes
-      savePhone(currentPhone);
-
-      // 3) LOOK UP Firestore “members/<phone>” to confirm onList
-      const snap = await db.collection('members').doc(currentPhone).get();
-      if (!snap.exists) {
-        alert('No membership record found. Please sign up first.');
-        return;
-      }
-      const data = snap.data();
-      //if (!data.onList) {
-        //alert('Your membership is not approved yet.');
-        //return;
-      //}
-
-      // 4) SET currentName + hide login overlay + show main app
-      currentName = data.name || data.Name || 'No Name';
-      isFirstLogin = false;
-      document.getElementById('signed-in').innerText = `Signed in as ${currentName}`;
-      document.getElementById('phone-entry').style.display = 'none';
-      unlockCommentsAndRSVP();
-      await loadEventData();
-    } catch (err) {
-      console.error('OTP confirm error:', err);
-      alert('Code incorrect: ' + err.message);
-    }
-  };
-
-
-
-  // 4d) Create Dummy Event (temporary)
-  document.getElementById('btn-create-dummy').onclick = async () => {
-    if (!eventId) {
-      const newDocRef = db.collection('events').doc();
-      eventId = newDocRef.id;
-    }
-    const now = new Date();
-    const yyyy = now.getFullYear();
-    const mm = String(now.getMonth() + 1).padStart(2, '0');
-    const dd = String(now.getDate()).padStart(2, '0');
-    const creator = currentPhone || 'unknown';
-
-    const dummy = {
-      title: "Sample Event",
-      host: currentName || "Strangers",
-      imageUrl: "https://via.placeholder.com/600x200.png?text=Dummy+Event",
-      date: "2025-06-20",
-      time: "7:00 PM",
-      location: "123 Main Street",
-      description: "This is a dummy event description.\nAdd multiline text here.",
-      calendarLink: "https://example.com/dummy.ics",
-      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-      createdBy: creator
-    };
-
-    try {
-      await db.collection('events').doc(eventId).set(dummy);
-      alert("Dummy event created at events/" + eventId);
-      window.location.search = "?e=" + encodeURIComponent(eventId);
-    } catch (err) {
-      console.error("Failed to create dummy event at events/" + eventId, err);
-      alert("Error creating dummy event.");
-    }
-  };
-
-  // 4e) Giphy modal open/close (main comment)
-  document.getElementById('btn-giphy-open').onclick = () => {
-    currentGifTarget = document.getElementById('comment-input');
-    document.getElementById('giphy-modal').style.display = 'flex';
-    document.getElementById('giphy-search-input').value = '';
-    document.getElementById('giphy-results').innerHTML = '';
-  };
-  document.getElementById('giphy-close').onclick = () => {
-    document.getElementById('giphy-modal').style.display = 'none';
-    currentGifTarget = null;
-  };
-  document.getElementById('giphy-search-input').onkeyup = async (e) => {
-    if (e.key === 'Enter') {
-      const query = e.target.value.trim();
-      if (!query) return;
-      await searchGiphy(query);
-    }
-  };
-
-  // 4f) Image upload icon triggers file input for main comment
+  // START: ADD THIS ENTIRE BLOCK
+  // Main Comment Widget Listeners
+  document.getElementById('btn-post-comment').onclick = () => submitComment();
+  
   document.getElementById('btn-image-upload').onclick = () => {
     const mainContent = document.getElementById('comment-input');
     if (mainContent.querySelector('img[data-giphy]')) {
@@ -313,31 +149,44 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     document.getElementById('comment-file-input').click();
   };
+
   document.getElementById('comment-file-input').onchange = () => {
     const mainContent = document.getElementById('comment-input');
     if (mainContent.querySelector('img[data-giphy]')) {
       alert("You already inserted a GIF; remove it before uploading images.");
       document.getElementById('comment-file-input').value = '';
-      return;
     }
   };
 
-  // 4g) Post comment button (gated by login)
-  document.getElementById('btn-post-comment').onclick = async () => {
-    if (!currentPhone) {
-      document.getElementById('phone-entry').style.display = 'flex';
-      return;
-    }
-    await submitComment();
+  document.getElementById('btn-giphy-open').onclick = () => {
+    currentGifTarget = document.getElementById('comment-input');
+    document.getElementById('giphy-modal').style.display = 'flex';
+    document.getElementById('giphy-search-input').value = '';
+    document.getElementById('giphy-results').innerHTML = '';
+  };
+  // END: ADD THIS ENTIRE BLOCK
+
+  // START: ADD THIS ENTIRE BLOCK
+  // Modal Listeners
+  document.getElementById('giphy-close').onclick = () => {
+    document.getElementById('giphy-modal').style.display = 'none';
+    currentGifTarget = null;
   };
 
-  // 4h) See All modal logic (unchanged)
-  document.getElementById('btn-see-all').onclick = () => {
-    showSeeAllModal('Going');
-  };
   document.getElementById('see-all-close').onclick = () => {
     document.getElementById('see-all-modal').style.display = 'none';
   };
+
+  document.getElementById('giphy-search-input').onkeyup = async (e) => {
+    if (e.key === 'Enter') {
+      const query = e.target.value.trim();
+      if (query) await searchGiphy(query);
+    }
+  };
+  // END: ADD THIS ENTIRE BLOCK
+
+  // START: ADD THIS FINAL BLOCK
+  // "See All" Modal Tab Listeners
   document.querySelectorAll('.tab-button').forEach(btn => {
     btn.onclick = async (e) => {
       document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
@@ -346,35 +195,194 @@ document.addEventListener('DOMContentLoaded', () => {
       await populateSeeAllList(status);
     };
   });
+  // END: ADD THIS FINAL BLOCK
 
-  // 4i) Comments “Sign In” overlay button
+  // Attempt to resume session and set user state
+  const saved = loadPhone();
+  if (saved) {
+    try {
+      const snap = await db.collection('members').doc(saved).get();
+      if (snap.exists) {
+        // Successfully logged in from session
+        const data = snap.data();
+        currentPhone = saved;
+        currentName  = data.name || data.Name || 'No Name';
+        isFirstLogin = false;
+        document.getElementById('signed-in').innerText = `Signed in as ${currentName}`;
+        unlockLoggedInFeatures();
+      }
+    } catch (e) {
+      console.error('Auto-resume failed', e);
+      // Ensure user is treated as logged-out if session restore fails
+      currentPhone = ''; 
+    }
+  }
+  
+  // If, after checking the session, there is no user, set up the public/logged-out view
+  if (!currentPhone) {
+    setupLoggedOutView();
+  }
+
+  // CRITICAL FIX: Load all page data ONCE, after the login state has been determined.
+  // This single, sequential call prevents the race condition.
+  await loadEventData();
+  loadComments();
+  setupRSVPButtons();
+
+  // --- All other synchronous event listeners can be set up below ---
+
+  // Phone and OTP Submission Logic
+  document.getElementById('phone-submit').onclick = async () => {
+    let raw = document.getElementById('phone-input').value.replace(/\D/g, '');
+    if (raw.length === 11 && raw.startsWith('1')) {
+      raw = raw.slice(1);
+    }
+    if (raw.length !== 10) {
+      alert('Enter a valid 10-digit phone.');
+      return;
+    }
+    try {
+      await initRecaptcha();
+      const confirmation = await auth.signInWithPhoneNumber('+1' + raw, window.recaptchaVerifier);
+      window.confirmationResult = confirmation;
+      document.getElementById('otp-entry').style.display = 'block';
+    } catch (err) {
+      console.error('signInWithPhoneNumber error:', err);
+      alert('SMS not sent: ' + err.message);
+    }
+  };
+
+  document.getElementById('otp-submit').onclick = async () => {
+    const code = document.getElementById('otp-input').value.trim();
+    if (code.length !== 6) {
+      alert('Enter the 6-digit code.');
+      return;
+    }
+    try {
+      const cred = await window.confirmationResult.confirm(code);
+      const user = cred.user;
+      currentPhone = user.phoneNumber.replace('+1', '');
+      savePhone(currentPhone);
+      const snap = await db.collection('members').doc(currentPhone).get();
+      if (!snap.exists) {
+        alert('No membership record found. Please sign up first.');
+        return;
+      }
+      const data = snap.data();
+      currentName = data.name || data.Name || 'No Name';
+      isFirstLogin = false;
+      document.getElementById('phone-entry').style.display = 'none';
+      document.getElementById('signed-in').innerText = `Signed in as ${currentName}`;
+
+      // After a manual login, unlock features and reload data to get user-specific content
+      unlockLoggedInFeatures();
+      await loadEventData();
+    } catch (err) {
+      console.error('OTP confirm error:', err);
+      alert('Code incorrect: ' + err.message);
+    }
+  };
+  
+  // Other button listeners
+  document.getElementById('btn-see-all').onclick = () => {
+    if (!currentPhone) {
+      document.getElementById('phone-entry').style.display = 'flex';
+      return;
+    }
+    showSeeAllModal('Going');
+  };
+  
   document.getElementById('comments-signin-btn').onclick = () => {
     document.getElementById('phone-entry').style.display = 'flex';
   };
 });
+// END REVISION
 
-// 5. When the user logs in, remove blur/overlay and enable RSVP/comments
-function unlockCommentsAndRSVP() {
-  // Hide the comments overlay
+// 5a. Set up the UI for a logged-out user
+function setupLoggedOutView() {
+  // --- This is the new, more robust implementation ---
+  
+  // 1. Target the necessary elements
+  const commentsWrapper = document.getElementById('comments-wrapper'); // Assuming a wrapper div exists
+  const commentsList = document.getElementById('comments-list');
+  const commentsOverlay = document.getElementById('comments-blur-overlay');
+
+  // 2. Apply styles to create the blurred overlay effect
+  if (commentsWrapper && commentsList && commentsOverlay) {
+    // Make the wrapper a positioning context
+    commentsWrapper.style.position = 'relative';
+
+    // Blur the list of comments
+    commentsList.style.filter = 'blur(8px)';
+    commentsList.style.pointerEvents = 'none'; // Prevent interaction with blurred content
+
+    // Ensure the overlay is visible and styled correctly
+    commentsOverlay.style.position = 'absolute';
+    commentsOverlay.style.top = '0';
+    commentsOverlay.style.left = '0';
+    commentsOverlay.style.width = '100%';
+    commentsOverlay.style.height = '100%';
+    commentsOverlay.style.display = 'flex';
+    commentsOverlay.style.zIndex = '10';
+  }
+
+  // 3. Replace the "Signed in as..." text with a "Sign In" button
+  const signedInContainer = document.getElementById('signed-in');
+  if (signedInContainer) {
+    signedInContainer.innerHTML = ''; // Clear existing text
+    const headerSignInBtn = document.createElement('button');
+    headerSignInBtn.textContent = 'Sign In';
+    headerSignInBtn.className = 'btn-header-signin'; // Use this class to style in your CSS
+    // Applying backup styles in case CSS class isn't set
+    headerSignInBtn.style.cssText = `
+      padding: 8px 16px; 
+      border: none; 
+      background-color: var(--brown, #8d6e63); 
+      color: var(--gold, #fff); 
+      border-radius: 20px; 
+      cursor: pointer;
+      font-size: 0.9rem;
+    `;
+    headerSignInBtn.onclick = () => {
+      document.getElementById('phone-entry').style.display = 'flex';
+    };
+    signedInContainer.appendChild(headerSignInBtn);
+  }
+}
+
+// 5b. When the user logs in, unlock all features
+function unlockLoggedInFeatures() {
+  // Remove the comment blur and hide the overlay
+  const commentsWrapper = document.getElementById('comments-wrapper');
+  const commentsList = document.getElementById('comments-list');
   const overlay = document.getElementById('comments-blur-overlay');
+  
+  if (commentsList) {
+    commentsList.style.filter = 'none';
+    commentsList.style.pointerEvents = 'auto';
+  }
   if (overlay) {
     overlay.style.display = 'none';
   }
+  if(commentsWrapper){
+    commentsWrapper.style.position = 'static'; // Reset position
+  }
 
-  // Show reply widget
-  document.getElementById('comment-widget').style.display = 'block';
+  // Show the comment input widget
+  const commentWidget = document.getElementById('comment-widget');
+  commentWidget.style.display = 'block';
+  commentWidget.style.marginBottom = '20px';
 
-  // Load comments and set up RSVP
-  loadComments();
-  setupRSVPButtons();
+
+  // Load the user's current RSVP status to highlight the correct button
   loadRSVPList();
 }
 
-// 6. Load event data and initialize UI (always runs after login or manually called)
+// 6. Load event data and initialize UI (runs for all users)
 async function loadEventData() {
   if (!eventId) return;
 
-  // 6a. If logged in, check admin flag (members/{phone})
+  // 6a. If logged in, check admin flag to show admin-only buttons
   if (currentPhone) {
     try {
       const userSnap = await db.collection('members').doc(currentPhone).get();
@@ -413,32 +421,26 @@ async function loadEventData() {
   // Title, host
   document.getElementById('event-title').innerText = e.title || 'Untitled Event';
   if (e.createdBy) {
-    const creatorSnap = await db.collection('members').doc(e.createdBy).get();
-    if (creatorSnap.exists) {
-      const cData = creatorSnap.data();
-      document.getElementById('event-host').innerText =
-        'Hosted by ' + (cData.name || cData.Name || 'Strangers');
-    } else {
-      document.getElementById('event-host').innerText =
-        'Hosted by ' + (e.host || 'Strangers');
-    }
+    db.collection('members').doc(e.createdBy).get().then(creatorSnap => {
+        if (creatorSnap.exists) {
+            const cData = creatorSnap.data();
+            document.getElementById('event-host').innerText = 'Hosted by ' + (cData.name || cData.Name || 'Strangers');
+        } else {
+            document.getElementById('event-host').innerText = 'Hosted by ' + (e.host || 'Strangers');
+        }
+    });
   } else {
-    document.getElementById('event-host').innerText =
-      'Hosted by ' + (e.host || 'Strangers');
+    document.getElementById('event-host').innerText = 'Hosted by ' + (e.host || 'Strangers');
   }
 
   // Image & dynamic gradient + meta tags
   if (e.imageUrl) {
     const eventImageEl = document.getElementById('event-image');
-
-    // Dynamic background gradient once the image loads
     eventImageEl.onload = () => {
       try {
         const colorThief = new ColorThief();
         const palette = colorThief.getPalette(eventImageEl, 5);
-        const top4 = palette.slice(0, 4).map(
-          (c) => `rgb(${c[0]},${c[1]},${c[2]})`
-        );
+        const top4 = palette.slice(0, 4).map(c => `rgb(<span class="math-inline">\{c\[0\]\},</span>{c[1]},${c[2]})`);
         const gradient = `linear-gradient(to right, ${top4.join(', ')})`;
         const appEl = document.getElementById('app');
         appEl.style.setProperty('--event-gradient', gradient);
@@ -447,27 +449,19 @@ async function loadEventData() {
         console.error('Gradient extraction failed:', err);
       }
     };
-
-    // Set image and meta tags
     eventImageEl.src = e.imageUrl;
     document.title = e.title || 'Event Page';
     document.getElementById('page-title').innerText = e.title || 'Event Page';
-    document.querySelector("meta[property='og:title']")
-      .setAttribute("content", e.title || '');
-    document.querySelector("meta[property='og:image']")
-      .setAttribute("content", e.imageUrl);
+    document.querySelector("meta[property='og:title']").setAttribute("content", e.title || '');
+    document.querySelector("meta[property='og:image']").setAttribute("content", e.imageUrl);
   }
 
   // Date & time
-  if (e.date) {
-    document.getElementById('event-date').innerText = formatEventDate(e.date);
-  }
-  if (e.time) {
-    document.getElementById('event-time').innerText = e.time;
-  }
+  if (e.date) document.getElementById('event-date').innerText = formatEventDate(e.date);
+  if (e.time) document.getElementById('event-time').innerText = e.time;
 
   // Location & description
-  document.getElementById('event-location').innerText    = e.location || '';
+  document.getElementById('event-location').innerText = e.location || '';
   document.getElementById('event-description').innerText = e.description || '';
 
   // Calendar & share logic
@@ -487,126 +481,8 @@ async function loadEventData() {
   document.getElementById('ticket-modal-close').onclick = () => {
     document.getElementById('ticket-modal').style.display = 'none';
   };
-
-  // 6d. Dynamic “Add/Remove Ticket Option” for Create Event form
-  const ticketContainer = document.getElementById('ticket-options-container');
-  const addTicketBtn   = document.getElementById('add-ticket-option');
-
-  function createTicketRow() {
-    const template = ticketContainer.querySelector('.ticket-row-input');
-    const newRow   = template.cloneNode(true);
-    newRow.querySelector('.ticket-name').value = '';
-    newRow.querySelector('.ticket-desc').value = '';
-    newRow.querySelector('.ticket-price').value = '';
-    newRow.querySelector('.ticket-link').value = '';
-
-    const removeBtn = newRow.querySelector('.remove-ticket');
-    removeBtn.addEventListener('click', () => {
-      const rows = ticketContainer.querySelectorAll('.ticket-row-input');
-      if (rows.length > 1) {
-        newRow.remove();
-      } else {
-        newRow.querySelector('.ticket-name').value = '';
-        newRow.querySelector('.ticket-desc').value = '';
-        newRow.querySelector('.ticket-price').value = '';
-        newRow.querySelector('.ticket-link').value = '';
-      }
-    });
-
-    return newRow;
-  }
-
-  addTicketBtn.addEventListener('click', () => {
-    const newTicketRow = createTicketRow();
-    ticketContainer.appendChild(newTicketRow);
-  });
-
-  ticketContainer.querySelector('.ticket-row-input .remove-ticket')
-    .addEventListener('click', (e) => {
-      const rows = ticketContainer.querySelectorAll('.ticket-row-input');
-      const rowNode = e.currentTarget.closest('.ticket-row-input');
-      if (rows.length > 1) {
-        rowNode.remove();
-      } else {
-        rowNode.querySelector('.ticket-name').value = '';
-        rowNode.querySelector('.ticket-desc').value = '';
-        rowNode.querySelector('.ticket-price').value = '';
-        rowNode.querySelector('.ticket-link').value = '';
-      }
-    });
-
-  // 6e. Create Event form submission
-  document.getElementById('create-event-form')
-    .addEventListener('submit', (e) => {
-      e.preventDefault();
-
-      // Collect event fields
-      const name        = document.getElementById('new-event-name').value.trim();
-      const date        = document.getElementById('new-event-date').value;
-      const time        = document.getElementById('new-event-time').value;
-      const address     = document.getElementById('new-event-address').value.trim();
-      const description = document.getElementById('new-event-description').value.trim();
-      const imageLink   = document.getElementById('new-event-image').value.trim();
-
-      if (!name || !date || !time || !address || !description || !imageLink) {
-        alert('Please fill in all event fields.');
-        return;
-      }
-
-      // Collect ticket options
-      const ticketRows = ticketContainer.querySelectorAll('.ticket-row-input');
-      const tickets    = [];
-      ticketRows.forEach(row => {
-        const tName  = row.querySelector('.ticket-name').value.trim();
-        const tDesc  = row.querySelector('.ticket-desc').value.trim();
-        const tPrice = parseFloat(row.querySelector('.ticket-price').value);
-        const tLink  = row.querySelector('.ticket-link').value.trim();
-        if (tName && tDesc && !isNaN(tPrice) && tLink) {
-          tickets.push({ name: tName, description: tDesc, price: tPrice, paymentlink: tLink });
-        }
-      });
-
-      db.collection('events')
-        .add({
-          title:        name,
-          host:         currentName || '',
-          imageUrl:     imageLink,
-          date:         date,
-          time:         time,
-          location:     address,
-          description:  description,
-          calendarLink: '',
-          createdAt:    firebase.firestore.FieldValue.serverTimestamp(),
-          createdBy:    currentPhone
-        })
-        .then(docRef => {
-          const newEventId = docRef.id;
-          const batch = db.batch();
-          tickets.forEach(t => {
-            const ticketDocRef = db
-              .collection('events')
-              .doc(newEventId)
-              .collection('tickets')
-              .doc();
-            batch.set(ticketDocRef, {
-              name:        t.name,
-              description: t.description,
-              price:       t.price,
-              paymentlink: t.paymentlink
-            });
-          });
-          return batch.commit().then(() => newEventId);
-        })
-        .then(newEventId => {
-          alert('Event and tickets created successfully!');
-          document.getElementById('event-modal').style.display = 'none';
-        })
-        .catch(err => {
-          console.error('Error creating event or tickets:', err);
-          alert('Failed to create event. Check console for details.');
-        });
-    });
 }
+
 
 // 7. Load Guest List Preview
 async function loadGuestListPreview() {
@@ -777,7 +653,7 @@ async function handleRSVP(status) {
   }
 
   // System comment
-  const sysText = `${currentName} marked as *${status}*`;
+  const sysText = `<span class="math-inline">\{currentName\} marked as \*</span>{status}*`;
   await db.collection('events').doc(eventId).collection('comments').add({
     text: sysText,
     name: '',
@@ -800,8 +676,7 @@ async function handleRSVP(status) {
   }
 }
 
-// 10. Load comments (only after login)
-// 10. Load comments (only after login)
+// 10. Load comments (runs for all users)
 function loadComments() {
   const commentsRef = db
     .collection('events')
@@ -843,7 +718,7 @@ function loadComments() {
       }
 
       if (isSysComment) {
-        row.style.backgroundColor = '#b5a08d'; // Dark tan
+        row.style.backgroundColor = '#bdafa2'; // Pine Green
         row.style.color = 'white';
         row.style.borderRadius = '8px'; // Ensure consistent border-radius
       }
@@ -886,7 +761,7 @@ function loadComments() {
         content.style.marginLeft = '0';
       }
 
-      if (c.user === currentPhone) {
+      if (c.user && c.user === currentPhone) {
         const delLink = document.createElement('span');
         delLink.textContent = 'x';
         delLink.style.position = 'absolute';
@@ -987,6 +862,7 @@ function loadComments() {
   });
 }
 
+
 // 11. Show reply input under a comment
 function showReplyInput(parentId, contentDiv) {
   if (contentDiv.querySelector('.reply-input-container')) return;
@@ -994,6 +870,7 @@ function showReplyInput(parentId, contentDiv) {
   const container = document.createElement('div');
   container.className = 'reply-input-container';
   container.style.position = 'relative';
+  container.style.marginBottom = '30px';
 
   const textarea = document.createElement('div');
   textarea.className = 'reply-input';
@@ -1256,7 +1133,7 @@ function loadReplies(parentId, repliesContainer) {
   });
 }
 
-// 13. Load RSVP list (initial button state)
+// 13. Load user's RSVP status (only after login)
 async function loadRSVPList() {
   if (!currentPhone) return;
   const rsvpSnap = await db.collection('events')
@@ -1303,7 +1180,7 @@ async function submitComment() {
   const imageUrls = [];
   if (fileInput.files && fileInput.files.length > 0) {
     for (const file of fileInput.files) {
-      const storageRef = storage.ref(`events/${eventId}/comments/${currentPhone}_${timestamp}_${file.name}`);
+      const storageRef = storage.ref(`events/<span class="math-inline">\{eventId\}/comments/</span>{currentPhone}_${timestamp}_${file.name}`);
       await storageRef.put(file);
       const downloadUrl = await storageRef.getDownloadURL();
       imageUrls.push(downloadUrl);
@@ -1334,6 +1211,18 @@ async function submitComment() {
     .collection('comments')
     .add(payload);
 
+  // ---- START REVISION: Award sPoints for commenting ----
+  try {
+    const memberRef = db.collection('members').doc(currentPhone);
+    await memberRef.update({
+      sPoints: firebase.firestore.FieldValue.increment(3)
+    });
+  } catch (err) {
+    console.error("Failed to award sPoints for comment:", err);
+    // This is a non-critical error, so we don't need to alert the user.
+  }
+  // ---- END REVISION ----
+
   // Clear inputs
   contentDiv.innerHTML = '';
   fileInput.value = '';
@@ -1363,7 +1252,7 @@ async function submitReply(parentId, textarea, fileInput) {
   let imageUrl = '';
   if (fileInput.files && fileInput.files[0]) {
     const file = fileInput.files[0];
-    const storageRef = storage.ref(`events/${eventId}/comments/${parentId}_reply_${currentPhone}_${timestamp}_${file.name}`);
+    const storageRef = storage.ref(`events/<span class="math-inline">\{eventId\}/comments/</span>{parentId}_reply_${currentPhone}_${timestamp}_${file.name}`);
     await storageRef.put(file);
     imageUrl = await storageRef.getDownloadURL();
   }
@@ -1393,6 +1282,18 @@ async function submitReply(parentId, textarea, fileInput) {
     .doc(parentId)
     .collection('replies')
     .add(payload);
+    
+  // ---- START REVISION: Award sPoints for replying ----
+  try {
+    const memberRef = db.collection('members').doc(currentPhone);
+    await memberRef.update({
+      sPoints: firebase.firestore.FieldValue.increment(3)
+    });
+  } catch (err) {
+    console.error("Failed to award sPoints for reply:", err);
+    // This is a non-critical error, so we don't need to alert the user.
+  }
+  // ---- END REVISION ----
 
   // Clear reply box
   textarea.innerHTML = '';
@@ -1485,7 +1386,7 @@ function setupCalendarAndShare(e) {
       ).join('');
     };
     const finalToken = randChars() + reversedHash + randChars();
-    const shareURL = `${baseURL}${paramE}&ref=${encodeURIComponent(finalToken)}`;
+    const shareURL = `<span class="math-inline">\{baseURL\}</span>{paramE}&ref=${encodeURIComponent(finalToken)}`;
 
     try {
       await navigator.share({
@@ -1519,8 +1420,8 @@ function showTicketModal() {
         const left = document.createElement('div');
         left.style.flex = '1';
         left.innerHTML = `
-          <h3 style="margin:0; color:#333;">${t.name}</h3>
-          <p style="margin:0.25rem 0; color:#555;">${t.description}</p>
+          <h3 style="margin:0; color:#333;"><span class="math-inline">${t.name}</h3\>
+          <p style\="margin\:0\.25rem 0; color\:\#555;"\></span>${t.description}</p>
           <p style="margin:0; color:#555;">Price: $${Number(t.price).toFixed(2)}</p>
         `;
 
