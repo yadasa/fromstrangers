@@ -293,7 +293,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!f) return;
     if (window.cropper) window.cropper.destroy();
     window.cropper = new Croppie(cropContainer, {
-      viewport: { width:512, height:512, type:'square' },
+      viewport: { width:300, height:300, type:'square' },
       boundary: { width:300, height:300 }
     });
     const reader = new FileReader();
