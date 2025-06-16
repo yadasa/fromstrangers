@@ -99,6 +99,22 @@ document.addEventListener('DOMContentLoaded', () => {
     const data   = doc.data();
     const isMe   = profileDocId === me;
 
+    // grab the wrappers for each section
+    const vibeField       = vibeSimilarityEl.closest('.profile-field');
+    const topMatchesField = document.getElementById('top-matches')
+                                  .closest('.profile-field');
+
+    // hide/show appropriately
+    if (isMe) {
+      // you’re on your own page → hide Vibe Similarity, show Most Similar Strangers
+      vibeField.style.display       = 'none';
+      topMatchesField.style.display = '';
+    } else {
+      // you’re on someone else’s page → show Vibe Similarity, hide Most Similar Strangers
+      vibeField.style.display       = '';
+      topMatchesField.style.display = 'none';
+    }
+
     // populate name / instagram
     originalName  = data.name || '';
     originalInsta = data.instagramHandle || '';
@@ -128,6 +144,102 @@ document.addEventListener('DOMContentLoaded', () => {
     } else if (vibeSimilarityEl) {
       vibeSimilarityEl.innerText = '—';
     }
+
+    // inside auth.onAuthStateChanged, after you determine `isMe`…
+    if (isMe) {
+      // fetch your vibes
+      const meSnap  = await db.collection('members').doc(me).get();
+      const meVibes = meSnap.data()?.vibes || {};
+
+      // ——————— NEW: check if you’ve answered >=11 questions ———————
+      const nonZeroCount = Object.values(meVibes)
+        .filter(val => parseFloat(val) !== 0)
+        .length;
+
+      if (nonZeroCount < 11) {
+        // hide the matches wrapper (optional)
+        const topField = document.getElementById('top-matches')
+                                .closest('.profile-field');
+        if (topField) topField.style.display = 'block';
+
+        // clear out any old content
+        const container = document.getElementById('top-matches');
+        container.innerHTML = '';
+
+        // create & insert the button
+        const btn = document.createElement('button');
+        btn.textContent = 'Enter your vibes to view';
+        btn.className = 'w-button';             // or your own button class
+        btn.onclick = () => {
+          window.location.href = '../vibes.html'; // adjust to your vibe-entry route
+        };
+        container.appendChild(btn);
+
+        // stop here—don’t render the match cards
+        return;
+      }
+      // ————————————————————————————————————————————————————————
+
+      // load everyone else
+      const allSnap = await db.collection('members').get();
+      const scores  = allSnap.docs
+        .filter(d => d.id !== me && d.data().vibes)
+        .map(d => ({
+          name:       d.data().name,
+          phone:      d.id, 
+          name:       d.data().name,
+          profilePic: d.data().profilePic || null,
+          profileId:  d.data().profileId  || null,
+          score:      computeVibeSimilarity(meVibes, d.data().vibes)
+        }));
+
+      // sort & take top 5
+      scores.sort((a,b) => b.score - a.score);
+      const top5 = scores.slice(0,5);
+
+      // render as horizontal cards
+      const container = document.getElementById('top-matches');
+      container.innerHTML = '';  // clear “Loading…”
+      top5.forEach(u => {
+        const card = document.createElement('div');
+        card.className = 'match-card';
+
+        const img = document.createElement('img');
+        img.className = 'match-pic';
+        img.src = u.profilePic
+          ? `/api/drive/thumb?id=${u.profilePic}&sz=64`
+          : '../assets/defaultpfp.png';
+        img.onerror = () => {
+          img.onerror = null;
+          img.src = '../assets/defaultpfp.png';
+        };
+
+        const label = document.createElement('div');
+        label.className = 'match-name';
+        label.textContent = u.name;
+
+        card.appendChild(img);
+        card.appendChild(label);
+        card.addEventListener('click', async () => {
+          let pid = u.profileId;
+          if (!pid) {
+            // no profileId yet: generate one and save it
+            pid = await generateProfileId(u.phone);
+            await db.collection('members')
+                    .doc(u.phone)
+                    .update({ profileId: pid });
+          }
+          // now redirect
+          window.location.href = `/profile?id=${pid}`;
+        });
+
+        container.appendChild(card);
+      });
+    }
+
+
+
+    
 
     // mark inputs dirty on change
     [nameInput, instaInput, pinInput, confirmPin]
@@ -254,6 +366,9 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     };
     xhr.send(fd);
+
+
+
   };
 
   saveBtn.onclick = async e => {

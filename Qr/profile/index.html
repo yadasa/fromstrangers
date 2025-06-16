@@ -165,6 +165,46 @@
     body {
       overflow-y: auto; /* Allow vertical scrolling */
     }
+
+    /* container holds exactly 5 cards in one row */
+    /* container holds exactly five cards, centered as a group */
+    .top-matches-container {
+      display: flex;
+      justify-content: center;  /* center the group of cards */
+      gap: 16px;                /* space between cards */
+      margin: 1rem auto;        /* vertical spacing + horizontal auto-center */
+      padding: 0.5rem;          /* breathing room */
+      flex-wrap: nowrap;        /* never wrap */
+    }
+
+    /* each card is a fixed 64px wide column */
+    .match-card {
+      flex: 0 0 auto;           /* no growing or shrinking */
+      width: 64px;              /* lock to same width as .match-pic */
+      display: flex;
+      flex-direction: column;
+      align-items: center;      /* center pic & name */
+    }
+
+    /* the circular pic stays 64×64 */
+    .match-pic {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      object-fit: cover;
+      margin-bottom: 0.5rem;
+    }
+
+    /* wrap long names inside that 64px column */
+    .match-name {
+      max-width: 64px;
+      text-align: center;
+      word-wrap: break-word;
+      font-size: 0.9rem;
+      line-height: 1.2;
+      margin: 0;
+    }
+
   </style>
 </head>
 <body>
@@ -223,6 +263,11 @@
       </div>
 
       <button id="edit-btn" class="w-button view-only">Edit Profile</button>
+
+      <div class="profile-field">
+        <label>Most Similar Strangers</label>
+        <div id="top-matches" class="top-matches-container">Loading…</div>
+      </div>
 
       <div class="edit-buttons edit-only">
         <button id="cancel-btn">Cancel</button>
