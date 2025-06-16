@@ -294,7 +294,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (window.cropper) window.cropper.destroy();
     window.cropper = new Croppie(cropContainer, {
       viewport: { width:512, height:512, type:'square' },
-      boundary: { width:512, height:512 }
+      boundary: { width:333, height:333 }
     });
     const reader = new FileReader();
     reader.onload = () => window.cropper.bind({ url: reader.result });
