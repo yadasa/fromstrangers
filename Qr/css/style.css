@@ -990,3 +990,15 @@ header #user-name {
 .select-mode .photo-card img {
     cursor: pointer;
 }
+/* somewhere in your styles */
+.leaderboard-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  /* …existing styles… */
+}
+
+.leaderboard-item span {
+  display: flex;
+  align-items: center;
+}
