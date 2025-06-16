@@ -16,7 +16,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js" defer></script>
 
   <script src="../js/firebaseConfig.js" defer></script>
-  <script src="../js/profile.js" defer></script>
+  <script type="module" src="../js/profile.js" defer></script>
 
   <style>
     /* Fixed back arrow in top-right viewport */
@@ -189,6 +189,10 @@
     <main>
       <div class="avatar-container">
         <img id="profile-img" src="../assets/defaultpfp.png" alt="Avatar">
+      </div>
+      <div class="profile-field">
+        <label>Vibe Similarity</label>
+        <span id="vibe-similarity">—</span>
       </div>
       <button id="change-pic" class="edit-only">Change Picture</button>
       <input type="file" id="img-input" accept="image/*" style="display:none">
