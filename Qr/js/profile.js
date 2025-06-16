@@ -169,7 +169,7 @@ document.addEventListener('DOMContentLoaded', () => {
     fd.append('folderId', PROFILE_DRIVE_FOLDER_ID);
 
     const xhr = new XMLHttpRequest();
-    xhr.open('POST', '/api/drive/upload');
+    xhr.open('POST', '/api/drive/uploadpfp');
     xhr.onload = async () => {
       if (xhr.status !== 200) {
         console.error('Upload failed:', xhr.responseText);

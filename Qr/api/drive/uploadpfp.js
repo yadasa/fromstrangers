@@ -74,7 +74,7 @@ export default async function handler(req, res) {
     });
     const drive = google.drive({ version: 'v3', auth });
 
-    const FOLDER_ID = process.env.DRIVE_FOLDER_ID;
+    const FOLDER_ID = process.env.PROFILE_DRIVE_FOLDER_ID || process.env.DRIVE_FOLDER_ID;
     if (!FOLDER_ID) {
       console.error('No DRIVE_FOLDER_ID or PROFILE_DRIVE_FOLDER_ID configured');
       return res.status(500).json({ error: 'Missing server folder configuration' });
