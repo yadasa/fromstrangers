@@ -1,4 +1,3 @@
-// /js/profile.js
 document.addEventListener('DOMContentLoaded', () => {
   if (!window.firebaseConfig) throw new Error('Missing firebaseConfig.js');
   firebase.initializeApp(window.firebaseConfig);
@@ -91,7 +90,6 @@ document.addEventListener('DOMContentLoaded', () => {
     instaView.innerText = originalInsta;
     instaInput.value    = originalInsta;
 
-    // Add this line
     instagramLink.href = `https://instagram.com/${originalInsta.replace('@', '')}`;
 
     hdrTitle.innerText = `Profile: ${originalName}`;
@@ -141,28 +139,29 @@ document.addEventListener('DOMContentLoaded', () => {
   imgInput.onchange = () => {
     const f = imgInput.files[0];
     if (!f) return;
-    if (window.cropper) cropper.destroy();
+    if (window.cropper) window.cropper.destroy();
     window.cropper = new Croppie(cropContainer,{
       viewport:{width:128,height:128,type:'square'},
       boundary:{width:300,height:300}
     });
     const r = new FileReader();
-    r.onload = () => cropper.bind({url: r.result});
+    r.onload = () => window.cropper.bind({url: r.result});
     r.readAsDataURL(f);
     cropOverlay.style.display = 'flex';
   };
   cropCancel.onclick = () => {
     cropOverlay.style.display = 'none';
-    cropper.destroy(); cropper = null;
+    if(window.cropper) window.cropper.destroy(); 
+    window.cropper = null;
     imgInput.value = '';
   };
   cropConfirm.onclick = async () => {
-    if (!cropper) return;
-    const blob = await cropper.result('blob');
+    if (!window.cropper) return;
+    const blob = await window.cropper.result('blob');
     cropOverlay.style.display = 'none';
-    cropper.destroy(); cropper = null;
+    if(window.cropper) window.cropper.destroy(); 
+    window.cropper = null;
 
-    // build FormData with folderId override
     const fd = new FormData();
     fd.append('owner', localStorage.getItem('userPhone'));
     fd.append('ownerName', nameInput.value);
@@ -178,17 +177,52 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       const res = JSON.parse(xhr.responseText);
 
-      // 1) update member record with new profilePic
-      await db.collection('members').doc(profileDocId)
-              .update({ profilePic: res.id });
+      // ---- START REVISION: Points for Profile Picture ----
+      const memberRef = db.collection('members').doc(profileDocId);
+      try {
+        await db.runTransaction(async (transaction) => {
+          const userDoc = await transaction.get(memberRef);
+          if (!userDoc.exists) throw new Error("User document not found.");
 
-      // 2) create a Firestore doc for this file with visibility=false
-      await db.collection('photos').doc(res.id).set({
-        visibility: false
-      }, { merge: true });
+          const userData = userDoc.data();
+          const now = new Date();
+          const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          
+          const existingUploads = userData.profileImageUploads || [];
+          const recentUploads = existingUploads.filter(ts => ts.toDate() > sevenDaysAgo);
+          
+          const isEligibleForPoints = recentUploads.length < 2;
 
-      // 3) update the UI
-      profileImg.src = `/api/drive/thumb?id=${res.id}&sz=128`;
+          const dataToUpdate = {
+            profilePic: res.id,
+            lastUpdated: firebase.firestore.FieldValue.serverTimestamp(),
+          };
+
+          if (isEligibleForPoints) {
+            console.log("Awarding 75 sPoints for profile picture upload.");
+            dataToUpdate.sPoints = firebase.firestore.FieldValue.increment(75);
+            recentUploads.push(now); // Add new timestamp
+            dataToUpdate.profileImageUploads = recentUploads;
+          } else {
+            console.log("User has reached the point limit for this action.");
+            dataToUpdate.profileImageUploads = recentUploads; // Save the cleaned-up array
+          }
+          
+          transaction.update(memberRef, dataToUpdate);
+        });
+
+        // Create a Firestore doc for this file with visibility=false
+        await db.collection('photos').doc(res.id).set({ visibility: false }, { merge: true });
+        
+        // Update the UI
+        profileImg.src = `/api/drive/thumb?id=${res.id}&sz=128`;
+        alert("Profile picture updated!");
+
+      } catch (error) {
+        console.error("Transaction failed: ", error);
+        alert("There was an error updating your profile picture.");
+      }
+      // ---- END REVISION ----
     };
     xhr.send(fd);
   };

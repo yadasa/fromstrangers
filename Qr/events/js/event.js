@@ -653,7 +653,7 @@ async function handleRSVP(status) {
   }
 
   // System comment
-  const sysText = `<span class="math-inline">\{currentName\} marked as \*</span>{status}*`;
+  const sysText = `${currentName} marked as *${status}*`;
   await db.collection('events').doc(eventId).collection('comments').add({
     text: sysText,
     name: '',
