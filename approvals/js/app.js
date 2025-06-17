@@ -237,10 +237,19 @@ function applyFilters() {
   listEl.innerHTML = '';
   list.forEach(renderItem);
 }
-function matchUser(u,t) {
-  return [u.name, u.instagram, u.gender, u.employment, String(u.age), u.budget, u.id]
-    .some(f => f?.toLowerCase().includes(t));
+function matchUser(u, tok) {
+  tok = tok.toLowerCase();
+  return (
+    u.name.toLowerCase().includes(tok) ||
+    u.instagram.toLowerCase().includes(tok) ||
+    u.gender.toLowerCase().includes(tok) ||
+    u.employment.toLowerCase().includes(tok) ||
+    (u.age !== null && String(u.age).includes(tok)) ||
+    // ID or phone search
+    (u.id && u.id.toLowerCase().includes(tok))
+  );
 }
+
 function score(u,toks) {
   let s=0, n=u.name.toLowerCase();
   toks.forEach(t=>{
