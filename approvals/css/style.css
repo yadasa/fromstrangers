@@ -1,5 +1,8 @@
 /* css/style.css */
 
+details summary::-webkit-details-marker { display: none; }
+details summary::marker { display: none; }
+
 :root {
   --bg: #f5f1e8;
   --card-bg: #fffaf0;
@@ -24,6 +27,8 @@ html, body {
   font-family: sans-serif;
   background: var(--bg);
   height: 100%;
+  display: flex;
+  justify-content: center;
 }
 
 body {
@@ -32,6 +37,11 @@ body {
   min-height: 100vh;
 }
 
+.header-bar,
+#user-list {
+  width: 84%;      /* 84% of viewport width */
+  max-width: 84%;
+}
 header {
   text-align: center;
   margin: 1rem 0;
@@ -308,4 +318,219 @@ button.deny:hover {
 .user-item.pending,
 .user-item.hold {
   opacity: 1;
+}
+
+/* Container for two-thumb range slider */
+.slider-range {
+  position: relative;
+  height: 2rem;
+  margin: 0 1rem;              /* horizontal padding */
+  background: #ddd;            /* un-selected track color */
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+/* Hide the native track, let the container’s background-gradient show */
+.slider-range input[type="range"] {
+  -webkit-appearance: none;    /* remove default styling */
+  background: transparent;     
+  pointer-events: none;        /* only thumbs capture events */
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 100%;
+  transform: translateY(-50%);
+  height: 2px;                 /* thin invisible active area */
+}
+
+/* Hide native track for Webkit */
+.slider-range input[type="range"]::-webkit-slider-runnable-track {
+  background: transparent;
+}
+
+/* Hide native track for Firefox */
+.slider-range input[type="range"]::-moz-range-track {
+  background: transparent;
+}
+
+/* Style the thumbs */
+.slider-range input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  pointer-events: all;
+  position: relative;
+  z-index: 2;
+  width: 1rem;
+  height: 1rem;
+  border-radius: 50%;
+  background: var(--text);
+  border: 2px solid var(--bg);
+  cursor: pointer;
+  margin-top: -0.4rem;        /* vertically center the thumb */
+}
+
+.slider-range input[type="range"]::-moz-range-thumb {
+  pointer-events: all;
+  position: relative;
+  z-index: 2;
+  width: 1rem;
+  height: 1rem;
+  border-radius: 50%;
+  background: var(--text);
+  border: 2px solid var(--bg);
+  cursor: pointer;
+}
+
+/* Repaint only the area between thumbs */
+.slider-range[data-min][data-max] {
+  /* The JS colorRange(...) function sets this inline via style.background */
+}
+/* make the painted track area black, thumbs tall vertical bars */
+.slider-range {
+  position: relative;
+  height: 2rem;
+  margin: 0 1rem;
+  background: #ddd;
+  border-radius: 4px;
+  overflow: hidden;
+  transition: width 333ms ease;
+}
+/* hide native track, keep only container’s gradient */
+.slider-range input[type=range] {
+  -webkit-appearance: none;
+  background: transparent;
+  pointer-events: none;
+  position: absolute;
+  top: 50%; left: 0; width: 100%;
+  transform: translateY(-50%);
+  height: 2px;
+}
+/* hide Webkit/Firefox tracks */
+.slider-range input[type=range]::-webkit-slider-runnable-track,
+.slider-range input[type=range]::-moz-range-track {
+  background: transparent;
+}
+/* tall vertical black thumbs */
+.slider-range input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  pointer-events: all;
+  position: relative; z-index: 2;
+  width: 7px;         /* narrow vertical bar */
+  height: 6.5rem;     /* tall */
+  background: #000;    /* black */
+  border: none;
+  margin-top: -0.75rem;/* center vertically */
+  cursor: pointer;
+}
+.slider-range input[type=range]::-moz-range-thumb {
+  pointer-events: all;
+  position: relative; z-index: 2;
+  width: 7px;
+  height: 6.5rem;
+  background: #000;
+  border: none;
+  cursor: pointer;
+}
+
+/* animate opening content to 33% */
+.filter-options,
+.filter-slider {
+  width: auto;
+  transition: width 333ms ease;
+}
+details[open] .filter-options,
+details[open] .filter-slider {
+  width: 33%;
+}
+/* Container for all filter panels */
+#filtersDiv {
+  display: flex;
+  gap: 0.5rem;
+}
+
+/* Let each <details> flex-shrink, base 0 */
+#filtersDiv > details {
+  flex: 1 1 0;
+}
+
+/* Summary styling */
+.filters details summary {
+  background: #fff;
+  color: var(--text);
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background 200ms, color 200ms;
+}
+
+/* When a panel is open, invert colors */
+.filters details[open] summary {
+  background: var(--text);
+  color: var(--bg);
+}
+
+/* Content inside panels */
+.filter-options,
+.filter-slider {
+  width: auto;
+  max-width: 100%;
+  overflow: hidden;
+  transition: width 333ms ease;
+}
+
+/* Opened panel expands to 33% */
+details[open] .filter-options,
+details[open] .filter-slider {
+  width: 33%;
+}
+
+/* Two-thumb slider container */
+.slider-range {
+  position: relative;
+  height: 2rem;
+  margin: 0 1rem;            /* horizontal padding */
+  background: #ddd;  
+  border-radius: 4px;
+  overflow: hidden;
+  transition: width 333ms ease;
+}
+
+/* Hide native track, keep thumbs only */
+.slider-range input[type="range"] {
+  -webkit-appearance: none;
+  background: transparent;
+  pointer-events: none;
+  position: absolute;
+  top: 50%; left: 0; width: 100%;
+  transform: translateY(-50%);
+  height: 2px;
+}
+
+/* Hide WebKit/Firefox track visuals */
+.slider-range input[type="range"]::-webkit-slider-runnable-track,
+.slider-range input[type="range"]::-moz-range-track {
+  background: transparent;
+}
+
+/* Tall vertical black thumbs */
+.slider-range input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  pointer-events: all;
+  z-index: 2;
+  width: 7px;
+  height: 6.5rem;
+  background: #000;
+  border: none;
+  margin-top: -0.75rem;
+  cursor: pointer;
+}
+.slider-range input[type="range"]::-moz-range-thumb {
+  pointer-events: all;
+  z-index: 2;
+  width: 7px;
+  height: 6.5rem;
+  background: #000;
+  border: none;
+  cursor: pointer;
 }
