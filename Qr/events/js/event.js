@@ -410,6 +410,54 @@ async function loadEventData() {
       }
     });
 
+  // 6b-1. Handle the “Create Event” form submission
+  const createForm = document.getElementById('create-event-form');
+  createForm.addEventListener('submit', async e => {
+    e.preventDefault();
+
+    // 2a) Gather inputs
+    const title       = document.getElementById('new-event-name').value.trim();
+    const date        = document.getElementById('new-event-date').value;
+    const time        = document.getElementById('new-event-time').value;
+    const address     = document.getElementById('new-event-address').value.trim();
+    const description = document.getElementById('new-event-description').value.trim();
+    const imageUrl    = document.getElementById('new-event-image').value.trim();
+
+    // 2b) Build tickets array
+    const tickets = [];
+    document.querySelectorAll('.ticket-row-input').forEach(row => {
+      const name  = row.querySelector('.ticket-name').value.trim();
+      const desc  = row.querySelector('.ticket-desc').value.trim();
+      const price = parseFloat(row.querySelector('.ticket-price').value) || 0;
+      const link  = row.querySelector('.ticket-link').value.trim();
+      if (name && link) {
+        tickets.push({ name, description: desc, price, link });
+      }
+    });
+
+    try {
+      // 2c) Add to Firestore
+      const ref = await db.collection('events').add({
+        title,
+        date,
+        time,
+        address,
+        description,
+        imageUrl,
+        tickets,
+        createdBy: currentPhone,                                      // from your auth flow
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+
+      // 2d) Redirect to the new event’s page
+      window.location.href = `eventid.html?e=${ref.id}`;
+    } catch (err) {
+      console.error('Error creating event:', err);
+      alert('There was an error creating your event.');
+    }
+  });
+
+
   // 6c. Fetch event document
   const eventSnap = await db.collection('events').doc(eventId).get();
   if (!eventSnap.exists) {
@@ -503,9 +551,9 @@ async function loadGuestListPreview() {
     avatarEl.className = 'avatar';
     avatarEl.dataset.phone = phone;
 
-    if (memberSnap.exists && memberSnap.data().profileImage) {
+    if (memberSnap.exists && memberSnap.data().profilePic) {
       const img = document.createElement('img');
-      img.src = memberSnap.data().profileImage;
+      img.src = `/api/drive/thumb?id=${memberSnap.data().profilePic}&sz=64`;
       avatarEl.appendChild(img);
     } else {
       const name = memberSnap.exists
@@ -571,9 +619,9 @@ async function populateSeeAllList(statusFilter) {
     // Avatar
     const avatarEl = document.createElement('div');
     avatarEl.className = 'see-all-avatar';
-    if (memberSnap.exists && memberSnap.data().profileImage) {
+    if (memberSnap.exists && memberSnap.data().profilePic) {
       const img = document.createElement('img');
-      img.src = memberSnap.data().profileImage;
+      img.src = `/api/drive/thumb?id=${memberSnap.data().profilePic}&sz=64`;
       avatarEl.appendChild(img);
     } else {
       const name = memberSnap.exists
@@ -728,10 +776,10 @@ function loadComments() {
         const avatarEl = document.createElement('div');
         avatarEl.className = 'comment-avatar';
 
-        if (c.user && member && member.profileImage) {
+        if (c.user && member && member.profilePic) {
           avatarEl.innerHTML = '';
           const img = document.createElement('img');
-          img.src = member.profileImage;
+          img.src = `/api/drive/thumb?id=${member.profilePic}&sz=64`;
           avatarEl.appendChild(img);
         } else if (c.user) {
           const name = member ? (member.name || member.Name || 'Unknown') : 'Unknown';
@@ -1028,10 +1076,10 @@ function loadReplies(parentId, repliesContainer) {
       avatarEl.className = 'comment-avatar';
       if (r.user) {
         const memSnap = await db.collection('members').doc(r.user).get();
-        if (memSnap.exists && memSnap.data().profileImage) {
+        if (memSnap.exists && memSnap.data().profilePic) {
           avatarEl.innerHTML = '';
           const img = document.createElement('img');
-          img.src = memSnap.data().profileImage;
+          img.src = `/api/drive/thumb?id=${memSnap.data().profilePic}&sz=64`;
           avatarEl.appendChild(img);
         } else {
           const name = memSnap.exists
