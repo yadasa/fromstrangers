@@ -1,107 +1,536 @@
+/* css/style.css */
+
+details summary::-webkit-details-marker { display: none; }
+details summary::marker { display: none; }
+
 :root {
-    --bg: #f5f1e8;
-    --card-bg: #fffaf0;
-    --text: #5a4632;
-    --approve: #8fbc8f;
-    --approve-hover: #7cad7c;
-    --deny: #cd5c5c;
-    --deny-hover: #b24d4d;
-    --info: #a0522d;
-    --shadow: 0 2px 6px rgba(0,0,0,0.1);
-  }
-  
-  * {
-    box-sizing: border-box;
-  }
-  
-  body {
-    margin: 0;
-    font-family: sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-  }
-  
-  header {
-    margin: 2rem 0 1rem;
-  }
-  header h1 {
-    margin: 0;
-  }
-  
-  main {
-    width: 100%;
-    max-width: 480px;
-  }
-  
-  #user-list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-  }
-  
-  .user-item {
-    background: var(--card-bg);
-    margin-bottom: 1rem;
-    padding: 1rem;
-    border-radius: 8px;
-    box-shadow: var(--shadow);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    transition: opacity 0.3s ease;
-  }
-  
-  .user-item.denied {
-    opacity: 0.75;
-  }
-  
-  .user-details {
-    flex: 1;
-    font-size: 1rem;
-  }
-  
-  .info-icon {
-    margin-left: 0.5rem;
-    color: var(--info);
-    cursor: pointer;
-  }
-  
-  .buttons {
-    display: flex;
-    gap: 0.5rem;
-  }
-  
-  button {
-    border: none;
-    padding: 0.5rem 1rem;
-    border-radius: 4px;
-    color: #fff;
-    font-size: 0.9rem;
-    cursor: pointer;
-    box-shadow: var(--shadow);
-    transition: background 0.2s ease, transform 0.1s ease;
-  }
-  
-  button:active { transform: translateY(1px); }
-  
-  button.approve {
-    background: var(--approve);
-  }
-  button.approve:hover {
-    background: var(--approve-hover);
-  }
-  
-  button.deny {
-    background: var(--deny);
-  }
-  button.deny:hover {
-    background: var(--deny-hover);
-  }
-  .user-item.approved {
-    opacity: 0.75;
-    background-color: rgba(143, 188, 143, 0.1); /* light green tint */
-  }
-  
+  --bg: #f5f1e8;
+  --card-bg: #fffaf0;
+  --text: #5a4632;
+  --approve: #8fbc8f;
+  --approve-hover: #7cad7c;
+  --deny: #cd5c5c;
+  --deny-hover: #b24d4d;
+  --hold: #ffd700;
+  --hold-hover: #e6c200;
+  --info: #a0522d;
+  --shadow: 0 2px 6px rgba(0,0,0,0.1);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  font-family: sans-serif;
+  background: var(--bg);
+  height: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+body {
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+}
+
+.header-bar,
+#user-list {
+  width: 84%;      /* 84% of viewport width */
+  max-width: 84%;
+}
+header {
+  text-align: center;
+  margin: 1rem 0;
+  color: var(--text);
+}
+
+main {
+  width: 100%;
+  max-width: 480px;
+  background: var(--bg);
+  padding: 0 1rem 2rem;
+}
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.controls input[type="text"],
+.controls select {
+  padding: 0.5rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+.controls input[type="text"] {
+  flex: 1 1 150px;
+}
+
+.filters {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.filters details {
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  background: #fff;
+  padding: 0.3rem;
+}
+
+.filters summary {
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.filter-options {
+  margin-top: 0.5rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.filter-options label {
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.tab-controls {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.tab-controls button {
+  background: var(--card-bg);
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px 4px 0 0;
+  cursor: pointer;
+  font-weight: bold;
+  color: var(--text);
+  opacity: 0.6;
+}
+
+.tab-controls button.active {
+  opacity: 1;
+  background: #e0dacd;
+}
+
+ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.user-item {
+  background: var(--card-bg);
+  color: var(--text);
+  margin-bottom: 1rem;
+  padding: 1rem;
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+}
+
+.user-item.pending { }
+.user-item.hold {
+  background-color: rgba(240,230,140,0.3);
+}
+.user-item.approved {
+  opacity: 0.75;
+  background-color: rgba(143,188,143,0.9);
+}
+.user-item.denied {
+  opacity: 0.6;
+  background-color: rgba(205, 92, 92, 0.29);
+}
+
+.user-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+/* new: allow long names to truncate */
+.user-top .name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.info-icon {
+  margin-right: 0.5rem;
+  color: var(--info);
+  cursor: pointer;
+}
+
+.status-label {
+  margin-left: 0.5rem;
+  font-size: 0.8rem;
+  color: #666;
+}
+
+.buttons button {
+  margin-left: 0.5rem;
+  padding: 0.4rem 0.7rem;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  box-shadow: var(--shadow);
+  font-size: 0.85rem;
+}
+
+button.approve {
+  background: var(--approve);
+}
+button.approve:hover {
+  background: var(--approve-hover);
+}
+
+button.hold {
+  background: var(--hold);
+}
+button.hold:hover {
+  background: var(--hold-hover);
+}
+
+button.deny {
+  background: var(--deny);
+}
+button.deny:hover {
+  background: var(--deny-hover);
+}
+
+/* Expanded details */
+.extra-details {
+  display: block;
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  background: #f0f0e0;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+.extra-details div {
+  margin: 4px 0;
+}
+.extra-details strong {
+  display: inline-block;
+  min-width: 100px;
+  color: #555;
+}
+
+/* style the phone link */
+.extra-details a {
+  color: var(--approve);
+  text-decoration: none;
+}
+.extra-details a:hover {
+  text-decoration: underline;
+}
+
+.points-input {
+  width: 3rem;
+  margin: 0 0.5rem;
+}
+.points-btn {
+  padding: 0.2rem 0.5rem;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.points-btn.increment {
+  background: #8fbc8f;
+  color: white;
+}
+.points-btn.decrement {
+  background: #cd5c5c;
+  color: white;
+}
+
+.toast {
+  position: fixed;
+  bottom: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #333;
+  color: #fff;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  z-index: 1000;
+}
+.undo-btn {
+  background: #555;
+  border: none;
+  padding: 0.25rem 0.5rem;
+  color: #fff;
+  cursor: pointer;
+  border-radius: 4px;
+}
+.undo-btn:hover {
+  background: #777;
+}
+/* Tab styling tweak: highlight active tab */
+.tab-controls button {
+  margin-right: 0.5rem;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: none;
+  cursor: pointer;
+  color: var(--text);
+  font-weight: bold;
+  opacity: 0.7;
+}
+.tab-controls button.active {
+  opacity: 1;
+  border-bottom-color: var(--text);
+}
+
+/* Denied styling: match approved’s semi-transparent pattern but red */
+.user-item.denied {
+  opacity: 0.75;
+  background-color: rgba(205, 92, 92, 0.503);
+}
+
+/* Approved remains as-is (semi-transparent green) */
+.user-item.approved {
+  opacity: 0.75;
+  background-color: rgba(143, 188, 143, 0.716);
+}
+
+/* Pending and Hold keep full opacity */
+.user-item.pending,
+.user-item.hold {
+  opacity: 1;
+}
+
+/* Container for two-thumb range slider */
+.slider-range {
+  position: relative;
+  height: 2rem;
+  margin: 0 1rem;              /* horizontal padding */
+  background: #ddd;            /* un-selected track color */
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+/* Hide the native track, let the container’s background-gradient show */
+.slider-range input[type="range"] {
+  -webkit-appearance: none;    /* remove default styling */
+  background: transparent;     
+  pointer-events: none;        /* only thumbs capture events */
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 100%;
+  transform: translateY(-50%);
+  height: 2px;                 /* thin invisible active area */
+}
+
+/* Hide native track for Webkit */
+.slider-range input[type="range"]::-webkit-slider-runnable-track {
+  background: transparent;
+}
+
+/* Hide native track for Firefox */
+.slider-range input[type="range"]::-moz-range-track {
+  background: transparent;
+}
+
+/* Style the thumbs */
+.slider-range input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  pointer-events: all;
+  position: relative;
+  z-index: 2;
+  width: 1rem;
+  height: 1rem;
+  border-radius: 50%;
+  background: var(--text);
+  border: 2px solid var(--bg);
+  cursor: pointer;
+  margin-top: -0.4rem;        /* vertically center the thumb */
+}
+
+.slider-range input[type="range"]::-moz-range-thumb {
+  pointer-events: all;
+  position: relative;
+  z-index: 2;
+  width: 1rem;
+  height: 1rem;
+  border-radius: 50%;
+  background: var(--text);
+  border: 2px solid var(--bg);
+  cursor: pointer;
+}
+
+/* Repaint only the area between thumbs */
+.slider-range[data-min][data-max] {
+  /* The JS colorRange(...) function sets this inline via style.background */
+}
+/* make the painted track area black, thumbs tall vertical bars */
+.slider-range {
+  position: relative;
+  height: 2rem;
+  margin: 0 1rem;
+  background: #ddd;
+  border-radius: 4px;
+  overflow: hidden;
+  transition: width 333ms ease;
+}
+/* hide native track, keep only container’s gradient */
+.slider-range input[type=range] {
+  -webkit-appearance: none;
+  background: transparent;
+  pointer-events: none;
+  position: absolute;
+  top: 50%; left: 0; width: 100%;
+  transform: translateY(-50%);
+  height: 2px;
+}
+/* hide Webkit/Firefox tracks */
+.slider-range input[type=range]::-webkit-slider-runnable-track,
+.slider-range input[type=range]::-moz-range-track {
+  background: transparent;
+}
+/* tall vertical black thumbs */
+.slider-range input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  pointer-events: all;
+  position: relative; z-index: 2;
+  width: 7px;         /* narrow vertical bar */
+  height: 6.5rem;     /* tall */
+  background: #000;    /* black */
+  border: none;
+  margin-top: -0.75rem;/* center vertically */
+  cursor: pointer;
+}
+.slider-range input[type=range]::-moz-range-thumb {
+  pointer-events: all;
+  position: relative; z-index: 2;
+  width: 7px;
+  height: 6.5rem;
+  background: #000;
+  border: none;
+  cursor: pointer;
+}
+
+/* animate opening content to 33% */
+.filter-options,
+.filter-slider {
+  width: auto;
+  transition: width 333ms ease;
+}
+details[open] .filter-options,
+details[open] .filter-slider {
+  width: 33%;
+}
+/* Container for all filter panels */
+#filtersDiv {
+  display: flex;
+  gap: 0.5rem;
+}
+
+/* Let each <details> flex-shrink, base 0 */
+#filtersDiv > details {
+  flex: 1 1 0;
+}
+
+/* Summary styling */
+.filters details summary {
+  background: #fff;
+  color: var(--text);
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background 200ms, color 200ms;
+}
+
+/* When a panel is open, invert colors */
+.filters details[open] summary {
+  background: var(--text);
+  color: var(--bg);
+}
+
+/* Content inside panels */
+.filter-options,
+.filter-slider {
+  width: auto;
+  max-width: 100%;
+  overflow: hidden;
+  transition: width 333ms ease;
+}
+
+/* Opened panel expands to 33% */
+details[open] .filter-options,
+details[open] .filter-slider {
+  width: 33%;
+}
+
+/* Two-thumb slider container */
+.slider-range {
+  position: relative;
+  height: 2rem;
+  margin: 0 1rem;            /* horizontal padding */
+  background: #ddd;  
+  border-radius: 4px;
+  overflow: hidden;
+  transition: width 333ms ease;
+}
+
+/* Hide native track, keep thumbs only */
+.slider-range input[type="range"] {
+  -webkit-appearance: none;
+  background: transparent;
+  pointer-events: none;
+  position: absolute;
+  top: 50%; left: 0; width: 100%;
+  transform: translateY(-50%);
+  height: 2px;
+}
+
+/* Hide WebKit/Firefox track visuals */
+.slider-range input[type="range"]::-webkit-slider-runnable-track,
+.slider-range input[type="range"]::-moz-range-track {
+  background: transparent;
+}
+
+/* Tall vertical black thumbs */
+.slider-range input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  pointer-events: all;
+  z-index: 2;
+  width: 7px;
+  height: 6.5rem;
+  background: #000;
+  border: none;
+  margin-top: -0.75rem;
+  cursor: pointer;
+}
+.slider-range input[type="range"]::-moz-range-thumb {
+  pointer-events: all;
+  z-index: 2;
+  width: 7px;
+  height: 6.5rem;
+  background: #000;
+  border: none;
+  cursor: pointer;
+}

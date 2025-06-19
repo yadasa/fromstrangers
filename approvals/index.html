@@ -1,27 +1,110 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Pending Approvals</title>
-  <link rel="stylesheet" href="css/style.css">
-  <!-- Firebase SDKs -->
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>User Review</title>
+  <link rel="stylesheet" href="css/style.css" />
+
+  <!-- hide disclosure triangles -->
+  <style>
+    
+    .filter-options label.selected {
+      background-color: var(--text);
+      color: var(--bg);
+    }
+    /* slider‐range container for two‐thumb track coloring */
+    .slider-range {
+      position: relative;
+      height: 2rem;
+      border-radius: 4px;
+      background: #ddd;
+    }
+    .slider-range input[type="range"] {
+      pointer-events: none;
+      position: absolute;
+      top: 0; left: 0; width: 100%;
+      background: transparent;
+      margin: 0;
+    }
+    .slider-range input[type="range"]::-webkit-slider-thumb {
+      pointer-events: all;
+      position: relative;
+      z-index: 2;
+    }
+    .slider-range input[type="range"]::-moz-range-thumb {
+      pointer-events: all;
+      position: relative;
+      z-index: 2;
+    }
+  </style>
+
+  <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
-  
-  <!-- Load your secret-free template (ignored) -->
   <script src="js/firebaseConfig.js" defer></script>
-  
-  <!-- Your logic -->
-  <script defer src="js/app.js"></script>
+  <script src="js/app.js" defer></script>
 </head>
 <body>
-  <header>
-    <h1>Pending Approvals</h1>
-  </header>
-  <main>
-    <ul id="user-list"></ul>
-  </main>
-  
+  <div class="header-bar">
+    <header><h1>User Review</h1></header>
+
+    <div class="controls">
+      <input type="text" id="searchBar" placeholder="Search users…" />
+
+      <div id="filtersDiv" class="filters">
+        <details>
+          <summary>sex</summary>
+          <div id="genderOptions" class="filter-options"></div>
+        </details>
+        <details>
+          <summary>job</summary>
+          <div id="employmentOptions" class="filter-options"></div>
+        </details>
+        <details>
+          <summary>age</summary>
+          <div class="filter-slider">
+            <label>Age: <span id="ageLabel">18 – 40+</span></label>
+            <div id="ageSlider" class="slider-range">
+              <input type="range" id="ageMin" min="18" max="40" value="18" />
+              <input type="range" id="ageMax" min="18" max="40" value="40" />
+            </div>
+          </div>
+        </details>
+        <details>
+          <summary>$$$</summary>
+          <div class="filter-slider">
+            <label>Budget: <span id="budgetLabel">0 – 10</span></label>
+            <div id="budgetSlider" class="slider-range">
+              <input type="range" id="budgetMin" step="0.10" min="-5" max="5" value="-5" />
+              <input type="range" id="budgetMax" step="0.10" min="-5" max="5" value="5" />
+            </div>
+          </div>
+        </details>
+      </div>
+
+      <label>
+        Sort by:
+        <select id="sortSelect">
+          <option value="time_desc">Newest First</option>
+          <option value="time_asc">Oldest First</option>
+          <option value="name_asc">Name A–Z</option>
+          <option value="name_desc">Name Z–A</option>
+          <option value="points_desc">Points High→Low</option>
+          <option value="points_asc">Points Low→High</option>
+          <option value="status">Status (Approved→Hold→Denied)</option>
+        </select>
+      </label>
+    </div>
+
+    <div class="tab-controls">
+      <button data-tab="all"      class="active">All</button>
+      <button data-tab="approved">Approved</button>
+      <button data-tab="hold">Hold</button>
+      <button data-tab="denied">Denied</button>
+    </div>
+  </div>
+
+  <ul id="user-list"></ul>
 </body>
 </html>
