@@ -389,7 +389,7 @@ async function startQRScan() {
         }
 
         await docRef.update({
-          sPoints: firebase.firestore.FieldValue.increment(7)
+          sPoints: firebase.firestore.FieldValue.increment(70)
         });
         alert(`✅ Welcome, ${name}!`);
       },
