@@ -666,6 +666,9 @@ async function handleRSVP(status) {
 
   const rsvpRef   = db.collection('events').doc(eventId).collection('rsvps').doc(currentPhone);
   const memberRef = db.collection('members').doc(currentPhone);
+  // 1) fetch previous RSVP so we know if it really changed
+  const prevSnap    = await rsvpRef.get();
+  const prevStatus  = prevSnap.exists ? prevSnap.data().status : null;
 
   await db.runTransaction(async tx => {
     const doc       = await tx.get(rsvpRef);
@@ -702,15 +705,24 @@ async function handleRSVP(status) {
     }
   });
 
-  // System comment
-  const sysText = `${currentName} marked as *${status}*`;
-  await db.collection('events').doc(eventId).collection('comments').add({
-    text: sysText,
-    name: '',
-    user: '',
-    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-    system: true
-  });
+  
+ // 4) only add a system comment if the status is different than before
+ if (prevStatus !== status) {
+   const sysText = `${currentName} marked as *${status}*`;
+   await db
+     .collection('events')
+     .doc(eventId)
+     .collection('comments')
+     .add({
+       text:      sysText,
+       system:    true,
+       timestamp: firebase.firestore.FieldValue.serverTimestamp()
+     });
+ }
+
+  // 5) update the active class on the RSVP buttons
+  document.querySelectorAll('.rsvp-button').forEach(btn => btn.classList.remove('active'));
+  document.getElementById(`btn-${status.toLowerCase()}`).classList.add('active');
 
   // Refresh preview
   await loadGuestListPreview();
