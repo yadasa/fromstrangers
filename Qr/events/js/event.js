@@ -1435,14 +1435,34 @@ function getActiveGifTarget() {
 function setupCalendarAndShare(e) {
   // “Add to Calendar” → build & download .ics
   document.getElementById('btn-calendar').onclick = () => {
-    // parse start date/time
+    // parse date
     const [y, m, d] = e.date.split('-').map(Number);
-    const [h, min]  = (e.time || '00:00').split(':').map(Number);
-    const startDt   = new Date(y, m - 1, d, h, min);
 
-    // determine duration in minutes (Firestore `duration` or default to 180)
+    // parse time, supporting both "HH:MM" and "H:MMAM/PM"
+    const timeStr = (e.time || '').trim();
+    let hours = 0, minutes = 0;
+    const ampmMatch = timeStr.match(/^(\d{1,2}):(\d{2})\s*([AaPp][Mm])$/);
+    if (ampmMatch) {
+      // 12-hour format
+      hours   = parseInt(ampmMatch[1], 10);
+      minutes = parseInt(ampmMatch[2], 10);
+      const suffix = ampmMatch[3].toUpperCase();
+      if (suffix === 'PM' && hours < 12) hours += 12;
+      if (suffix === 'AM' && hours === 12) hours = 0;
+    } else {
+      // assume 24-hour "HH:MM"
+      const parts = timeStr.split(':').map(p => parseInt(p, 10));
+      if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+        hours = parts[0];
+        minutes = parts[1];
+      }
+    }
+
+    const startDt = new Date(y, m - 1, d, hours, minutes);
+
+    // duration (in minutes) or default to 180
     const durationMin = typeof e.duration === 'number' ? e.duration : 180;
-    const endDt       = new Date(startDt.getTime() + durationMin * 60000);
+    const endDt = new Date(startDt.getTime() + durationMin * 60000);
 
     // helper to format as UTC YYYYMMDDTHHMMSSZ
     const fmtUTC = dt => {
@@ -1461,8 +1481,9 @@ function setupCalendarAndShare(e) {
     const uid     = `${eventId}@yourapp.com`;
     const title   = e.title.replace(/[\r\n]/g, ' ');
     const desc    = (e.description || '').replace(/[\r\n]/g, '\\n');
-    const loc     = (e.location    || '').replace(/[\r\n]/g, ' ');
+    const loc     = (e.location || '').replace(/[\r\n]/g, ' ');
 
+    // build lines, omitting LOCATION if empty
     const icsLines = [
       'BEGIN:VCALENDAR',
       'VERSION:2.0',
@@ -1474,15 +1495,13 @@ function setupCalendarAndShare(e) {
       `DTEND:${dtend}`,
       `SUMMARY:${title}`,
       `DESCRIPTION:${desc}`,
-      `LOCATION:${loc}`,
+      ...(loc ? [`LOCATION:${loc}`] : []),
       `URL:${window.location.href}`,
       'END:VEVENT',
       'END:VCALENDAR'
     ];
 
-    const blob = new Blob([icsLines.join('\r\n')], {
-      type: 'text/calendar;charset=utf-8'
-    });
+    const blob = new Blob([icsLines.join('\r\n')], { type: 'text/calendar;charset=utf-8' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
     link.download = `${title || 'event'}.ics`;
@@ -1490,6 +1509,8 @@ function setupCalendarAndShare(e) {
     link.click();
     document.body.removeChild(link);
   };
+
+
 
   // “Share” → Web Share API
   document.getElementById('btn-share-event').onclick = async () => {
