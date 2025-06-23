@@ -1497,9 +1497,22 @@ function setupCalendarAndShare(e) {
       return;
     }
 
-    // Build your referral URL (same as before)
-    const baseURL = window.location.origin + window.location.pathname;
-    const paramE  = '?e=' + encodeURIComponent(eventId);
+    // 1) Make sure OG meta tags are up to date
+    const ogImage = e.imageUrl || '../assets/ogimage.png';
+    document.querySelector("meta[property='og:image']").setAttribute('content', ogImage);
+    document.querySelector("meta[property='og:title']").setAttribute('content', e.title);
+
+    // 2) Preload the image into cache
+    await new Promise(resolve => {
+      const img = new Image();
+      img.onload  = resolve;
+      img.onerror = resolve;
+      img.src     = ogImage;
+    });
+
+    // 3) Build your referral URL
+    const baseURL  = window.location.origin + window.location.pathname;
+    const paramE   = '?e=' + encodeURIComponent(eventId);
     const phoneBytes = new TextEncoder().encode(currentPhone);
     const dig = await crypto.subtle.digest('SHA-256', phoneBytes);
     const hashArray = Array.from(new Uint8Array(dig));
@@ -1514,6 +1527,7 @@ function setupCalendarAndShare(e) {
     const finalToken = randChars() + reversedHash + randChars();
     const shareURL = `${baseURL}${paramE}&ref=${encodeURIComponent(finalToken)}`;
 
+    // 4) Fire the share sheet
     try {
       await navigator.share({
         title: e.title,
@@ -1524,6 +1538,7 @@ function setupCalendarAndShare(e) {
       console.error('Share failed:', err);
     }
   };
+
 }
 
 
