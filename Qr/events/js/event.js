@@ -699,8 +699,9 @@ async function handleRSVP(status) {
     // 3) if first‐ever RSVP and we still have a referrer, give them +5 once
     if (!doc.exists && referrerPhone) {
       const refMemRef = db.collection('members').doc(referrerPhone);
+      const referralPts = status === 'Going' ? 200 : 50;
       tx.update(refMemRef, {
-        sPoints: firebase.firestore.FieldValue.increment(5)
+        sPoints: firebase.firestore.FieldValue.increment(referralPts)
       });
       tx.update(rsvpRef, { referrerAwarded: true }, { merge: true });
     }
