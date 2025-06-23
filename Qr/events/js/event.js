@@ -1432,64 +1432,100 @@ function getActiveGifTarget() {
 
 // 17. Calendar & Share logic
 function setupCalendarAndShare(e) {
+  // “Add to Calendar” → build & download .ics
   document.getElementById('btn-calendar').onclick = () => {
-  // parse start date/time
-  const [y, m, d] = e.date.split('-').map(Number);
-  const [h, min]  = (e.time || '00:00').split(':').map(Number);
-  const startDt   = new Date(y, m - 1, d, h, min);
+    // parse start date/time
+    const [y, m, d] = e.date.split('-').map(Number);
+    const [h, min]  = (e.time || '00:00').split(':').map(Number);
+    const startDt   = new Date(y, m - 1, d, h, min);
 
-  // determine duration in minutes (Firestore `duration` or defaults to 180)
-  const durationMin = typeof e.duration === 'number'
-                      ? e.duration
-                      : 180;
+    // determine duration in minutes (Firestore `duration` or default to 180)
+    const durationMin = typeof e.duration === 'number' ? e.duration : 180;
+    const endDt       = new Date(startDt.getTime() + durationMin * 60000);
 
-  const endDt = new Date(startDt.getTime() + durationMin * 60000);
+    // helper to format as UTC YYYYMMDDTHHMMSSZ
+    const fmtUTC = dt => {
+      const pad = n => n.toString().padStart(2, '0');
+      return dt.getUTCFullYear()
+        + pad(dt.getUTCMonth() + 1)
+        + pad(dt.getUTCDate()) + 'T'
+        + pad(dt.getUTCHours())
+        + pad(dt.getUTCMinutes())
+        + pad(dt.getUTCSeconds()) + 'Z';
+    };
 
-  // helper to format as UTC YYYYMMDDTHHMMSSZ
-  const fmtUTC = dt => {
-    const pad = n => n.toString().padStart(2, '0');
-    return dt.getUTCFullYear()
-      + pad(dt.getUTCMonth() + 1)
-      + pad(dt.getUTCDate()) + 'T'
-      + pad(dt.getUTCHours())
-      + pad(dt.getUTCMinutes())
-      + pad(dt.getUTCSeconds()) + 'Z';
+    const dtstamp = fmtUTC(new Date());
+    const dtstart = fmtUTC(startDt);
+    const dtend   = fmtUTC(endDt);
+    const uid     = `${eventId}@yourapp.com`;
+    const title   = e.title.replace(/[\r\n]/g, ' ');
+    const desc    = (e.description || '').replace(/[\r\n]/g, '\\n');
+    const loc     = (e.location    || '').replace(/[\r\n]/g, ' ');
+
+    const icsLines = [
+      'BEGIN:VCALENDAR',
+      'VERSION:2.0',
+      'PRODID:-//YourApp//EN',
+      'BEGIN:VEVENT',
+      `UID:${uid}`,
+      `DTSTAMP:${dtstamp}`,
+      `DTSTART:${dtstart}`,
+      `DTEND:${dtend}`,
+      `SUMMARY:${title}`,
+      `DESCRIPTION:${desc}`,
+      `LOCATION:${loc}`,
+      `URL:${window.location.href}`,
+      'END:VEVENT',
+      'END:VCALENDAR'
+    ];
+
+    const blob = new Blob([icsLines.join('\r\n')], {
+      type: 'text/calendar;charset=utf-8'
+    });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `${title || 'event'}.ics`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
-  const dtstamp = fmtUTC(new Date());
-  const dtstart = fmtUTC(startDt);
-  const dtend   = fmtUTC(endDt);
-  const uid     = `${eventId}@yourapp.com`;
-  const title   = e.title.replace(/[\r\n]/g, ' ');
-  const desc    = (e.description || '').replace(/[\r\n]/g, '\\n');
-  const loc     = (e.location || '').replace(/[\r\n]/g, ' ');
+  // “Share” → Web Share API
+  document.getElementById('btn-share-event').onclick = async () => {
+    if (!navigator.share) {
+      alert('Web Share API not supported');
+      return;
+    }
 
-  const icsLines = [
-    'BEGIN:VCALENDAR',
-    'VERSION:2.0',
-    'PRODID:-//YourApp//EN',
-    'BEGIN:VEVENT',
-    `UID:${uid}`,
-    `DTSTAMP:${dtstamp}`,
-    `DTSTART:${dtstart}`,
-    `DTEND:${dtend}`,
-    `SUMMARY:${title}`,
-    `DESCRIPTION:${desc}`,
-    `LOCATION:${loc}`,
-    `URL:${window.location.href}`,
-    'END:VEVENT',
-    'END:VCALENDAR'
-  ];
-  const blob = new Blob([icsLines.join('\r\n')], { type: 'text/calendar;charset=utf-8' });
-  const link = document.createElement('a');
-  link.href = URL.createObjectURL(blob);
-  link.download = `${title || 'event'}.ics`;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-};
+    // Build your referral URL (same as before)
+    const baseURL = window.location.origin + window.location.pathname;
+    const paramE  = '?e=' + encodeURIComponent(eventId);
+    const phoneBytes = new TextEncoder().encode(currentPhone);
+    const dig = await crypto.subtle.digest('SHA-256', phoneBytes);
+    const hashArray = Array.from(new Uint8Array(dig));
+    const hashHex   = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    const reversedHash = hashHex.split('').reverse().join('');
+    const randChars = () => {
+      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+      return Array.from({ length: 4 }, () =>
+        chars.charAt(Math.floor(Math.random() * chars.length))
+      ).join('');
+    };
+    const finalToken = randChars() + reversedHash + randChars();
+    const shareURL = `${baseURL}${paramE}&ref=${encodeURIComponent(finalToken)}`;
 
+    try {
+      await navigator.share({
+        title: e.title,
+        text:  'Join me at ' + e.title,
+        url:   shareURL
+      });
+    } catch (err) {
+      console.error('Share failed:', err);
+    }
+  };
 }
+
 
 // 18. Show ticket modal
 function showTicketModal() {
