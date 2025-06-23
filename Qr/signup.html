@@ -1,0 +1,258 @@
+<div class="w-form">
+  <style>
+    .muted-form { background:#F7F2EA; padding:24px; border-radius:8px; color:#1A1A1A; font-family:sans-serif; max-width:600px; margin:auto; }
+    .muted-form .field { margin-bottom:16px; }
+    .muted-form label { display:block; margin-bottom:6px; font-weight:600; }
+    .muted-form input, .muted-form select, .muted-form textarea {
+      width:100%; padding:8px; border:1px solid #DDD; border-radius:4px;
+      background:#FFF; color:#1A1A1A;
+    }
+    .muted-form textarea { resize:vertical; }
+    .gender-options { display:flex; gap:20px; }
+    .muted-form input[type=radio] { accent-color:#1A1A1A; margin-right:6px; }
+    .slider-wrap { margin-bottom:24px; }
+    .slider-labels { display:flex; justify-content:space-between; font-size:0.9em; }
+    .muted-form input[type=range] {
+      -webkit-appearance:none; appearance:none;
+      width:100%; height:8px; border-radius:4px;
+      background:#FFF; margin-top:6px;
+    }
+    .muted-form input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance:none; width:6px; height:20px;
+      border-radius:3px; background:#1A1A1A;
+      cursor:pointer; margin-top:-6px;
+    }
+    .muted-form input[type=range]::-moz-range-thumb {
+      width:6px; height:20px;
+      border-radius:3px; background:#1A1A1A;
+      cursor:pointer; margin-top:-6px;
+    }
+    .muted-form .w-button {
+      background:transparent; color:#1A1A1A;
+      border:2px solid #1A1A1A; padding:10px 24px;
+      border-radius:4px; font-weight:600; cursor:pointer;
+    }
+    .muted-form .w-button:hover { background:#1A1A1A; color:#FFF; }
+  </style>
+
+  <form method="POST" name="wf-form-Profile-Form" data-name="Profile Form" class="muted-form">
+    <!-- Name -->
+    <div class="field">
+      <label for="name">Name</label>
+      <input type="text" id="name" name="Name" placeholder="Your name" required>
+    </div>
+
+    <!-- Age -->
+    <div class="field">
+      <label for="age">Age</label>
+      <input type="number" id="age" name="Age" placeholder="Your age" required>
+    </div>
+
+    <!-- Gender -->
+    <div class="field">
+      <label>Gender</label>
+      <div class="gender-options">
+        <label><input type="radio" name="Gender" value="Male" required>Male</label>
+        <label><input type="radio" name="Gender" value="Female">Female</label>
+      </div>
+    </div>
+
+    <!-- Instagram -->
+    <div class="field">
+      <label for="insta">Instagram Handle</label>
+      <input type="text" id="insta" name="Instagram-Handle" placeholder="@yourhandle" required>
+    </div>
+
+    <!-- Phone -->
+    <div class="field">
+      <label for="phone">Phone Number</label>
+      <input type="tel" id="phone" name="Phone-Number" placeholder="(123) 456-7890" required>
+    </div>
+
+    <!-- Availability -->
+    <div class="field">
+      <label>Usual Availability</label>
+      <label><input type="checkbox" name="Availability" data-name="Availability" value="Weeknights">Weeknights</label>
+      <label><input type="checkbox" name="Availability" data-name="Availability" value="Weekends">Weekends</label>
+      <label><input type="checkbox" name="Availability" data-name="Availability" value="Mornings">Mornings</label>
+      <label><input type="checkbox" name="Availability" data-name="Availability" value="Evenings">Evenings</label>
+    </div>
+
+    <!-- Last-Minute -->
+    <div class="field">
+      <label for="spont">Open to Last-Minute Invites?</label>
+      <select id="spont" name="Spontaneous-Invites" required>
+        <option value="">Select one</option>
+        <option value="Yes">Yes</option>
+        <option value="Depends">Depends</option>
+        <option value="No">Nah, I need notice</option>
+      </select>
+    </div>
+
+    <!-- Neighborhood -->
+    <div class="field">
+      <label for="hood">What neighborhood are you from?</label>
+      <input type="text" id="hood" name="Neighborhood" placeholder="e.g. Montrose" required>
+    </div>
+
+    <!-- Vibe Prompt -->
+    <div class="field">
+      <p style="font-weight:600; margin-bottom:4px;">What's your vibe?</p>
+      <p style="margin-top:0; font-weight:400; margin-bottom:12px;">drag the sliders accordingly</p>
+    </div>
+
+    <!-- Sliders: backend -5→+5, front-end unchanged text -->
+    <div class="slider-wrap">
+      <div class="slider-labels"><span>Chill Hangouts</span><span>Competitive Energy</span></div>
+      <input type="range" name="Chill-vs-Competitive" min="-5" max="5" step="0.1" value="0" class="range-slider">
+    </div>
+    <div class="slider-wrap">
+      <div class="slider-labels"><span>Indoors</span><span>Outdoors</span></div>
+      <input type="range" name="Indoors-vs-Outdoors" min="-5" max="5" step="0.1" value="0" class="range-slider">
+    </div>
+    <div class="slider-wrap">
+      <div class="slider-labels"><span>Planned</span><span>Spontaneous</span></div>
+      <input type="range" name="Planned-vs-Spontaneous" min="-5" max="5" step="0.1" value="0" class="range-slider">
+    </div>
+    <div class="slider-wrap">
+      <div class="slider-labels"><span>Small Group</span><span>Large Crowd</span></div>
+      <input type="range" name="Small-vs-Large" min="-5" max="5" step="0.1" value="0" class="range-slider">
+    </div>
+    <div class="slider-wrap">
+      <div class="slider-labels"><span>Quiet Evenings</span><span>Vibrant Nights</span></div>
+      <input type="range" name="Quiet-vs-Vibrant" min="-5" max="5" step="0.1" value="0" class="range-slider">
+    </div>
+
+    <!-- Comfort -->
+    <div class="field">
+      <label for="solo">Comfort attending solo?</label>
+      <select id="solo" name="Solo-Attendance" required>
+        <option value="">Select one</option>
+        <option value="Yes">Yes</option>
+        <option value="Prefer">Prefer to bring someone</option>
+      </select>
+    </div>
+
+    <!-- Mixed-gender -->
+    <div class="field">
+      <label for="mg">Mixed-gender spaces?</label>
+      <select id="mg" name="Mixed-Gender" required>
+        <option value="">Select one</option>
+        <option value="All-good">All good</option>
+        <option value="Same-gender">Prefer same-gender spaces</option>
+        <option value="No-preference">No preference</option>
+      </select>
+    </div>
+
+    <!-- Accessibility -->
+    <div class="field">
+      <label for="access">Accessibility or Safety Needs (optional)</label>
+      <textarea id="access" name="Accessibility-Needs" placeholder="Let us know here..."></textarea>
+    </div>
+
+    <!-- Employment -->
+    <div class="field">
+      <label for="emp">Are you employed? (optional)</label>
+      <select id="emp" name="Employment">
+        <option value="">Select one</option>
+        <option value="Yes">Yes</option>
+        <option value="No">No</option>
+        <option value="Prefer-not">Prefer not to say</option>
+      </select>
+    </div>
+
+    <!-- Bucket List -->
+    <div class="field">
+      <label for="bucket">What's one thing on your bucket list? (optional)</label>
+      <textarea id="bucket" name="Bucket-List-Item" placeholder="Skydiving, snorkeling, etc"></textarea>
+    </div>
+
+    <!-- Submit -->
+    <div class="field">
+      <input type="submit" value="Submit" class="w-button">
+    </div>
+  </form>
+
+  <div class="w-form-done" style="display:none"><p>Thanks! We'll see you soon.</p></div>
+  <div class="w-form-fail" style="display:none"><p>Oops! Please try again.</p></div>
+
+  <script>
+    document.querySelectorAll('.range-slider').forEach(slider => {
+      const min = parseFloat(slider.min),
+            max = parseFloat(slider.max),
+            mid = (0 - min) / (max - min) * 100; // always 50%
+      function updateBackground() {
+        const val = parseFloat(slider.value),
+              pct = (val - min) / (max - min) * 100;
+        let bg;
+        if (pct >= mid) {
+          bg = `linear-gradient(to right, #FFFFFF ${mid}%, #F7F2EA ${mid}%, #1A1A1A ${pct}%, #FFFFFF ${pct}%)`;
+        } else {
+          const rev = 100 - pct;
+          bg = `linear-gradient(to left, #FFFFFF ${100-mid}%, #F7F2EA ${100-mid}%, #1A1A1A ${rev}%, #FFFFFF ${rev}%)`;
+        }
+        slider.style.background = bg;
+      }
+      slider.addEventListener('input', updateBackground);
+      updateBackground();
+    });
+  </script>
+  <script>
+  (function(){
+    const form = document.querySelector('form[name="wf-form-Profile-Form"]');
+    const done = document.querySelector('.w-form-done');
+    const fail = document.querySelector('.w-form-fail');
+
+    form.addEventListener('submit', async e => {
+      e.preventDefault();
+
+      // 1. Sanitize phone
+      let phone = form.querySelector('input[name="Phone-Number"]').value;
+      phone = phone.replace(/\D/g, '');
+      if (phone.length === 11 && phone.startsWith('1')) phone = phone.slice(1);
+      if (phone.length !== 10) {
+        alert('Enter a valid 10-digit number');
+        return;
+      }
+
+      // 2. Build your data object
+      const data = {
+        name:                form.querySelector('input[name="Name"]').value.trim(),
+        age:                 parseInt(form.querySelector('input[name="Age"]').value,10),
+        gender:              form.querySelector('input[name="Gender"]:checked').value,
+        instagramHandle:     form.querySelector('input[name="Instagram-Handle"]').value.trim(),
+        availability:        Array.from(form.querySelectorAll('input[name="Availability"]:checked'))
+                                  .map(cb => cb.value),
+        spontaneousInvites:  form.querySelector('select[name="Spontaneous-Invites"]').value,
+        neighborhood:        form.querySelector('input[name="Neighborhood"]').value.trim(),
+        vibes: {
+          chillVsCompetitive:   parseFloat(form.querySelector('input[name="Chill-vs-Competitive"]').value),
+          indoorsVsOutdoors:    parseFloat(form.querySelector('input[name="Indoors-vs-Outdoors"]').value),
+          plannedVsSpontaneous: parseFloat(form.querySelector('input[name="Planned-vs-Spontaneous"]').value),
+          smallVsLarge:         parseFloat(form.querySelector('input[name="Small-vs-Large"]').value),
+          quietVsVibrant:       parseFloat(form.querySelector('input[name="Quiet-vs-Vibrant"]').value)
+        },
+        soloAttendance:      form.querySelector('select[name="Solo-Attendance"]').value,
+        mixedGender:         form.querySelector('select[name="Mixed-Gender"]').value,
+        accessibilityNeeds:  form.querySelector('textarea[name="Accessibility-Needs"]').value.trim(),
+        employment:          form.querySelector('select[name="Employment"]').value,
+        bucketListItem:      form.querySelector('textarea[name="Bucket-List-Item"]').value.trim(),
+        // event-specific
+        onList: false,
+        sPoints: firebase.firestore.FieldValue.increment(0) // initialize if missing
+      };
+
+      // 3. Write to Firestore under doc ID = phone
+      try {
+        await db.collection('members').doc(phone).set(data, { merge: true });
+        done.style.display = 'block';
+        fail.style.display = 'none';
+      } catch (err) {
+        console.error(err);
+        done.style.display = 'none';
+        fail.style.display = 'block';
+      }
+    });
+  })();
+</script>
+</div>
