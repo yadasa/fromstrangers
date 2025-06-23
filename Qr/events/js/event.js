@@ -663,42 +663,44 @@ async function handleRSVP(status) {
     document.getElementById('phone-entry').style.display = 'flex';
     return;
   }
-  const rsvpRef = db.collection('events').doc(eventId).collection('rsvps').doc(currentPhone);
-  await rsvpRef.set({
-    status: status,
-    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-  });
 
-  // Update button styles
-  document.querySelectorAll('.rsvp-button').forEach(btn => btn.classList.remove('active'));
-  const targetBtn = document.getElementById(`btn-${status.toLowerCase()}`);
-  if (targetBtn) {
-    targetBtn.classList.add('active');
-  }
-
-  // Award points
-  const delta = status === 'Going' ? 10 : status === 'Maybe' ? 5 : 1;
+  const rsvpRef   = db.collection('events').doc(eventId).collection('rsvps').doc(currentPhone);
   const memberRef = db.collection('members').doc(currentPhone);
-  try {
-    await memberRef.update({
-      sPoints: firebase.firestore.FieldValue.increment(delta)
-    });
-  } catch (e) {
-    console.error('Points update failed', e);
-  }
 
-  // Referral award
-  if (referrerPhone) {
-    const refMemberRef = db.collection('members').doc(referrerPhone);
-    try {
-      await refMemberRef.update({
+  await db.runTransaction(async tx => {
+    const doc       = await tx.get(rsvpRef);
+    const prevData  = doc.exists ? doc.data() : {};
+    const prevSt    = prevData.status;
+
+    // compute old vs new points
+    const pts       = { Going: 10, Maybe: 5, NotGoing: 1 };
+    const oldPts    = prevSt ? (pts[prevSt] || 0) : 0;
+    const newPts    = pts[status];
+    const delta     = newPts - oldPts;
+
+    // 1) write the new RSVP (and carry forward if we already gave referral)
+    tx.set(rsvpRef, {
+      status,
+      updatedAt:        firebase.firestore.FieldValue.serverTimestamp(),
+      referrerAwarded:  prevData.referrerAwarded || false
+    }, { merge: true });
+
+    // 2) only update your sPoints by the net delta
+    if (delta !== 0) {
+      tx.update(memberRef, {
+        sPoints: firebase.firestore.FieldValue.increment(delta)
+      });
+    }
+
+    // 3) if first‐ever RSVP and we still have a referrer, give them +5 once
+    if (!doc.exists && referrerPhone) {
+      const refMemRef = db.collection('members').doc(referrerPhone);
+      tx.update(refMemRef, {
         sPoints: firebase.firestore.FieldValue.increment(5)
       });
-    } catch (e) {
-      console.error('Referral points update failed', e);
+      tx.update(rsvpRef, { referrerAwarded: true }, { merge: true });
     }
-    referrerPhone = null;
-  }
+  });
 
   // System comment
   const sysText = `${currentName} marked as *${status}*`;
@@ -1259,17 +1261,27 @@ async function submitComment() {
     .collection('comments')
     .add(payload);
 
-  // ---- START REVISION: Award sPoints for commenting ----
-  try {
-    const memberRef = db.collection('members').doc(currentPhone);
-    await memberRef.update({
-      sPoints: firebase.firestore.FieldValue.increment(3)
-    });
-  } catch (err) {
-    console.error("Failed to award sPoints for comment:", err);
-    // This is a non-critical error, so we don't need to alert the user.
-  }
-  // ---- END REVISION ----
+// ---- START REVISION: Award up to 30 pts/day (3 pts/comment) ----
+const memberRef = db.collection('members').doc(currentPhone);
+
+// count how many comments they've posted since midnight
+const startOfDay = new Date();
+startOfDay.setHours(0,0,0,0);
+const todaySnap = await db.collection('events')
+  .doc(eventId)
+  .collection('comments')
+  .where('user','==', currentPhone)
+  .where('timestamp','>=',
+         firebase.firestore.Timestamp.fromDate(startOfDay))
+  .get();
+
+const ptsSoFar  = todaySnap.size * 3;
+const canGive   = ptsSoFar < 30 ? Math.min(3, 30 - ptsSoFar) : 0;
+if (canGive > 0) {
+  await memberRef.update({
+    sPoints: firebase.firestore.FieldValue.increment(canGive)
+  });
+}
 
   // Clear inputs
   contentDiv.innerHTML = '';
