@@ -323,7 +323,7 @@ body::after {
 
 /* Top-right “Signed in as {name}” */
 #signed-in {
-  position: absolute;
+  position: fixed;
   top: 0.3rem;
   right: 1rem;
   font-size: 0.6rem;
