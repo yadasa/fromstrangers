@@ -1,4 +1,10 @@
-<div class="w-form">
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Sign Up</title>
+  <!-- Styles -->
   <style>
     .muted-form { background:#F7F2EA; padding:24px; border-radius:8px; color:#1A1A1A; font-family:sans-serif; max-width:600px; margin:auto; }
     .muted-form .field { margin-bottom:16px; }
@@ -34,225 +40,220 @@
     }
     .muted-form .w-button:hover { background:#1A1A1A; color:#FFF; }
   </style>
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
+  <script src="js/firebaseConfig.js"></script>
+  <script defer>
+    // This runs after firebase-app and your config have loaded
+    firebase.initializeApp(window.firebaseConfig);
+  </script>
 
-  <form method="POST" name="wf-form-Profile-Form" data-name="Profile Form" class="muted-form">
-    <!-- Name -->
-    <div class="field">
-      <label for="name">Name</label>
-      <input type="text" id="name" name="Name" placeholder="Your name" required>
-    </div>
-
-    <!-- Age -->
-    <div class="field">
-      <label for="age">Age</label>
-      <input type="number" id="age" name="Age" placeholder="Your age" required>
-    </div>
-
-    <!-- Gender -->
-    <div class="field">
-      <label>Gender</label>
-      <div class="gender-options">
-        <label><input type="radio" name="Gender" value="Male" required>Male</label>
-        <label><input type="radio" name="Gender" value="Female">Female</label>
+</head>
+<body>
+  <div class="w-form">
+    <form id="signup-form" class="muted-form">
+      <!-- Referred By -->
+      <div class="field">
+        <label for="referredBy">Referred By (optional)</label>
+        <input type="text" id="referredBy" name="ReferredBy" placeholder="Referrer Name (you can edit)">
       </div>
-    </div>
-
-    <!-- Instagram -->
-    <div class="field">
-      <label for="insta">Instagram Handle</label>
-      <input type="text" id="insta" name="Instagram-Handle" placeholder="@yourhandle" required>
-    </div>
-
-    <!-- Phone -->
-    <div class="field">
-      <label for="phone">Phone Number</label>
-      <input type="tel" id="phone" name="Phone-Number" placeholder="(123) 456-7890" required>
-    </div>
-
-    <!-- Availability -->
-    <div class="field">
-      <label>Usual Availability</label>
-      <label><input type="checkbox" name="Availability" data-name="Availability" value="Weeknights">Weeknights</label>
-      <label><input type="checkbox" name="Availability" data-name="Availability" value="Weekends">Weekends</label>
-      <label><input type="checkbox" name="Availability" data-name="Availability" value="Mornings">Mornings</label>
-      <label><input type="checkbox" name="Availability" data-name="Availability" value="Evenings">Evenings</label>
-    </div>
-
-    <!-- Last-Minute -->
-    <div class="field">
-      <label for="spont">Open to Last-Minute Invites?</label>
-      <select id="spont" name="Spontaneous-Invites" required>
-        <option value="">Select one</option>
-        <option value="Yes">Yes</option>
-        <option value="Depends">Depends</option>
-        <option value="No">Nah, I need notice</option>
-      </select>
-    </div>
-
-    <!-- Neighborhood -->
-    <div class="field">
-      <label for="hood">What neighborhood are you from?</label>
-      <input type="text" id="hood" name="Neighborhood" placeholder="e.g. Montrose" required>
-    </div>
-
-    <!-- Vibe Prompt -->
-    <div class="field">
-      <p style="font-weight:600; margin-bottom:4px;">What's your vibe?</p>
-      <p style="margin-top:0; font-weight:400; margin-bottom:12px;">drag the sliders accordingly</p>
-    </div>
-
-    <!-- Sliders: backend -5→+5, front-end unchanged text -->
-    <div class="slider-wrap">
-      <div class="slider-labels"><span>Chill Hangouts</span><span>Competitive Energy</span></div>
-      <input type="range" name="Chill-vs-Competitive" min="-5" max="5" step="0.1" value="0" class="range-slider">
-    </div>
-    <div class="slider-wrap">
-      <div class="slider-labels"><span>Indoors</span><span>Outdoors</span></div>
-      <input type="range" name="Indoors-vs-Outdoors" min="-5" max="5" step="0.1" value="0" class="range-slider">
-    </div>
-    <div class="slider-wrap">
-      <div class="slider-labels"><span>Planned</span><span>Spontaneous</span></div>
-      <input type="range" name="Planned-vs-Spontaneous" min="-5" max="5" step="0.1" value="0" class="range-slider">
-    </div>
-    <div class="slider-wrap">
-      <div class="slider-labels"><span>Small Group</span><span>Large Crowd</span></div>
-      <input type="range" name="Small-vs-Large" min="-5" max="5" step="0.1" value="0" class="range-slider">
-    </div>
-    <div class="slider-wrap">
-      <div class="slider-labels"><span>Quiet Evenings</span><span>Vibrant Nights</span></div>
-      <input type="range" name="Quiet-vs-Vibrant" min="-5" max="5" step="0.1" value="0" class="range-slider">
-    </div>
-
-    <!-- Comfort -->
-    <div class="field">
-      <label for="solo">Comfort attending solo?</label>
-      <select id="solo" name="Solo-Attendance" required>
-        <option value="">Select one</option>
-        <option value="Yes">Yes</option>
-        <option value="Prefer">Prefer to bring someone</option>
-      </select>
-    </div>
-
-    <!-- Mixed-gender -->
-    <div class="field">
-      <label for="mg">Mixed-gender spaces?</label>
-      <select id="mg" name="Mixed-Gender" required>
-        <option value="">Select one</option>
-        <option value="All-good">All good</option>
-        <option value="Same-gender">Prefer same-gender spaces</option>
-        <option value="No-preference">No preference</option>
-      </select>
-    </div>
-
-    <!-- Accessibility -->
-    <div class="field">
-      <label for="access">Accessibility or Safety Needs (optional)</label>
-      <textarea id="access" name="Accessibility-Needs" placeholder="Let us know here..."></textarea>
-    </div>
-
-    <!-- Employment -->
-    <div class="field">
-      <label for="emp">Are you employed? (optional)</label>
-      <select id="emp" name="Employment">
-        <option value="">Select one</option>
-        <option value="Yes">Yes</option>
-        <option value="No">No</option>
-        <option value="Prefer-not">Prefer not to say</option>
-      </select>
-    </div>
-
-    <!-- Bucket List -->
-    <div class="field">
-      <label for="bucket">What's one thing on your bucket list? (optional)</label>
-      <textarea id="bucket" name="Bucket-List-Item" placeholder="Skydiving, snorkeling, etc"></textarea>
-    </div>
-
-    <!-- Submit -->
-    <div class="field">
-      <input type="submit" value="Submit" class="w-button">
-    </div>
-  </form>
-
-  <div class="w-form-done" style="display:none"><p>Thanks! We'll see you soon.</p></div>
-  <div class="w-form-fail" style="display:none"><p>Oops! Please try again.</p></div>
+      <!-- Name -->
+      <div class="field">
+        <label for="name">Name</label>
+        <input type="text" id="name" name="Name" placeholder="Your name" required>
+      </div>
+      <!-- Age -->
+      <div class="field">
+        <label for="age">Age</label>
+        <input type="number" id="age" name="Age" placeholder="Your age" required>
+      </div>
+      <!-- Gender -->
+      <div class="field">
+        <label>Gender</label>
+        <div class="gender-options">
+          <label><input type="radio" name="Gender" value="Male" required>Male</label>
+          <label><input type="radio" name="Gender" value="Female">Female</label>
+        </div>
+      </div>
+      <!-- Instagram -->
+      <div class="field">
+        <label for="insta">Instagram Handle</label>
+        <input type="text" id="insta" name="InstagramHandle" placeholder="@yourhandle" required>
+      </div>
+      <!-- Phone -->
+      <div class="field">
+        <label for="phone">Phone Number</label>
+        <input type="tel" id="phone" name="PhoneNumber" placeholder="(123) 456-7890" required>
+      </div>
+      <!-- Availability -->
+      <div class="field">
+        <label>Usual Availability</label>
+        <label><input type="checkbox" name="Availability" value="Weeknights">Weeknights</label>
+        <label><input type="checkbox" name="Availability" value="Weekends">Weekends</label>
+        <label><input type="checkbox" name="Availability" value="Mornings">Mornings</label>
+        <label><input type="checkbox" name="Availability" value="Evenings">Evenings</label>
+      </div>
+      <!-- Spontaneous -->
+      <div class="field">
+        <label for="spont">Open to Last-Minute Invites?</label>
+        <select id="spont" name="SpontaneousInvites" required>
+          <option value="">Select one</option>
+          <option value="Yes">Yes</option>
+          <option value="Depends">Depends</option>
+          <option value="No">Nah, I need notice</option>
+        </select>
+      </div>
+      <!-- Neighborhood -->
+      <div class="field">
+        <label for="hood">What neighborhood are you from?</label>
+        <input type="text" id="hood" name="Neighborhood" placeholder="e.g. Montrose" required>
+      </div>
+      <!-- Vibe Sliders -->
+      <div class="field"><label>What's your vibe?</label></div>
+      <div class="slider-wrap">
+        <div class="slider-labels"><span>Chill Hangouts</span><span>Competitive Energy</span></div>
+        <input type="range" name="ChillVsCompetitive" min="-5" max="5" step="0.1" value="0" class="range-slider">
+      </div>
+      <div class="slider-wrap">
+        <div class="slider-labels"><span>Indoors</span><span>Outdoors</span></div>
+        <input type="range" name="IndoorsVsOutdoors" min="-5" max="5" step="0.1" value="0" class="range-slider">
+      </div>
+      <div class="slider-wrap">
+        <div class="slider-labels"><span>Planned</span><span>Spontaneous</span></div>
+        <input type="range" name="PlannedVsSpontaneous" min="-5" max="5" step="0.1" value="0" class="range-slider">
+      </div>
+      <div class="slider-wrap">
+        <div class="slider-labels"><span>Small Group</span><span>Large Crowd</span></div>
+        <input type="range" name="SmallVsLarge" min="-5" max="5" step="0.1" value="0" class="range-slider">
+      </div>
+      <div class="slider-wrap">
+        <div class="slider-labels"><span>Quiet Evenings</span><span>Vibrant Nights</span></div>
+        <input type="range" name="QuietVsVibrant" min="-5" max="5" step="0.1" value="0" class="range-slider">
+      </div>
+      <!-- Solo Attendance -->
+      <div class="field">
+        <label for="solo">Comfort attending solo?</label>
+        <select id="solo" name="SoloAttendance" required>
+          <option value="">Select one</option>
+          <option value="Yes">Yes</option>
+          <option value="Prefer">Prefer to bring someone</option>
+        </select>
+      </div>
+      <!-- Mixed Gender -->
+      <div class="field">
+        <label for="mg">Mixed-gender spaces?</label>
+        <select id="mg" name="MixedGender" required>
+          <option value="">Select one</option>
+          <option value="All-good">All good</option>
+          <option value="Same-gender">Prefer same-gender spaces</option>
+          <option value="No-preference">No preference</option>
+        </select>
+      </div>
+      <!-- Accessibility -->
+      <div class="field">
+        <label for="access">Accessibility or Safety Needs (optional)</label>
+        <textarea id="access" name="AccessibilityNeeds" placeholder="Let us know here..."></textarea>
+      </div>
+      <!-- Employment -->
+      <div class="field">
+        <label for="emp">Are you employed? (optional)</label>
+        <select id="emp" name="Employment">
+          <option value="">Select one</option>
+          <option value="Yes">Yes</option>
+          <option value="No">No</option>
+          <option value="Prefer-not">Prefer not to say</option>
+        </select>
+      </div>
+      <!-- Bucket List -->
+      <div class="field">
+        <label for="bucket">What's one thing on your bucket list? (optional)</label>
+        <textarea id="bucket" name="BucketListItem" placeholder="Skydiving, snorkeling, etc"></textarea>
+      </div>
+      <!-- Submit -->
+      <div class="field">
+        <button type="submit" class="w-button">Submit</button>
+      </div>
+    </form>
+    <div id="form-success" class="w-form-done" style="display:none"><p>Thanks! We'll see you soon.</p></div>
+    <div id="form-fail" class="w-form-fail" style="display:none"><p>Oops! Please try again.</p></div>
+  </div>
 
   <script>
-    document.querySelectorAll('.range-slider').forEach(slider => {
-      const min = parseFloat(slider.min),
-            max = parseFloat(slider.max),
-            mid = (0 - min) / (max - min) * 100; // always 50%
-      function updateBackground() {
-        const val = parseFloat(slider.value),
-              pct = (val - min) / (max - min) * 100;
-        let bg;
-        if (pct >= mid) {
-          bg = `linear-gradient(to right, #FFFFFF ${mid}%, #F7F2EA ${mid}%, #1A1A1A ${pct}%, #FFFFFF ${pct}%)`;
-        } else {
-          const rev = 100 - pct;
-          bg = `linear-gradient(to left, #FFFFFF ${100-mid}%, #F7F2EA ${100-mid}%, #1A1A1A ${rev}%, #FFFFFF ${rev}%)`;
-        }
-        slider.style.background = bg;
+    // Initialize Firestore
+    const db = firebase.firestore();
+
+    // Decode ref token
+    function decodeRefToken(token) {
+      if (!token || token.length <= 8) return null;
+      const core = token.slice(4, -4);
+      return core.split('').reverse().join('');
+    }
+
+    async function lookupReferrer(hash) {
+      const snap = await db.collection('members')
+        .where('hashedPhone','==', hash)
+        .limit(1)
+        .get();
+      if (!snap.empty) return snap.docs[0].data().name || '';
+      return null;
+    }
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      // 1) Grab ?ref= from URL
+      const params = new URLSearchParams(window.location.search);
+      const token  = params.get('ref');
+      const digest = decodeRefToken(token);
+      if (digest) {
+        const name = await lookupReferrer(digest);
+        if (name) document.getElementById('referredBy').value = name;
       }
-      slider.addEventListener('input', updateBackground);
-      updateBackground();
+
+      // 2) Form submission
+      const form = document.getElementById('signup-form');
+      form.addEventListener('submit', async e => {
+        e.preventDefault();
+        // collect values
+        const phoneField = form.querySelector('input[name="PhoneNumber"]');
+        let phone = phoneField.value.replace(/\D/g,'');
+        if (phone.length===11 && phone.startsWith('1')) phone=phone.slice(1);
+
+        const data = {
+          referredBy:        form.referredBy.value.trim() || null,
+          name:              form.Name.value.trim(),
+          age:               parseInt(form.Age.value,10),
+          gender:            form.Gender.value,
+          instagramHandle:   form.InstagramHandle.value.trim(),
+          availability:      Array.from(form.querySelectorAll('input[name="Availability"]:checked')).map(cb=>cb.value),
+          spontaneousInvites:form.SpontaneousInvites.value,
+          neighborhood:      form.Neighborhood.value.trim(),
+          vibes: {
+            chillVsCompetitive:   parseFloat(form['ChillVsCompetitive'].value),
+            indoorsVsOutdoors:    parseFloat(form['IndoorsVsOutdoors'].value),
+            plannedVsSpontaneous: parseFloat(form['PlannedVsSpontaneous'].value),
+            smallVsLarge:         parseFloat(form['SmallVsLarge'].value),
+            quietVsVibrant:       parseFloat(form['QuietVsVibrant'].value)
+          },
+          soloAttendance:   form.SoloAttendance.value,
+          mixedGender:      form.MixedGender.value,
+          accessibilityNeeds:form.AccessibilityNeeds.value.trim(),
+          employment:       form.Employment.value,
+          bucketListItem:   form.BucketListItem.value.trim(),
+          joinDate:         firebase.firestore.FieldValue.serverTimestamp()
+        };
+        try {
+          await db.collection('members').doc(phone).set(data, { merge:true });
+          document.getElementById('form-success').style.display='block';
+          document.getElementById('form-fail').style.display='none';
+          // notify parent to close iframe
+          window.parent.postMessage('signupComplete','*');
+        } catch(err) {
+          console.error(err);
+          document.getElementById('form-success').style.display='none';
+          document.getElementById('form-fail').style.display='block';
+        }
+      });
     });
   </script>
-  <script>
-  (function(){
-    const form = document.querySelector('form[name="wf-form-Profile-Form"]');
-    const done = document.querySelector('.w-form-done');
-    const fail = document.querySelector('.w-form-fail');
-
-    form.addEventListener('submit', async e => {
-      e.preventDefault();
-
-      // 1. Sanitize phone
-      let phone = form.querySelector('input[name="Phone-Number"]').value;
-      phone = phone.replace(/\D/g, '');
-      if (phone.length === 11 && phone.startsWith('1')) phone = phone.slice(1);
-      if (phone.length !== 10) {
-        alert('Enter a valid 10-digit number');
-        return;
-      }
-
-      // 2. Build your data object
-      const data = {
-        name:                form.querySelector('input[name="Name"]').value.trim(),
-        age:                 parseInt(form.querySelector('input[name="Age"]').value,10),
-        gender:              form.querySelector('input[name="Gender"]:checked').value,
-        instagramHandle:     form.querySelector('input[name="Instagram-Handle"]').value.trim(),
-        availability:        Array.from(form.querySelectorAll('input[name="Availability"]:checked'))
-                                  .map(cb => cb.value),
-        spontaneousInvites:  form.querySelector('select[name="Spontaneous-Invites"]').value,
-        neighborhood:        form.querySelector('input[name="Neighborhood"]').value.trim(),
-        vibes: {
-          chillVsCompetitive:   parseFloat(form.querySelector('input[name="Chill-vs-Competitive"]').value),
-          indoorsVsOutdoors:    parseFloat(form.querySelector('input[name="Indoors-vs-Outdoors"]').value),
-          plannedVsSpontaneous: parseFloat(form.querySelector('input[name="Planned-vs-Spontaneous"]').value),
-          smallVsLarge:         parseFloat(form.querySelector('input[name="Small-vs-Large"]').value),
-          quietVsVibrant:       parseFloat(form.querySelector('input[name="Quiet-vs-Vibrant"]').value)
-        },
-        soloAttendance:      form.querySelector('select[name="Solo-Attendance"]').value,
-        mixedGender:         form.querySelector('select[name="Mixed-Gender"]').value,
-        accessibilityNeeds:  form.querySelector('textarea[name="Accessibility-Needs"]').value.trim(),
-        employment:          form.querySelector('select[name="Employment"]').value,
-        bucketListItem:      form.querySelector('textarea[name="Bucket-List-Item"]').value.trim(),
-        // event-specific
-        onList: false,
-        sPoints: firebase.firestore.FieldValue.increment(0) // initialize if missing
-      };
-
-      // 3. Write to Firestore under doc ID = phone
-      try {
-        await db.collection('members').doc(phone).set(data, { merge: true });
-        done.style.display = 'block';
-        fail.style.display = 'none';
-      } catch (err) {
-        console.error(err);
-        done.style.display = 'none';
-        fail.style.display = 'block';
-      }
-    });
-  })();
-</script>
-</div>
+</body>
+</html>

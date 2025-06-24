@@ -107,20 +107,26 @@ if (!eventId) {
   console.warn("No eventId in URL. Click 'Create Dummy Event' to make one.");
 }
 
-// 3a. Parse referral token if present
-let referrerPhone = null;
-if (params.has('ref')) {
-  const refToken = params.get('ref');
-  const stripped = refToken.slice(4, -4);
-  const reversedHash = stripped.split('').reverse().join('');
-  db.collection('members').where('hashedPhone', '==', reversedHash).get()
-    .then(refSnap => {
-      if (!refSnap.empty) {
-        referrerPhone = refSnap.docs[0].id;
-      }
-    })
-    .catch(err => console.error('Referral lookup failed:', err));
-}
+ // 3a. Parse referral token if present
+ let referrerPhone = null;
+ if (params.has('ref')) {
+   // grab the raw token from the URL
+   const refToken = params.get('ref');
+   // strip off the first/last 4 random chars
+   const stripped = refToken.slice(4, -4);
+   // reverse back to the original hash
+   const reversedHash = stripped.split('').reverse().join('');
+   // look up the member whose hashedPhone equals that
+   db.collection('members')
+     .where('hashedPhone', '==', reversedHash)
+     .get()
+     .then(refSnap => {
+       if (!refSnap.empty) {
+         referrerPhone = refSnap.docs[0].id;
+       }
+     })
+     .catch(err => console.error('Referral lookup failed:', err));
+ }
 
 let currentPhone = '';
 let currentName  = '';
@@ -297,6 +303,27 @@ document.addEventListener('DOMContentLoaded', async () => {
   };
 });
 // END REVISION
+
+// ─── NEW: Sign-Up iframe popup logic ─────────────────────────────────────
+const signUpBtn     = document.getElementById('sign-up');
+const signupOverlay = document.getElementById('signup-overlay');
+const signupClose   = document.getElementById('signup-close');
+const signupIframe  = signupOverlay.querySelector('iframe');
+
+// When they click “Sign Up,” grab the ref token and show the iframe
+signUpBtn.onclick = () => {
+  const params   = new URLSearchParams(window.location.search);
+  const refToken = params.get('ref') || '';
+  signupIframe.src        = `../signup.html?ref=${encodeURIComponent(refToken)}`;
+  signupOverlay.style.display = 'block';
+};
+
+// Close button hides the iframe overlay again
+signupClose.onclick = () => {
+  signupOverlay.style.display = 'none';
+};
+// ────────────────────────────────────────────────────────────────────────
+
 
 // 5a. Set up the UI for a logged-out user
 function setupLoggedOutView() {
@@ -1512,33 +1539,44 @@ function setupCalendarAndShare(e) {
 
 
 
-  // “Share” → Web Share API
   document.getElementById('btn-share-event').onclick = async () => {
     if (!navigator.share) {
       alert('Web Share API not supported');
       return;
     }
+    if (!currentPhone) {
+      alert('You need to be signed in to share.');
+      return;
+    }
 
     // 1) Make sure OG meta tags are up to date
     const ogImage = e.imageUrl || '../assets/ogimage.png';
-    document.querySelector("meta[property='og:image']").setAttribute('content', ogImage);
-    document.querySelector("meta[property='og:title']").setAttribute('content', e.title);
+    document.querySelector("meta[property='og:image']").content = ogImage;
+    document.querySelector("meta[property='og:title']").content = e.title;
 
-    // 2) Preload the image into cache
+    // 2) Preload the image into cache so the share sheet can pick it up immediately
     await new Promise(resolve => {
       const img = new Image();
-      img.onload  = resolve;
+      img.onload = resolve;
       img.onerror = resolve;
-      img.src     = ogImage;
+      img.src = ogImage;
     });
 
-    // 3) Build your referral URL
-    const baseURL  = window.location.origin + window.location.pathname;
-    const paramE   = '?e=' + encodeURIComponent(eventId);
-    const phoneBytes = new TextEncoder().encode(currentPhone);
-    const dig = await crypto.subtle.digest('SHA-256', phoneBytes);
-    const hashArray = Array.from(new Uint8Array(dig));
-    const hashHex   = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    // 3) Ensure we have a canonical SHA-256 hash stored on the user record
+    const userRef = db.collection('members').doc(currentPhone);
+    const userSnap = await userRef.get();
+    let hashHex = userSnap.exists && userSnap.data().hashedPhone;
+    if (!hashHex) {
+      // compute raw SHA-256 hex digest
+      const phoneBytes = new TextEncoder().encode(currentPhone);
+      const digest = await crypto.subtle.digest('SHA-256', phoneBytes);
+      const hashArray = Array.from(new Uint8Array(digest));
+      hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+      // store it for future
+      await userRef.set({ hashedPhone: hashHex }, { merge: true });
+    }
+
+    // 4) Build the referral token (4 random chars + reversedHash + 4 random chars)
     const reversedHash = hashHex.split('').reverse().join('');
     const randChars = () => {
       const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
@@ -1547,19 +1585,23 @@ function setupCalendarAndShare(e) {
       ).join('');
     };
     const finalToken = randChars() + reversedHash + randChars();
-    const shareURL = `${baseURL}${paramE}&ref=${encodeURIComponent(finalToken)}`;
 
-    // 4) Fire the share sheet
+    // 5) Build the full URL with ?e=…&ref=…
+    const baseURL = window.location.origin + window.location.pathname;
+    const shareURL = `${baseURL}?e=${encodeURIComponent(eventId)}&ref=${encodeURIComponent(finalToken)}`;
+
+    // 6) Fire the native share sheet
     try {
       await navigator.share({
         title: e.title,
-        text:  'Join me at ' + e.title,
+        text:  `Join me at ${e.title}`,
         url:   shareURL
       });
     } catch (err) {
       console.error('Share failed:', err);
     }
   };
+
 
 }
 
