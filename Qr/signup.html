@@ -24,12 +24,12 @@
       background:#FFF; margin-top:6px;
     }
     .muted-form input[type=range]::-webkit-slider-thumb {
-      -webkit-appearance:none; width:6px; height:20px;
+      -webkit-appearance:none; width:8px; height:28px;
       border-radius:3px; background:#1A1A1A;
       cursor:pointer; margin-top:-6px;
     }
     .muted-form input[type=range]::-moz-range-thumb {
-      width:6px; height:20px;
+      width:8px; height:28px;
       border-radius:3px; background:#1A1A1A;
       cursor:pointer; margin-top:-6px;
     }
@@ -178,6 +178,28 @@
     <div id="form-success" class="w-form-done" style="display:none"><p>Thanks! We'll see you soon.</p></div>
     <div id="form-fail" class="w-form-fail" style="display:none"><p>Oops! Please try again.</p></div>
   </div>
+
+    <script>
+    document.querySelectorAll('.range-slider').forEach(slider => {
+      const min = parseFloat(slider.min),
+            max = parseFloat(slider.max),
+            mid = (0 - min) / (max - min) * 100; // always 50%
+      function updateBackground() {
+        const val = parseFloat(slider.value),
+              pct = (val - min) / (max - min) * 100;
+        let bg;
+        if (pct >= mid) {
+          bg = `linear-gradient(to right, #FFFFFF ${mid}%, #F7F2EA ${mid}%, #1A1A1A ${pct}%, #FFFFFF ${pct}%)`;
+        } else {
+          const rev = 100 - pct;
+          bg = `linear-gradient(to left, #FFFFFF ${100-mid}%, #F7F2EA ${100-mid}%, #1A1A1A ${rev}%, #FFFFFF ${rev}%)`;
+        }
+        slider.style.background = bg;
+      }
+      slider.addEventListener('input', updateBackground);
+      updateBackground();
+    });
+  </script>
 
   <script>
     // Initialize Firestore
