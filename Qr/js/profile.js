@@ -141,6 +141,13 @@ document.addEventListener('DOMContentLoaded', () => {
       const pct = computeVibeSimilarity(meVibes, otherVibes)
                     .toFixed(1);
       vibeSimilarityEl.innerText = `${pct}%`;
+      // Load Venn diagram with the similarity percentage
+      const vennFrame = document.getElementById('vibe-venn');
+      if (vennFrame) {
+          vennFrame.src = `./venn.html?pct=${pct}`;
+          vennFrame.style.display = '';  // reveal the iframe now that src is set
+      }
+      
     } else if (vibeSimilarityEl) {
       vibeSimilarityEl.innerText = '—';
     }
