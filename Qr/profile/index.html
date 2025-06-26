@@ -16,14 +16,14 @@
   <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js" defer></script>
 
   <script src="../js/firebaseConfig.js" defer></script>
-  <script type="module" src="../js/profile.js" defer></script>
+  <script type="module" src="js/profile.js" defer></script>
 
   <style>
     /* Fixed back arrow in top-right viewport */
     .back-arrow {
       position: fixed;
       top: 16px;
-      right: 16px;
+      left: 16px;
       font-size: 1.5rem;
       text-decoration: none;
       color: var(--green-dark);
@@ -223,14 +223,17 @@
     <img class="main-logo" src="../assets/mainlogo.png" alt="Logo">
     <h1 id="header-title">Profile</h1>
   </header>
-  <a id="back-arrow" class="back-arrow" href="index.html">←</a>
+  <a id="back-arrow" class="back-arrow" href="/">←</a>
 
   <div id="profile-app">
     <main>
       <div class="avatar-container">
         <img id="profile-img" src="../assets/defaultpfp.png" alt="Avatar">
       </div>
+      <iframe id="vibe-venn" src="" style="border:none; width:21%; height:35px; display:none;"></iframe>
       <div class="profile-field">
+        
+        
         <label>Vibe Similarity</label>
         <span id="vibe-similarity">—</span>
       </div>
