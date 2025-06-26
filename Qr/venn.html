@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Venn Diagram</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: transparent;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+    #vennCanvas {
+      width: 50%;
+      height: auto;
+      background: transparent;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="vennCanvas"></canvas>
+
+  <script>
+    // Read the target pct from URL
+    const params = new URLSearchParams(window.location.search);
+    let endPct = parseFloat(params.get('pct'));
+    if (isNaN(endPct) || endPct < 0) endPct = 0;
+    if (endPct > 100) endPct = 100;
+
+    const canvas = document.getElementById('vennCanvas');
+    const ctx = canvas.getContext('2d');
+
+    // Config constants
+    const outerRadius = 80;
+    const baseLineWidth = 20;
+    const fullMergePoint = 91;
+    const fillCompletePoint = 95;
+    const shrinkCompletePoint = 100;
+    const minShrinkScale = 0.25;
+
+    // Draw logic
+    function drawVennDiagram(percentOverlap) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const centerY = canvas.height / 2;
+      const centerX = canvas.width / 2;
+      let radius = outerRadius;
+      let lineWidth = baseLineWidth;
+      let distance = 0;
+
+      if (percentOverlap <= fullMergePoint) {
+        const startNorm = 42;
+        const clamped = Math.max(percentOverlap, startNorm);
+        const phase = (clamped - startNorm) / (fullMergePoint - startNorm);
+        distance = outerRadius * 2 * (1 - phase);
+      }
+      if (percentOverlap > fullMergePoint && percentOverlap <= fillCompletePoint) {
+        const p = (percentOverlap - fullMergePoint) / (fillCompletePoint - fullMergePoint);
+        lineWidth = baseLineWidth + p * (outerRadius - baseLineWidth);
+      }
+      if (percentOverlap > fillCompletePoint) {
+        const p = (percentOverlap - fillCompletePoint) / (shrinkCompletePoint - fillCompletePoint);
+        const scale = 1 - (1 - minShrinkScale) * p;
+        radius = outerRadius * scale;
+        lineWidth = radius;
+      }
+
+      const x1 = centerX - distance / 2;
+      const x2 = centerX + distance / 2;
+
+      ctx.beginPath();
+      ctx.arc(x1, centerY, radius - lineWidth / 2, 0, 2 * Math.PI);
+      ctx.lineWidth = lineWidth;
+      ctx.strokeStyle = 'black';
+      ctx.stroke();
+
+      if (percentOverlap <= fullMergePoint) {
+        ctx.beginPath();
+        ctx.arc(x2, centerY, radius - lineWidth / 2, 0, 2 * Math.PI);
+        ctx.lineWidth = lineWidth;
+        ctx.stroke();
+      }
+    }
+
+    // Responsive sizing: width = window.innerWidth * 4.9
+    const width = window.innerWidth * 4.9;
+    const aspectRatio = 300 / 500;
+    canvas.width = width;
+    canvas.height = width * aspectRatio;
+
+    // Phase animation helper (ease out quad)
+    function animatePhase(fromPct, toPct, duration, onComplete) {
+      let startTime = null;
+      function step(timestamp) {
+        if (!startTime) startTime = timestamp;
+        const elapsed = timestamp - startTime;
+        const t = Math.min(elapsed / duration, 1);
+        const easeT = 1 - Math.pow(1 - t, 2);
+        const current = fromPct + (toPct - fromPct) * easeT;
+        drawVennDiagram(current);
+        if (t < 1) {
+          requestAnimationFrame(step);
+        } else if (onComplete) {
+          onComplete();
+        }
+      }
+      requestAnimationFrame(step);
+    }
+
+    // First animate 100 → 0, then 0 → endPct
+    animatePhase(100, 7, 1000, () => {
+      animatePhase(7, endPct, 600);
+    });
+  </script>
+</body>
+</html>
