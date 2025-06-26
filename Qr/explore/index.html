@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Explore</title>
+
+  <!-- Existing CSS -->
+  <link rel="stylesheet" href="../css/style.css"/>
+  <link rel="stylesheet" href="../css/vibes.css"/>
+
+  <!-- Firebase & Config -->
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js" defer></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js" defer></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js" defer></script>
+  <script src="../js/firebaseConfig.js" defer></script>
+
+  <style>
+    /* Page header & description */
+    header {
+      text-align: center;
+      padding: 1rem;
+    }
+    .explore-desc {
+      max-width: 360px;
+      margin: 0.5rem auto 2rem;
+      color: var(--green-light);
+      font-size: 0.95rem;
+    }
+
+    .back-arrow {
+      position: fixed;
+      top: 16px;
+      left: 16px;
+      font-size: 1.5rem;
+      text-decoration: none;
+      color: var(--green-dark);
+      z-index: 1000;
+    }
+
+    /* Main container */
+    main {
+      max-width: 360px;
+      margin: 0 auto 2rem;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Link wrapper: hidden by default, will fade in */
+    .explore-link {
+      display: block;
+      text-decoration: none;
+      color: inherit;
+      margin-bottom: 8px;
+
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    .explore-link.visible {
+      opacity: 1;
+      transform: translateY(0);
+      transition: opacity 0.5s ease, transform 0.5s ease;
+    }
+
+    /* Card styling: light beige + darker inner gradient */
+    .explore-card {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
+      border-radius: 8px;
+      background: #ebe2d0;
+      box-shadow:
+        inset 4px 4px 8px rgba(0,0,0,0.2),
+        inset -4px -4px 8px rgba(255,255,255,0.6);
+    }
+
+    .explore-pic {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      object-fit: cover;
+    }
+
+    .explore-info {
+      flex: 1 1 0;
+      min-width: 0;                  /* allow flex shrinking */
+      display: flex;
+      flex-direction: column;
+      word-break: break-word;        /* wrap long text */
+    }
+    .explore-name {
+      font-weight: bold;
+      color: var(--green-dark);
+      margin-bottom: 4px;
+    }
+    .explore-handle {
+      color: var(--green-light);
+      font-size: 0.9rem;
+    }
+
+    /* Venn + label vertically stacked */
+    .explore-venn-container {
+      flex: 0 0 auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+    .explore-venn {
+      width: 80px;
+      height: 50px;
+      border: none;
+      background: transparent;
+    }
+    .explore-pct {
+      font-size: 0.8rem;
+      color: var(--green-dark);
+      text-align: center;
+      line-height: 1.1;
+    }
+  </style>
+</head>
+
+<body>
+
+      <div class="background-container">
+        <div class="shape-blob"></div>
+        <div class="shape-blob"></div>
+        <div class="shape-blob"></div>
+        <div class="shape-blob"></div>
+        <div class="shape-blob"></div>
+    </div>
+  <header>
+    <a href="/" class="back-link">
+    <img class="main-logo" src="../assets/mainlogo.png" alt="Main Logo" />
+    </a>
+    <h1>Explore</h1>
+    <p class="explore-desc">
+      These are a random selection of strangers on the platform, you have more in common than you think!
+    </p>
+  </header>
+  <a id="back-arrow" class="back-arrow" href="/">←</a>
+
+  <main id="explore-container">
+    <!-- Cards will be injected here -->
+  </main>
+
+  <script type="module">
+    import { computeVibeSimilarity } from '../js/vibeSimilarity.js';
+
+    // Initialize Firebase
+    if (!window.firebaseConfig) throw new Error('Missing firebaseConfig.js');
+    firebase.initializeApp(window.firebaseConfig);
+    const auth = firebase.auth();
+    const db   = firebase.firestore();
+
+    // Simple Fisher–Yates shuffle
+    function shuffle(arr) {
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    }
+
+    auth.onAuthStateChanged(async user => {
+      if (!user) return location.replace('../index.html');
+      const me = localStorage.getItem('userPhone');
+      if (!me) return location.replace('../index.html');
+
+      // Fetch my vibes
+      const meSnap  = await db.collection('members').doc(me).get();
+      const meVibes = meSnap.data()?.vibes || {};
+
+      // Fetch other users
+      const allSnap = await db.collection('members').get();
+      const others  = allSnap.docs
+        .filter(d => d.id !== me && d.data().vibes)
+        .map(d => {
+          const data = d.data();
+          return {
+            name:      data.name,
+            insta:     data.instagramHandle,
+            picId:     data.profilePic,
+            vibes:     data.vibes,
+            profileId: data.profileId
+          };
+        });
+
+      const randomSeven = shuffle(others).slice(0, 7);
+      const container   = document.getElementById('explore-container');
+
+      const links = [];
+
+      randomSeven.forEach(u => {
+        const pct = computeVibeSimilarity(meVibes, u.vibes).toFixed(1);
+
+        // Link wrapper
+        const link = document.createElement('a');
+        link.href = `/profile?id=${u.profileId}`;
+        link.className = 'explore-link';
+
+        // Card
+        const card = document.createElement('div');
+        card.className = 'explore-card';
+
+        // Profile pic
+        const img = document.createElement('img');
+        img.className = 'explore-pic';
+        img.src = u.picId
+          ? `/api/drive/thumb?id=${u.picId}&sz=64`
+          : '../assets/defaultpfp.png';
+        img.onerror = () => { img.src = '../assets/defaultpfp.png'; };
+
+        // Info block
+        const info = document.createElement('div');
+        info.className = 'explore-info';
+        const nameEl   = document.createElement('div');
+        nameEl.className = 'explore-name';
+        nameEl.textContent = u.name;
+        const handleEl = document.createElement('div');
+        handleEl.className = 'explore-handle';
+        handleEl.textContent = u.insta.startsWith('@')
+                            ? u.insta
+                            : '@' + u.insta;
+        info.append(nameEl, handleEl);
+
+        // Venn + label
+        const vstack = document.createElement('div');
+        vstack.className = 'explore-venn-container';
+        const frame = document.createElement('iframe');
+        frame.className = 'explore-venn';
+        frame.src = `./venn.html?pct=${pct}`;
+        frame.loading = 'lazy';
+        const label = document.createElement('div');
+        label.className = 'explore-pct';
+        label.innerHTML = `${pct}%<br/>similarity`;
+        vstack.append(frame, label);
+
+        card.append(img, info, vstack);
+        link.appendChild(card);
+        container.appendChild(link);
+        links.push(link);
+      });
+
+      // Fade in sequentially, top to bottom
+      links.forEach((link, idx) => {
+        setTimeout(() => {
+          link.classList.add('visible');
+        }, idx * 200);
+      });
+    });
+  </script>
+</body>
+</html>
