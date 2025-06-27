@@ -206,19 +206,216 @@
     }
 
     /* small pill with very rounded corners */
+    /* container */
+    .spoints-container {
+      display: inline-flex;
+      align-items: center;
+      position: relative;
+      transition: width 0.3s ease;
+      overflow: hidden;
+      width: auto; /* shrinks to child */
+    }
+
+    /* pill */
     .spoints-box {
-      margin: -0.2rem 0;
-      padding: 0.2rem 0.5rem;
+      padding: .2rem .5rem;
       background: var(--green-light);
       border-radius: 999px;
-      text-align: center;
+      font-size: .75rem;
+      margin: 0;
+      cursor: pointer;
     }
+
+    /* hidden child buttons */
+    .spoints-child {
+      flex: 0 0 auto;
+      margin-left: .25rem;
+      padding: .2rem .5rem;
+      font-size: .75rem;
+      border: none;
+      border-radius: 999px;
+      background: var(--green-light);
+      color: #fff;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .3s ease .1s;
+    }
+
+    /* when expanded, show children */
+    .spoints-container.expanded {
+      /* enough room for 4 pills side by side */
+      width: calc( (4 * 2.5rem) + (3 * .25rem) );
+    }
+    .spoints-container.expanded .spoints-child {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    /* modal backdrop */
+    .modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.5);
+      align-items: center;
+      justify-content: center;
+    }
+    .modal.visible { display: flex; }
+    .modal-content {
+      background: #fff;
+      padding: 1rem;
+      border-radius: 8px;
+      max-width: 90%;
+    }
+    .error { color: red; font-size: .8rem; margin-top: .5rem; }
+
     .spoints-box a {
       color: #fff;
       text-decoration: none;
       font-weight: bold;
       font-size: 0.7rem;
     }
+
+    /* 1) center the pill */
+    /* parent wrapper stays in flow, centers itself */
+    #spoints-pill-container {
+      position: relative;       /* establish a positioning context */
+      margin: 0.5rem auto;      /* horizontally center in its slot */
+      text-align: center;       /* center the pill inside it */
+    }
+
+    /* pill styling stays the same */
+    .spoints-box {
+      padding: .2rem .5rem;
+      background: var(--green-light);
+      border-radius: 999px;
+      font-size: .75rem;
+      cursor: pointer;
+      transition: opacity .2s ease;
+    }
+    .spoints-box.hidden { opacity: 0; }
+
+    /* now absolutely overlay the 3-button group */
+    #spoints-children-container {
+      position: absolute;           /* take it out of flow */
+      top: 0;                       /* align with top of pill container */
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: .5rem;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .3s ease;
+      z-index: 1;                   /* above the pill */
+    }
+    #spoints-children-container.visible {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    /* individual child button styling */
+    .spoints-child {
+      padding: .2rem .5rem;
+      font-size: .75rem;
+      border: none;
+      border-radius: 999px;
+      background: var(--green-light);
+      color: #fff;
+    }
+
+    /* override the hidden default when our container is “visible” */
+    #spoints-children-container.visible .spoints-child {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    /* ensure modals sit above the sP children (which are at z-index:1) */
+    .modal {
+      z-index: 100; /* anything >1 will work */
+    }
+
+    /* style the modal “window” */
+    .modal-content {
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+      padding: 1.5rem;
+      max-width: 320px;
+      width: 90%;
+      text-align: center;
+      position: relative;
+    }
+
+    /* inputs inside the transfer modal */
+    #transfer-modal .modal-content input[type="number"] {
+      width: 100%;
+      padding: 0.5rem;
+      margin-bottom: 0.75rem;
+      font-size: 1rem;
+      border: 1px solid var(--green);
+      border-radius: 4px;
+      box-sizing: border-box;
+    }
+
+    /* error text */
+    #transfer-error {
+      margin-bottom: 0.75rem;
+    }
+
+    /* style all modal buttons */
+    .modal-content button {
+      padding: 0.5rem 1rem;
+      margin: 0.25rem 0.25rem 0 0.25rem;
+      font-size: 0.9rem;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    /* confirm button in transfer modal */
+    #transfer-confirm {
+      background: var(--green);
+      color: #fff;
+    }
+
+    /* cancel & info-close buttons */
+    #transfer-cancel,
+    #info-close {
+      background: #ddd;
+      color: #333;
+    }
+
+    /* ensure the info text block scrolls if too long */
+    #info-text {
+      max-height: 200px;
+      overflow-y: auto;
+      text-align: left;
+      background: #f9f9f9;
+      padding: 0.5rem;
+      border-radius: 4px;
+      margin-bottom: 0.75rem;
+    }
+
+    /* inside your <style> */
+    .info-content {
+      text-align: left;
+      max-height: 250px;
+      overflow-y: auto;
+      margin-bottom: 1rem;
+    }
+    .info-content p {
+      margin: 0 0 0.75rem;
+    }
+    .info-content ul {
+      padding-left: 1.25rem;
+      margin: 0 0 0.75rem;
+    }
+    .info-content li {
+      margin-bottom: 0.5rem;
+    }
+
+
+
 
   </style>
 </head>
@@ -245,9 +442,41 @@
       <div class="avatar-container">
         <img id="profile-img" src="../assets/defaultpfp.png" alt="Avatar">
       </div>
+      <!-- just under avatar… -->
+      <!-- sPoints pill (always centered) -->
+      <div id="spoints-pill-container">
         <div id="spoints-box" class="spoints-box">
-          <a id="spoints-link" href="/leaderboard.html">0</a>
+          <a id="spoints-link">0 sP</a>
         </div>
+        <!-- hidden children (appears on tap) -->
+        <div id="spoints-children-container" class="spoints-children">
+          <button id="btn-leaderboard" class="spoints-child">Leaderboard</button>
+          <button id="btn-transfer"    class="spoints-child">Transfer sP</button>
+          <button id="btn-info"        class="spoints-child">ℹ️</button>
+        </div>
+      </div>
+
+      
+
+      <!-- Transfer modal -->
+      <div id="transfer-modal" class="modal">
+        <div class="modal-content">
+          <h3>Transfer sP</h3>
+          <input id="transfer-amount" type="number" min="1" placeholder="Amount" />
+          <p id="transfer-error" class="error"></p>
+          <button id="transfer-confirm">Confirm</button>
+          <button id="transfer-cancel">Cancel</button>
+        </div>
+      </div>
+
+      <!-- Info modal -->
+      <div id="info-modal" class="modal">
+        <div class="modal-content">
+          <h3>Info</h3>
+          <div id="info-content" class="info-content"></div>
+          <button id="info-close">Close</button>
+        </div>
+      </div>
       <iframe id="vibe-venn" src="" style="border:none; width:21%; height:35px; display:none;"></iframe>
       <div class="profile-field">
         

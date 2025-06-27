@@ -100,8 +100,169 @@ document.addEventListener('DOMContentLoaded', () => {
     // ——— show sPoints ———
     const spoints = data.sPoints || 0;
     const spointsLink = document.getElementById('spoints-link');
+    spointsLink.addEventListener('click', e => {
+      e.preventDefault(); // stop the default navigation
+    });
     spointsLink.textContent = `${spoints} sP`;
     // (the href is already set in the HTML to /leaderboard.html)
+
+    // ▼ INSERT STEP 3 ▼
+    // ▼ STEP 3: pill ↔ children toggle, auto-collapse, modals, etc. ─────
+    // grab all the elements we need
+    const spointsBox        = document.getElementById('spoints-box');
+    const childrenContainer = document.getElementById('spoints-children-container');
+    const btnLeaderboard    = document.getElementById('btn-leaderboard');
+    const btnTransfer       = document.getElementById('btn-transfer');
+    const btnInfo           = document.getElementById('btn-info');
+
+    const transferModal     = document.getElementById('transfer-modal');
+    const transferInput     = document.getElementById('transfer-amount');
+    const transferError     = document.getElementById('transfer-error');
+    const transferOk        = document.getElementById('transfer-confirm');
+    const transferCancel    = document.getElementById('transfer-cancel');
+
+    const infoModal         = document.getElementById('info-modal');
+    const infoText          = document.getElementById('info-text');
+    const infoClose         = document.getElementById('info-close');
+
+    // collapse logic & timer
+    let collapseTimer;
+    function collapse() {
+      childrenContainer.classList.remove('visible');
+      spointsBox.classList.remove('hidden');
+    }
+    function startCollapseTimer() {
+      clearTimeout(collapseTimer);
+      collapseTimer = setTimeout(collapse, 3000);
+    }
+
+    // 1) tap the pill → hide it, show the 3 buttons, start 3s timer
+    spointsBox.addEventListener('click', () => {
+      spointsBox.classList.add('hidden');
+      childrenContainer.classList.add('visible');
+      startCollapseTimer();
+    });
+
+    // 2) Leaderboard: navigate immediately & collapse
+    btnLeaderboard.addEventListener('click', () => {
+      window.location.href = '/leaderboard.html';
+      collapse();
+    });
+
+    // 3) Transfer sP: open modal & pause collapse timer
+    btnTransfer.addEventListener('click', () => {
+      clearTimeout(collapseTimer);
+      transferInput.value = '';
+      transferError.textContent = '';
+      transferModal.classList.add('visible');
+    });
+    transferCancel.addEventListener('click', () => {
+      transferModal.classList.remove('visible');
+      if (childrenContainer.classList.contains('visible')) startCollapseTimer();
+    });
+    transferOk.addEventListener('click', async () => {
+      const amt = parseInt(transferInput.value, 10);
+      if (!amt || amt < 1) {
+        transferError.textContent = 'Enter a positive number.';
+        return;
+      }
+
+      transferOk.disabled = true;
+      transferError.textContent = 'Processing…';
+
+      try {
+        await db.runTransaction(async tx => {
+          const fromRef = db.collection('members').doc(me);
+          const toRef   = db.collection('members').doc(profileDocId);
+
+          const [fromSnap, toSnap] = await Promise.all([
+            tx.get(fromRef),
+            tx.get(toRef)
+          ]);
+
+          const fromPts = (fromSnap.data().sPoints || 0);
+          const toPts   = (toSnap.data().sPoints   || 0);
+
+          if (amt > fromPts) throw new Error('INSUFFICIENT');
+
+          tx.update(fromRef, { sPoints: fromPts - amt });
+          tx.update(toRef,   { sPoints: toPts   + amt });
+        });
+
+        // **fetch the updated recipient balance**  
+        const updatedSnap = await db.collection('members')
+                                    .doc(profileDocId)
+                                    .get();
+        const updatedPts = updatedSnap.data().sPoints || 0;
+
+        transferError.style.color = 'green';
+        transferError.textContent = `Transferred ${amt} sP!`;
+
+        // **update the pill with the new, correct value**  
+        const spointsLink = document.getElementById('spoints-link');
+        spointsLink.textContent = `${updatedPts} sP`;
+
+      } catch (err) {
+        if (err.message === 'INSUFFICIENT') {
+          transferError.textContent = 'Not enough sP.';
+        } else {
+          console.error(err);
+          transferError.textContent = 'Transfer failed.';
+        }
+      } finally {
+        transferOk.disabled = false;
+        setTimeout(() => {
+          transferModal.classList.remove('visible');
+          transferError.style.color = 'red';
+          if (childrenContainer.classList.contains('visible')) startCollapseTimer();
+        }, 1000);
+      }
+    });
+
+
+    // 4) Info: fetch rubric.json & open modal, pause timer
+    btnInfo.addEventListener('click', async () => {
+      clearTimeout(collapseTimer);
+      // fetch the rubric
+      const res    = await fetch('/rubric.json');
+      const rubric = await res.json();
+
+      // build human‐readable HTML
+      let html = `<p>${rubric.intro}</p>`;
+
+      // quarterly event paragraph
+      const q = rubric.quarterlyEvent;
+      const examples = q.examples.join(', ');
+      html += `<p>${q.template
+        .replace('{periodMonths}', q.periodMonths)
+        .replace('{examples}', examples)
+        .replace(/{topHolders}/g, q.topHolders)}</p>`;
+
+      // rules list
+      html += `<ul>`;
+      for (const rule of rubric.rules) {
+        // inject points and any “per” text
+        let line = rule.template
+          .replace(/{points}/g, rule.points)
+          .replace(/{per}/g, rule.per || '');
+        html += `<li>${line}</li>`;
+      }
+      html += `</ul>`;
+
+      // render into the new container
+      const infoContent = document.getElementById('info-content');
+      infoContent.innerHTML = html;
+
+      // show the modal
+      infoModal.classList.add('visible');
+    });
+
+    infoClose.addEventListener('click', () => {
+      infoModal.classList.remove('visible');
+      if (childrenContainer.classList.contains('visible')) startCollapseTimer();
+    });
+    // ────────────────────────────────────────────────────────────────
+
 
     const isMe   = profileDocId === me;
 
