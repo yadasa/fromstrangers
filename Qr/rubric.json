@@ -1,0 +1,70 @@
+{
+  "intro": "sPoints are a part of a reward program for strangers that attend events, share media from events, and help us reach others!",
+  "quarterlyEvent": {
+    "periodMonths": 3,
+    "examples": ["Yacht Party", "Ski Trip"],
+    "topHolders": 3,
+    "template": "Every {periodMonths} months, we’ll have a large event ({examples}) and the top {topHolders} points holders for that time period get to come for free, including housing. They can also be used for discounts to any other group outing we do - without waiting for a large event."
+  },
+  "rules": [
+    {
+      "action": "Attend event",
+      "points": 70,
+      "template": "Attend event: +({points}) sP"
+    },
+    {
+      "action": "RSVP for an event",
+      "points": 10,
+      "template": "RSVP for an event: +(up to {points}) sP"
+    },
+    {
+      "action": "Upload pictures",
+      "points": 10,
+      "per": "per pic",
+      "template": "Upload pictures: +({points} {per}) sP"
+    },
+    {
+      "action": "Bring a new stranger",
+      "points": 200,
+      "template": "Bring a new stranger: +({points}) sP"
+    },
+    {
+      "action": "Fill out “Vibes”",
+      "points": 150,
+      "template": "Fill out “Vibes”: +(up to {points}) sP"
+    },
+    {
+      "action": "Update profile pic",
+      "points": 75,
+      "template": "Update profile pic: +({points}) sP"
+    },
+    {
+      "action": "Comment on an event",
+      "points": 3,
+      "template": "Comment on an event: +({points}) sP"
+    },
+    {
+      "action": "Like someone’s pic",
+      "points": 1,
+      "per": "per like",
+      "template": "Like someone’s pic: +({points} {per}) sP"
+    },
+    {
+      "action": "Receive like",
+      "points": 1,
+      "per": "per like",
+      "template": "Receive like: +({points} {per}) sP"
+    },
+    {
+      "action": "Pay for tickets",
+      "points": 1,
+      "per": "per $1 spent",
+      "template": "Pay for tickets: +({points} {per})"
+    },
+    {
+      "action": "Repost us on IG",
+      "points": 50,
+      "template": "Repost us on IG: +({points}) sP"
+    }
+  ]
+}
