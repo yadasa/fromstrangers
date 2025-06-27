@@ -164,6 +164,27 @@
       return arr;
     }
 
+    async function hashHex(str) {
+        const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+        return Array.from(new Uint8Array(buf))
+            .map(b => b.toString(16).padStart(2,'0'))
+            .join('');
+    }
+
+    async function generateProfileId(phone) {
+        const rev = phone.split('').reverse();
+        let noise = '';
+        for (const d of rev) {
+            noise += d + Math.floor(Math.random()*100).toString().padStart(2,'0');
+        }
+        const prefix = Math.floor(Math.random()*10000).toString().padStart(4,'0');
+        const suffix = Math.floor(Math.random()*10000).toString().padStart(4,'0');
+        return await hashHex(prefix + noise + suffix);
+    }
+
+
+    
+
     auth.onAuthStateChanged(async user => {
       if (!user) return location.replace('../index.html');
       const me = localStorage.getItem('userPhone');
@@ -180,6 +201,7 @@
         .map(d => {
           const data = d.data();
           return {
+            phone:     d.id,
             name:      data.name,
             insta:     data.instagramHandle,
             picId:     data.profilePic,
@@ -198,7 +220,21 @@
 
         // Link wrapper
         const link = document.createElement('a');
-        link.href = `/profile?id=${u.profileId}`;
+    
+        link.addEventListener('click', async e => {
+            e.preventDefault();
+
+            // 1) if they don’t have one yet, generate & save
+            let pid = u.profileId;
+            if (!pid) {
+                pid = await generateProfileId(u.phone);
+                await db.collection('members').doc(u.phone).update({ profileId: pid });
+            }
+
+            // 2) navigate
+            window.location.href = `/profile?id=${pid}`;
+            });
+
         link.className = 'explore-link';
 
         // Card
