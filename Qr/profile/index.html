@@ -205,6 +205,21 @@
       margin: 0;
     }
 
+    /* small pill with very rounded corners */
+    .spoints-box {
+      margin: -0.2rem 0;
+      padding: 0.2rem 0.5rem;
+      background: var(--green-light);
+      border-radius: 999px;
+      text-align: center;
+    }
+    .spoints-box a {
+      color: #fff;
+      text-decoration: none;
+      font-weight: bold;
+      font-size: 0.7rem;
+    }
+
   </style>
 </head>
 <body>
@@ -230,6 +245,9 @@
       <div class="avatar-container">
         <img id="profile-img" src="../assets/defaultpfp.png" alt="Avatar">
       </div>
+        <div id="spoints-box" class="spoints-box">
+          <a id="spoints-link" href="/leaderboard.html">0</a>
+        </div>
       <iframe id="vibe-venn" src="" style="border:none; width:21%; height:35px; display:none;"></iframe>
       <div class="profile-field">
         

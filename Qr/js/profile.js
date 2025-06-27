@@ -97,6 +97,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const doc  = qs.docs[0];
     profileDocId = doc.id;
     const data   = doc.data();
+    // ——— show sPoints ———
+    const spoints = data.sPoints || 0;
+    const spointsLink = document.getElementById('spoints-link');
+    spointsLink.textContent = `${spoints} sP`;
+    // (the href is already set in the HTML to /leaderboard.html)
+
     const isMe   = profileDocId === me;
 
     // grab the wrappers for each section
