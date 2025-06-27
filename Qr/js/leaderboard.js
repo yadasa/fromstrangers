@@ -108,7 +108,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // rubric modal logic (unchanged) …
   document.getElementById('link-rubric').onclick = async e => {
     e.preventDefault();
-    const res = await fetch('rubric.json');
+    const res = await fetch('../rubric.json');
     const data = await res.json();
     const ul = document.getElementById('rubric-list');
     ul.innerHTML = data.map(r =>
