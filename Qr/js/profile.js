@@ -293,7 +293,7 @@ document.addEventListener('DOMContentLoaded', () => {
       `instagram://user?username=${originalInsta.replace('@','')}`;
 
     // header & profile image
-    hdrTitle.innerText = `Profile: ${originalName}`;
+    hdrTitle.innerText = `${originalName}`;
     profileImg.src = data.profilePic
       ? `/api/drive/thumb?id=${data.profilePic}&sz=128`
       : '../assets/defaultpfp.png';
