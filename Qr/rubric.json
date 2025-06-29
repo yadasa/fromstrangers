@@ -2,7 +2,7 @@
   "intro": "sPoints are a part of a reward program for strangers that attend events, share media from events, and help us reach others!",
   "quarterlyEvent": {
     "periodMonths": 3,
-    "examples": ["Yacht Party", "Ski Trip"],
+    "examples": ["Yacht Party", "Ski Trip", "etc."],
     "topHolders": 3,
     "template": "Every {periodMonths} months, we’ll have a large event ({examples}) and the top {topHolders} points holders for that time period get to come for free, including housing. They can also be used for discounts to any other group outing we do - without waiting for a large event."
   },
