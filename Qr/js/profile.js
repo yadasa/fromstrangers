@@ -66,6 +66,8 @@ document.addEventListener('DOMContentLoaded', () => {
     return await hashHex(prefix + noise + suffix);
   }
 
+  window.generateProfileId = generateProfileId;
+
   function getProfileId() {
     return new URLSearchParams(location.search).get('id');
   }

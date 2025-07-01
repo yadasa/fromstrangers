@@ -130,7 +130,7 @@ async function startQRScan() {
 
         // award points
         await docRef.update({
-          sPoints: firebase.firestore.FieldValue.increment(7)
+          sPoints: firebase.firestore.FieldValue.increment(70)
         });
         showPopup(`✅ Welcome, ${data.name || phone}!`, true);
       },

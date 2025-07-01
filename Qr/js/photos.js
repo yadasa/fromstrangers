@@ -1,11 +1,14 @@
 // js/photos.js
 
+
 // 1) Initialize Firebase -----------------------------------------------------
 if (!window.firebaseConfig) throw new Error("Missing firebaseConfig.js");
 firebase.initializeApp(window.firebaseConfig);
 const auth    = firebase.auth();
 const db      = firebase.firestore();
 const storage = firebase.storage();
+const PAGE_SIZE = 30;
+let lastDoc = null;
 
 // 2) DOM refs ---------------------------------------------------------------
 const overlay           = document.getElementById('phone-entry');
@@ -211,7 +214,7 @@ fileInput.onchange = () => uploadFiles(fileInput.files);
 
 async function uploadFiles(files) {
   for (const file of files) {
-    // Create placeholder card for the new file
+    // 1) Create placeholder card
     const card = document.createElement('div');
     card.className = 'photo-card new-upload';
     if (selectMode) card.classList.add('select-mode');
@@ -219,295 +222,244 @@ async function uploadFiles(files) {
     const isVideo = file.type.startsWith('video/');
     if (isVideo) card.classList.add('video');
 
-    // Thumbnail or preview
+    // 2) Thumbnail preview or play icon
     let imgEl = null;
     if (!isVideo) {
       imgEl = document.createElement('img');
       imgEl.src = URL.createObjectURL(file);
       imgEl.alt = file.name;
       card.append(imgEl);
-    }
-    if (isVideo) {
+    } else {
       const playIcon = document.createElement('div');
       playIcon.className = 'play-icon';
       playIcon.innerText = '▶';
       card.append(playIcon);
     }
 
-    // Caption overlay
+    // 3) Caption overlay
     const cap = document.createElement('div');
     cap.className = 'photo-caption';
     cap.appendChild(document.createElement('div')).innerText = new Date().toLocaleDateString();
     cap.appendChild(document.createElement('div')).innerText = `From ${userName}`;
     card.append(cap);
 
-    // Progress bar
+    // 4) Progress bar
     const progressBar = document.createElement('div');
     progressBar.className = 'upload-progress';
     card.append(progressBar);
 
-    // Insert card at top of gallery
+    // 5) Insert into gallery
     gallery.prepend(card);
-    requestAnimationFrame(() => {
-      card.classList.add('slide-in');
-    });
+    requestAnimationFrame(() => card.classList.add('slide-in'));
 
-    // Upload file via XHR
-    await new Promise(resolve => {
-      const xhr = new XMLHttpRequest();
-      xhr.open('POST', '/api/drive/upload');
-      xhr.upload.onprogress = e => {
-        if (e.lengthComputable) {
-          const percent = (e.loaded / e.total) * 100;
-          progressBar.style.width = percent + '%';
-        }
-      };
-      xhr.onload = async () => {
-        if (xhr.status !== 200) {
-          console.error('Upload failed', xhr.responseText);
-          alert('Upload failed for file: ' + file.name);
-          card.remove();
-          return resolve();
-        }
-        let data;
-        try {
-          data = JSON.parse(xhr.responseText);
-        } catch (err) {
-          console.error('Upload response parse error', err);
-          alert('Upload failed for file: ' + file.name);
-          card.remove();
-          return resolve();
-        }
-        // Record metadata in Firestore
-        try {
-          const thumb = data.thumbnailLink
-            ? data.thumbnailLink
-            : `/api/drive/thumb?id=${data.id}`;
-          await db.collection('photos').doc(data.id).set({
-            name:          data.name,
-            url:           data.webContentLink,
-            thumbnailLink: thumb,
-            ownerPhone:    userPhone,
-            ownerName:     userName,
-            uploaderPhone: userPhone,
-            timestamp:     firebase.firestore.Timestamp.fromDate(new Date(data.createdTime)),
-            deleted:       false
-          });
-        } catch (e) {
-          console.error('Failed to save file metadata:', e);
-        }
-        // Award upload points
-        try {
-          await updatePoints('upload');
-        } catch (e) {
-          console.error('Failed to update points after upload:', e);
-        }
+    // 6) Upload to Firebase Storage
+    const fileId = db.collection('photos').doc().id;
+    const storageRef = storage.ref(`photos/${fileId}`);
+    const uploadTask = storageRef.put(file);
 
-        progressBar.style.display = 'none';
-
-        // For video, set thumbnail image
-        if (isVideo && data.thumbnailLink) {
-          const thumbImg = document.createElement('img');
-          thumbImg.src = `/api/drive/thumb?id=${item.id}`;
-          thumbImg.alt = data.name;
-          thumbImg.onclick = () => {
-            if (selectMode) return;
-            showMedia(data);
-          };
-          const firstCaption = card.querySelector('.photo-caption');
-          card.insertBefore(thumbImg, firstCaption);
+    // 7) Wire up progress updates
+    uploadTask.on('state_changed',
+      snapshot => {
+        if (snapshot.totalBytes) {
+          const pct = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+          progressBar.style.width = pct + '%';
         }
-
-        // Enable click on image to open modal
-        if (!isVideo && imgEl) {
-          imgEl.onclick = () => {
-            if (selectMode) return;
-            showMedia(data);
-          };
-        }
-
-        // Like button
-        const likeBtn = document.createElement('button');
-        likeBtn.className = 'photo-like-btn';
-        likeBtn.innerText = '♡';
-        likeBtn.onclick = async () => {
-          if (likeBtn.dataset.liked === 'true') {
-            await db.collection('photos').doc(data.id).collection('likes').doc(userPhone).delete();
-            likeBtn.dataset.liked = 'false';
-            let count = parseInt(likeBtn.innerText.split(' ')[1]) || 0;
-            count = Math.max(0, count - 1);
-            likeBtn.innerText = count > 0 ? `♥ ${count}` : '♥';
-            likeBtn.classList.remove('liked');
-            updatePoints('like', -1);
-          } else {
-            await db.collection('photos').doc(data.id).collection('likes').doc(userPhone).set({ liked: true });
-            likeBtn.dataset.liked = 'true';
-            let count = parseInt(likeBtn.innerText.split(' ')[1]) || 0;
-            count = count + 1;
-            likeBtn.innerText = `♥ ${count}`;
-            likeBtn.classList.add('liked');
-            updatePoints('like', 1);
-          }
-        };
-        // Fetch initial like status/count
-        db.collection('photos').doc(data.id).collection('likes').get().then(snap => {
-          const count = snap.size;
-          const liked = snap.docs.some(doc => doc.id === userPhone);
-          likeBtn.textContent = count > 0 ? `♥ ${count}` : '♥';
-          likeBtn.dataset.liked = liked ? 'true' : 'false';
-          likeBtn.classList.toggle('liked', liked);
-        });
-        card.append(likeBtn);
-
-        // Delete button if owner
-        if (userPhone) {
-          const delBtn = document.createElement('button');
-          delBtn.className = 'photo-delete';
-          delBtn.innerText = 'Request Delete';
-          delBtn.onclick = async () => {
-            await fetch('/api/drive/move', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ fileId: data.id })
-            });
-            card.style.display = 'none';
-          };
-          card.append(delBtn);
-        }
-
-        // Add checkbox for multi-select
-        const cb = document.createElement('input');
-        cb.type = 'checkbox';
-        cb.className = 'photo-checkbox';
-        cb.onchange = e => {
-          if (e.target.checked) {
-            selectedItems.add(data);
-            card.classList.add('selected');
-          } else {
-            selectedItems.delete(data);
-            card.classList.remove('selected');
-          }
-          btnShare.disabled = selectedItems.size === 0;
-          const canDelete = Array.from(selectedItems).every(it => it.ownerPhone === userPhone);
-          btnDelete.disabled = !canDelete || selectedItems.size === 0;
-        };
-        card.prepend(cb);
-
-        resolve();
-      };
-      xhr.onerror = () => {
-        console.error('Upload XHR error');
-        alert('Upload failed for file: ' + file.name);
+      },
+      error => {
+        console.error('Upload failed', error);
+        alert(`Upload failed for file: ${file.name}`);
         card.remove();
-        resolve();
-      };
-      const formData = new FormData();
-      formData.append('owner', userPhone);
-      formData.append('ownerName', userName);
-      formData.append('file', file);
-      xhr.send(formData);
+      }
+    );
+
+    // 8) Await completion & get download URL
+    let downloadURL;
+    try {
+      await uploadTask;
+      downloadURL = await storageRef.getDownloadURL();
+    } catch {
+      // error already handled above
+      continue;
+    }
+
+    // 9) Write metadata to Firestore
+    const meta = {
+      name:         file.name,
+      url:          downloadURL,
+      thumbnailLink: '', // Cloud Function will fill this
+      ownerPhone:   userPhone,
+      ownerName:    userName,
+      timestamp:    firebase.firestore.FieldValue.serverTimestamp(),
+      deleted:      false
+    };
+    try {
+      await db.collection('photos').doc(fileId).set(meta);
+    } catch (e) {
+      console.error('Failed to save metadata', e);
+    }
+
+    // 10) Award upload points
+    try {
+      await updatePoints('upload');
+    } catch (e) {
+      console.error('Failed to update points', e);
+    }
+
+    // 11) Hide progress bar
+    progressBar.style.display = 'none';
+
+    // 12) Hook up showMedia on click
+    const mediaData = { id: fileId, ...meta };
+    if (!isVideo && imgEl) {
+      imgEl.onclick = () => { if (!selectMode) showMedia(mediaData); };
+    }
+    if (isVideo) {
+      // once your Cloud Function populates thumbnailUrl,
+      // you can replace the playIcon with an <img> here
+    }
+
+    // 13) Like button (same logic, now using Firestore)
+    const likeBtn = document.createElement('button');
+    likeBtn.className = 'photo-like-btn';
+    likeBtn.innerText = '♡';
+    likeBtn.onclick = async () => {
+      const likesCol = db.collection('photos').doc(fileId).collection('likes');
+      if (likeBtn.dataset.liked === 'true') {
+        await likesCol.doc(userPhone).delete();
+        likeBtn.dataset.liked = 'false';
+        updatePoints('like', -1);
+      } else {
+        await likesCol.doc(userPhone).set({ liked: true });
+        likeBtn.dataset.liked = 'true';
+        updatePoints('like', 1);
+      }
+      // update count display
+      const snap = await likesCol.get();
+      const count = snap.size;
+      likeBtn.textContent = count > 0 ? `♥ ${count}` : '♥';
+      likeBtn.classList.toggle('liked', likeBtn.dataset.liked === 'true');
+    };
+    // initialize count & state
+    db.collection('photos').doc(fileId).collection('likes').get().then(snap => {
+      const count = snap.size;
+      const liked = snap.docs.some(doc => doc.id === userPhone);
+      likeBtn.textContent = count > 0 ? `♥ ${count}` : '♥';
+      likeBtn.dataset.liked = liked.toString();
+      likeBtn.classList.toggle('liked', liked);
     });
+    card.append(likeBtn);
+
+    // 14) Delete button (Firestore flag instead of Drive move)
+    if (meta.ownerPhone === userPhone) {
+      const delBtn = document.createElement('button');
+      delBtn.className = 'photo-delete';
+      delBtn.innerText = 'Request Delete';
+      delBtn.onclick = async () => {
+        await db.collection('photos').doc(fileId).update({ deleted: true });
+        card.style.display = 'none';
+      };
+      card.append(delBtn);
+    }
+
+    // 15) Multi-select checkbox
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.className = 'photo-checkbox';
+    cb.onchange = e => {
+      if (e.target.checked) {
+        selectedItems.add(mediaData);
+        card.classList.add('selected');
+      } else {
+        // remove by matching id
+        for (let itm of selectedItems) {
+          if (itm.id === fileId) selectedItems.delete(itm);
+        }
+        card.classList.remove('selected');
+      }
+      btnShare.disabled = selectedItems.size === 0;
+      const canDelete = [...selectedItems].every(it => it.ownerPhone === userPhone);
+      btnDelete.disabled = !canDelete || selectedItems.size === 0;
+    };
+    card.prepend(cb);
   }
 }
 
-// 9) Load & render gallery --------------------------------------------------
-async function loadGallery() {
+
+// --- 9) Fetch & show gallery via Firestore -------------------------------
+async function loadGallery(append = false) {
   selectedItems.clear();
   selectMode = false;
   btnShare.disabled  = true;
   btnDelete.disabled = true;
-  nextPageToken = null;
 
-  gallery.innerHTML = '<p style="grid-column:1/-1;text-align:center;color:var(--green);">Loading…</p>';
-
-  try {
-    const res = await fetch(`/api/drive/list?t=${Date.now()}`, { cache: 'no-store' });
-    if (!res.ok) {
-      gallery.innerHTML = '<p style="grid-column:1/-1;color:red;">Error loading gallery</p>';
-      return;
-    }
-    const data = await res.json();
-    const items = data.files || data;
-    nextPageToken = data.nextPageToken || null;
-    await renderGallery(items, false);
-    if (nextPageToken) {
-      loadMoreContainer.style.display = 'block';
-      btnLoadMore.disabled = false;
-      btnLoadMore.innerText = 'Load more';
-      observer.observe(loadMoreContainer);
-    } else {
-      loadMoreContainer.style.display = 'none';
-    }
-  } catch (err) {
-    console.error(err);
-    gallery.innerHTML = '<p style="grid-column:1/-1;color:red;">Error loading gallery</p>';
+  if (!append) {
+    lastDoc = null;
+    gallery.innerHTML = '<p style="grid-column:1/-1;text-align:center;color:var(--green);">Loading…</p>';
   }
+
+  // Firestore query instead of Drive API
+  let q = db
+    .collection('photos')
+    .where('deleted', '==', false)
+    .orderBy('timestamp', 'desc')
+    .limit(PAGE_SIZE);
+  if (lastDoc) q = q.startAfter(lastDoc);
+
+  const snap = await q.get();
+  const items = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  lastDoc = snap.docs[snap.docs.length - 1] || lastDoc;
+
+  // Show or hide “Load more”
+  if (snap.size === PAGE_SIZE) {
+    loadMoreContainer.style.display = 'block';
+    btnLoadMore.disabled = false;
+  } else {
+    loadMoreContainer.style.display = 'none';
+  }
+
+  await renderGallery(items, append);
 }
 
 // renderGallery remains unchanged, but ensure it uses item.ownerPhone or item.appProperties.owner to check ownership, and looks up uploaderName via Firestore when creating captions.
 
-// 10) renderGallery (full, with visibility filter)
+// 10) renderGallery (full, filtering only visibility:false)
 async function renderGallery(items, append = false) {
-  const cutoff = new Date('2025-06-09T23:59:59Z');
-  const visibleItems = [];
-  for (const item of items) {
-    try {
-      const snap = await db.collection('photos').doc(item.id).get();
+  // 1) filter out any items explicitly hidden
+  items = items.filter(item => item.visibility !== false);
 
-      if (snap.exists) {
-        // if visibility explicitly false → skip
-        if (snap.data().visibility === false) {
-          continue;
-        }
-      } else {
-        // no doc at all → skip only if createdTime is after cutoff
-        if (new Date(item.createdTime) > cutoff) {
-          continue;
-        }
-      }
-    } catch (e) {
-      console.error('visibility/filter error for', item.id, e);
-      // on error, fall back to showing it
-    }
-    visibleItems.push(item);
-  }
-  items = visibleItems;
-
-  // 2) Clear gallery if not appending
+  // 2) clear gallery if this is not an append
   if (!append) {
     gallery.innerHTML = '';
   }
-  // 3) Handle no items
-  if (!items.length) {
+
+  // 3) if no items remain, show “No media yet” then exit
+  if (items.length === 0) {
     if (!append) {
-      gallery.innerHTML = 
+      gallery.innerHTML =
         '<p style="grid-column:1/-1;text-align:center;color:var(--green-light);">No media yet</p>';
     }
     return;
   }
 
   let lastWeekLabel = '';
-  let startIndex = 0;
+  let startIndex     = 0;
 
-  // 4) If appending, fill up to the next multiple of 3
+  // 4) if appending, first fill up to a multiple of 3
   if (append) {
-    const existingCards = gallery.querySelectorAll('.photo-card').length;
-    const remainder = existingCards % 3;
-    if (remainder !== 0) {
-      const fillCount = 3 - remainder;
+    const existingCount = gallery.querySelectorAll('.photo-card').length;
+    const rem           = existingCount % 3;
+    if (rem !== 0) {
+      const fillCount = 3 - rem;
       if (items.length >= fillCount) {
-        const groupItems = items.slice(0, fillCount);
-        const groupCards = [];
-        const loadPromises = [];
-
-        for (const item of groupItems) {
-          // compute week divider
-          const createdDate = new Date(item.createdTime);
-          const day = createdDate.getDay();
+        const slice      = items.slice(0, fillCount);
+        for (const item of slice) {
+          // --- week divider ---
+          const date   = item.timestamp.toDate();
+          const day    = date.getDay();
           const offset = day === 0 ? 6 : day - 1;
-          const monday = new Date(createdDate);
-          monday.setDate(createdDate.getDate() - offset);
-          const weekOf = monday.toLocaleDateString('en-US', {
+          const monday = new Date(date);
+          monday.setDate(date.getDate() - offset);
+          const weekOf     = monday.toLocaleDateString('en-US', {
             year: 'numeric', month: 'short', day: 'numeric'
           });
           const weekLabel = `Week of ${weekOf}`;
@@ -519,22 +471,16 @@ async function renderGallery(items, append = false) {
             lastWeekLabel = weekLabel;
           }
 
-          // create card
+          // --- build card ---
           const card = document.createElement('div');
           card.className = 'photo-card';
           if (selectMode) card.classList.add('select-mode');
 
-          // is it a video?
-          const isVideo = item.mimeType
-            ? item.mimeType.startsWith('video/')
-            : /\.(mp4|mov|avi|webm)$/i.test(item.name);
-          if (isVideo) card.classList.add('video');
-
           // checkbox
           const cb = document.createElement('input');
-          cb.type = 'checkbox';
+          cb.type      = 'checkbox';
           cb.className = 'photo-checkbox';
-          cb.onchange = e => {
+          cb.onchange  = e => {
             if (e.target.checked) {
               selectedItems.add(item);
               card.classList.add('selected');
@@ -543,26 +489,27 @@ async function renderGallery(items, append = false) {
               card.classList.remove('selected');
             }
             btnShare.disabled = selectedItems.size === 0;
-            const canDelete = Array.from(selectedItems)
+            const canDel = Array.from(selectedItems)
               .every(it => it.ownerPhone === userPhone);
-            btnDelete.disabled = !canDelete || selectedItems.size === 0;
+            btnDelete.disabled = !canDel || selectedItems.size === 0;
           };
           card.append(cb);
 
-          // img or video thumbnail
+          // detect video
+          const isVideo = item.mimeType
+            ? item.mimeType.startsWith('video/')
+            : /\.(mp4|mov|avi|webm)$/i.test(item.name);
+          if (isVideo) card.classList.add('video');
+
+          // thumbnail
           const img = document.createElement('img');
-          // always pull a thumbnail via your thumb API (works for images & videos)
-          img.src = `/api/drive/thumb?id=${item.id}`;
-          
+          img.src      = item.thumbnailLink;
           img.decoding = 'async';
-          img.alt = item.name;
-          img.onclick = () => {
-            if (selectMode) return;
-            showMedia(item);
-          };
+          img.alt      = item.name;
+          img.onclick  = () => { if (!selectMode) showMedia(item); };
           card.append(img);
 
-          // video play icon
+          // play icon for video
           if (isVideo) {
             const playIcon = document.createElement('div');
             playIcon.className = 'play-icon';
@@ -574,23 +521,9 @@ async function renderGallery(items, append = false) {
           const cap = document.createElement('div');
           cap.className = 'photo-caption';
           cap.appendChild(document.createElement('div'))
-            .innerText = new Date(item.createdTime)
-              .toLocaleDateString();
-
-          // uploaderName lookup
-          let uploaderName = 'Strangers';
-          try {
-            const itemSnap = await db.collection('photos')
-              .doc(item.id).get();
-            if (itemSnap.exists) {
-              uploaderName = itemSnap.data().ownerName || uploaderName;
-            }
-          } catch (e) {
-            console.error('Failed to fetch ownerName', e);
-          }
+             .innerText = date.toLocaleDateString();
           cap.appendChild(document.createElement('div'))
-            .innerText = `From ${uploaderName}`;
-
+             .innerText = `From ${item.ownerName || 'Strangers'}`;
           card.append(cap);
 
           // like button
@@ -598,101 +531,88 @@ async function renderGallery(items, append = false) {
           likeBtn.className = 'photo-like-btn';
           likeBtn.innerText = '♡ 0';
           likeBtn.onclick = async () => {
+            const likeRef = db.collection('photos')
+                              .doc(item.id)
+                              .collection('likes')
+                              .doc(userPhone);
             if (likeBtn.dataset.liked === 'true') {
-              await db.collection('photos')
-                .doc(item.id)
-                .collection('likes')
-                .doc(userPhone).delete();
-              likeBtn.dataset.liked = 'false';
-              let count = parseInt(likeBtn.innerText.split(' ')[1]) || 0;
-              count = Math.max(0, count - 1);
-              likeBtn.innerText = count > 0 ? `♥ ${count}` : '♥';
-              likeBtn.classList.remove('liked');
+              await likeRef.delete();
               updatePoints('like', -1);
             } else {
-              await db.collection('photos')
-                .doc(item.id)
-                .collection('likes')
-                .doc(userPhone)
-                .set({ liked: true });
-              likeBtn.dataset.liked = 'true';
-              let count = parseInt(likeBtn.innerText.split(' ')[1]) || 0;
-              count = count + 1;
-              likeBtn.innerText = `♥ ${count}`;
-              likeBtn.classList.add('liked');
+              await likeRef.set({ liked: true });
               updatePoints('like', 1);
             }
+            const snap = await db.collection('photos')
+                                 .doc(item.id)
+                                 .collection('likes')
+                                 .get();
+            const cnt = snap.size;
+            likeBtn.textContent = cnt > 0 ? `♥ ${cnt}` : '♥';
+            likeBtn.dataset.liked = likeBtn.dataset.liked === 'true' ? 'false' : 'true';
+            likeBtn.classList.toggle('liked', likeBtn.dataset.liked === 'true');
           };
-          db.collection('photos')
-            .doc(item.id)
-            .collection('likes')
-            .get()
+          db.collection('photos').doc(item.id)
+            .collection('likes').get()
             .then(snap => {
-              const count = snap.size;
-              const liked = snap.docs.some(doc => doc.id === userPhone);
-              likeBtn.textContent = count > 0 ? `♥ ${count}` : '♥';
+              const cnt   = snap.size;
+              const liked = snap.docs.some(d => d.id === userPhone);
+              likeBtn.textContent   = cnt > 0 ? `♥ ${cnt}` : '♥';
               likeBtn.dataset.liked = liked ? 'true' : 'false';
               likeBtn.classList.toggle('liked', liked);
             });
           card.append(likeBtn);
 
-          // delete button if owner
+          // delete button
           if (item.ownerPhone === userPhone) {
             const delBtn = document.createElement('button');
             delBtn.className = 'photo-delete';
             delBtn.innerText = 'Request Delete';
             delBtn.onclick = async () => {
-              await fetch('/api/drive/move', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ fileId: item.id })
-              });
+              await db.collection('photos')
+                      .doc(item.id)
+                      .update({ deleted: true });
               card.style.display = 'none';
             };
             card.append(delBtn);
           }
 
-          // initial CSS for animation
-          card.style.transform = 'scale(0.9)';
-          card.style.opacity = '0';
+          // initial animation state
+          card.style.transform  = 'scale(0.9)';
+          card.style.opacity    = '0';
           card.style.transition = 'transform 0.3s ease, opacity 0.3s ease';
 
-          groupCards.push(card);
-          loadPromises.push(new Promise(res => {
+          // wait for image then append & animate
+          await new Promise(res => {
             if (img.complete) return res();
-            img.onload = res;
+            img.onload  = res;
             img.onerror = res;
-          }));
-        }
-
-        await Promise.all(loadPromises);
-        groupCards.forEach((card, idx) => {
+          });
           gallery.append(card);
           setTimeout(() => {
-            card.style.opacity = '1';
+            card.style.opacity   = '1';
             card.style.transform = 'scale(1)';
-          }, idx * 100);
-        });
+          }, 100);
+        }
 
         startIndex = fillCount;
       }
     }
   }
 
-  // 5) Main loop for rows of 3
-  for (let index = startIndex; index < items.length; index += 3) {
-    const groupItems = items.slice(index, index + 3);
+  // 5) main rows of 3
+  for (let i = startIndex; i < items.length; i += 3) {
+    const slice      = items.slice(i, i + 3);
     const groupCards = [];
     const loadPromises = [];
 
-    for (const item of groupItems) {
-      // repeat exactly the same card‐building code as above...
-      const createdDate = new Date(item.createdTime);
-      const day = createdDate.getDay();
+    for (const item of slice) {
+      // week divider
+      const date = item.timestamp.toDate();
+      const day  = date.getDay();
       const offset = day === 0 ? 6 : day - 1;
-      const monday = new Date(createdDate);
-      monday.setDate(createdDate.getDate() - offset);
-      const weekOf = monday.toLocaleDateString('en-US', {
+      const monday = new Date(date);
+      monday.setDate(date.getDate() - offset);
+      const weekOf     = monday.toLocaleDateString('en-US', {
         year: 'numeric', month: 'short', day: 'numeric'
       });
       const weekLabel = `Week of ${weekOf}`;
@@ -704,15 +624,12 @@ async function renderGallery(items, append = false) {
         lastWeekLabel = weekLabel;
       }
 
+      // build card
       const card = document.createElement('div');
       card.className = 'photo-card';
       if (selectMode) card.classList.add('select-mode');
 
-      const isVideo = item.mimeType
-        ? item.mimeType.startsWith('video/')
-        : /\.(mp4|mov|avi|webm)$/i.test(item.name);
-      if (isVideo) card.classList.add('video');
-
+      // checkbox
       const cb = document.createElement('input');
       cb.type = 'checkbox';
       cb.className = 'photo-checkbox';
@@ -725,31 +642,27 @@ async function renderGallery(items, append = false) {
           card.classList.remove('selected');
         }
         btnShare.disabled = selectedItems.size === 0;
-        const canDelete = Array.from(selectedItems)
+        const canDel = Array.from(selectedItems)
           .every(it => it.ownerPhone === userPhone);
-        btnDelete.disabled = !canDelete || selectedItems.size === 0;
+        btnDelete.disabled = !canDel || selectedItems.size === 0;
       };
       card.append(cb);
 
+      // video detection
+      const isVideo = item.mimeType
+        ? item.mimeType.startsWith('video/')
+        : /\.(mp4|mov|avi|webm)$/i.test(item.name);
+      if (isVideo) card.classList.add('video');
+
+      // thumbnail
       const img = document.createElement('img');
-      // unified thumbnail for images *and* videos
-      img.src = `/api/drive/thumb?id=${item.id}`;
-      if (isVideo) {
-        const playIcon = document.createElement('div');
-        playIcon.className = 'play-icon';
-        playIcon.innerText = '▶';
-        card.append(playIcon);
-      }
-
-
+      img.src      = item.thumbnailLink;
       img.decoding = 'async';
-      img.alt = item.name;
-      img.onclick = () => {
-        if (selectMode) return;
-        showMedia(item);
-      };
+      img.alt      = item.name;
+      img.onclick  = () => { if (!selectMode) showMedia(item); };
       card.append(img);
 
+      // play icon
       if (isVideo) {
         const playIcon = document.createElement('div');
         playIcon.className = 'play-icon';
@@ -757,91 +670,74 @@ async function renderGallery(items, append = false) {
         card.append(playIcon);
       }
 
+      // caption
       const cap = document.createElement('div');
       cap.className = 'photo-caption';
       cap.appendChild(document.createElement('div'))
-        .innerText = new Date(item.createdTime)
-          .toLocaleDateString();
-
-      let uploaderName = 'Strangers';
-      try {
-        const itemSnap = await db.collection('photos')
-          .doc(item.id).get();
-        if (itemSnap.exists) {
-          uploaderName = itemSnap.data().ownerName || uploaderName;
-        }
-      } catch (e) {
-        console.error('Failed to fetch ownerName', e);
-      }
+         .innerText = date.toLocaleDateString();
       cap.appendChild(document.createElement('div'))
-        .innerText = `From ${uploaderName}`;
+         .innerText = `From ${item.ownerName || 'Strangers'}`;
       card.append(cap);
 
+      // like button
       const likeBtn = document.createElement('button');
       likeBtn.className = 'photo-like-btn';
       likeBtn.innerText = '♡ 0';
       likeBtn.onclick = async () => {
+        const likeRef = db.collection('photos')
+                          .doc(item.id)
+                          .collection('likes')
+                          .doc(userPhone);
         if (likeBtn.dataset.liked === 'true') {
-          await db.collection('photos')
-            .doc(item.id)
-            .collection('likes')
-            .doc(userPhone).delete();
-          likeBtn.dataset.liked = 'false';
-          let count = parseInt(likeBtn.innerText.split(' ')[1]) || 0;
-          count = Math.max(0, count - 1);
-          likeBtn.innerText = count > 0 ? `♥ ${count}` : '♥';
-          likeBtn.classList.remove('liked');
+          await likeRef.delete();
           updatePoints('like', -1);
         } else {
-          await db.collection('photos')
-            .doc(item.id)
-            .collection('likes')
-            .doc(userPhone)
-            .set({ liked: true });
-          likeBtn.dataset.liked = 'true';
-          let count = parseInt(likeBtn.innerText.split(' ')[1]) || 0;
-          count = count + 1;
-          likeBtn.innerText = `♥ ${count}`;
-          likeBtn.classList.add('liked');
+          await likeRef.set({ liked: true });
           updatePoints('like', 1);
         }
+        const snap = await db.collection('photos')
+                             .doc(item.id)
+                             .collection('likes')
+                             .get();
+        const cnt = snap.size;
+        likeBtn.textContent = cnt > 0 ? `♥ ${cnt}` : '♥';
+        likeBtn.dataset.liked = likeBtn.dataset.liked === 'true' ? 'false' : 'true';
+        likeBtn.classList.toggle('liked', likeBtn.dataset.liked === 'true');
       };
-      db.collection('photos')
-        .doc(item.id)
-        .collection('likes')
-        .get()
+      db.collection('photos').doc(item.id)
+        .collection('likes').get()
         .then(snap => {
-          const count = snap.size;
-          const liked = snap.docs.some(doc => doc.id === userPhone);
-          likeBtn.textContent = count > 0 ? `♥ ${count}` : '♥';
+          const cnt   = snap.size;
+          const liked = snap.docs.some(d => d.id === userPhone);
+          likeBtn.textContent   = cnt > 0 ? `♥ ${cnt}` : '♥';
           likeBtn.dataset.liked = liked ? 'true' : 'false';
           likeBtn.classList.toggle('liked', liked);
         });
       card.append(likeBtn);
 
+      // delete button
       if (item.ownerPhone === userPhone) {
         const delBtn = document.createElement('button');
         delBtn.className = 'photo-delete';
         delBtn.innerText = 'Request Delete';
         delBtn.onclick = async () => {
-          await fetch('/api/drive/move', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ fileId: item.id })
-          });
+          await db.collection('photos')
+                  .doc(item.id)
+                  .update({ deleted: true });
           card.style.display = 'none';
         };
         card.append(delBtn);
       }
 
-      card.style.transform = 'scale(0.9)';
-      card.style.opacity = '0';
+      // animation prep
+      card.style.transform  = 'scale(0.9)';
+      card.style.opacity    = '0';
       card.style.transition = 'transform 0.3s ease, opacity 0.3s ease';
 
       groupCards.push(card);
       loadPromises.push(new Promise(res => {
         if (img.complete) return res();
-        img.onload = res;
+        img.onload  = res;
         img.onerror = res;
       }));
     }
@@ -850,12 +746,15 @@ async function renderGallery(items, append = false) {
     groupCards.forEach((card, idx) => {
       gallery.append(card);
       setTimeout(() => {
-        card.style.opacity = '1';
+        card.style.opacity   = '1';
         card.style.transform = 'scale(1)';
       }, idx * 100);
     });
   }
 }
+
+
+
 
 
 // 11) Select-multiple toggle --------------------------------------------------
@@ -943,15 +842,15 @@ function showMedia(item) {
   if (isVideo) {
     modalImage.style.display = 'none';
     modalVideo.style.display = 'block';
-    modalVideo.src = `/api/drive/thumb?id=${item.id}&sz=1600`;
+    modalVideo.src = item.url;
     modalVideo.onloadeddata = () => { modalLoading.style.display = 'none'; };
   } else {
     modalVideo.style.display = 'none';
     modalImage.style.display = 'block';
-    modalImage.src = `/api/drive/thumb?id=${item.id}&sz=1600`;
+    modalImage.src = item.url;
     modalImage.onload = () => { modalLoading.style.display = 'none'; };
   }
-  modalDownload.href     = `/api/drive/thumb?id=${item.id}&sz=1600`;
+  modalDownload.href     = item.url;
   modalDownload.download = item.name || '';
 }
 modalClose.onclick = () => {
@@ -1029,17 +928,28 @@ pointsClose.onclick = () => {
 
 // 16) Load more (pagination) ------------------------------------------------
 async function loadMore() {
-  if (!nextPageToken) return;
   btnLoadMore.disabled = true;
   btnLoadMore.innerText = 'Loading...';
   try {
-    const res = await fetch(`/api/drive/list?pageToken=${encodeURIComponent(nextPageToken)}&t=${Date.now()}`, { cache: 'no-store' });
-    if (!res.ok) throw new Error('Failed to load more');
-    const data = await res.json();
-    const items = data.files || data;
-    nextPageToken = data.nextPageToken || null;
+    // build Firestore query with pagination
+    let q = db
+      .collection('photos')
+      .where('deleted', '==', false)
+      .orderBy('timestamp', 'desc')
+      .limit(PAGE_SIZE);
+    if (lastDoc) {
+      q = q.startAfter(lastDoc);
+    }
+
+    const snap = await q.get();
+    const items = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    // update lastDoc for next page
+    lastDoc = snap.docs[snap.docs.length - 1] || lastDoc;
+
     await renderGallery(items, true);
-    if (!nextPageToken) {
+
+    // hide "Load more" if fewer than PAGE_SIZE items
+    if (snap.size < PAGE_SIZE) {
       loadMoreContainer.style.display = 'none';
     }
   } catch (err) {
@@ -1049,16 +959,17 @@ async function loadMore() {
   btnLoadMore.disabled = false;
   btnLoadMore.innerText = 'Load more';
 }
+
 btnLoadMore.onclick = () => {
   autoTriggered = true;
   loadMore();
 };
 
 const observer = new IntersectionObserver(entries => {
-  if (entries[0].isIntersecting && nextPageToken && autoTriggered) {
+  if (entries[0].isIntersecting && loadMoreContainer.style.display !== 'none' && autoTriggered) {
     observer.unobserve(loadMoreContainer);
     loadMore().then(() => {
-      if (nextPageToken) {
+      if (loadMoreContainer.style.display !== 'none') {
         observer.observe(loadMoreContainer);
       }
     });
