@@ -9,4 +9,4 @@ package-lock.json
 /api/drive/service-account.json
 .env.local
 
-/keys
+/js/keys
