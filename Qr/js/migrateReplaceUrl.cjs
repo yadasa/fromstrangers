@@ -15,8 +15,7 @@
  *
  * Prereqs:
  *   npm install firebase-admin googleapis axios cli-progress sharp fluent-ffmpeg @ffmpeg-installer/ffmpeg @ffprobe-installer/ffprobe
- *   export GOOGLE_APPLICATION_CREDENTIALS="/path/to/keys/service-account.json"
- */
+*/
 
 const path        = require('path');
 const os          = require('os');
@@ -36,7 +35,6 @@ ffmpeg.setFfprobePath(ffprobePath);
 
 // load configs
 const firebaseConfig = require('./firebaseConfig.js');
-const serviceAccount = require(path.join(__dirname, 'keys', 'service-account.json'));
 
 // initialize Admin SDK
 admin.initializeApp({
