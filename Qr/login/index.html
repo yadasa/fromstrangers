@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Login</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- Phone‐entry overlay -->
+  <div id="phone-entry">
+    <div class="phone-box">
+        <!-- Logo at top of modal -->
+      <img
+        src="../assets/mainlogo.png"
+        alt="Logo"
+        style="display:block; width:17%; height:auto; margin:0 auto 1rem;"
+      />
+
+      <!-- 1) INITIAL SCREEN -->
+      <div id="initial-screen">
+        <button id="sign-in-btn">Sign In</button>
+        <button id="sign-up" class="btn-small">Sign Up</button>
+      </div>
+
+      <!-- 2) PHONE NUMBER ENTRY -->
+      <div id="phone-screen" style="display:none; position: relative;">
+        <div class="back-arrow" id="back-to-initial">&#8592;</div>
+        
+        <input
+          id="phone-input"
+          type="tel"
+          placeholder="enter your number"
+          maxlength="15"
+        />
+        <button id="confirm-btn">Confirm</button>
+        <div id="recaptcha-container"></div>
+      </div>
+
+      <!-- 3) CODE VERIFICATION -->
+      <div id="code-screen" style="display:none; position: relative;">
+        <div class="back-arrow" id="back-to-phone">&#8592;</div>
+        <p>We’ve sent you a 6-digit code to verify.</p>
+        <input
+          id="otp-input"
+          type="text"
+          placeholder="Enter code"
+          maxlength="6"
+        />
+        <button id="verify-btn">Verify</button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Hidden overlay for Sign Up iframe -->
+  <div
+    id="signup-overlay"
+    style="
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.5);
+      z-index: 2000;
+    "
+  >
+    <div
+      style="
+        position: relative;
+        width: 90%;
+        height: 90%;
+        margin: 5% auto;
+        background: white;
+        border-radius: 8px;
+        overflow: hidden;
+      "
+    >
+      <button
+        id="signup-close"
+        style="
+          position: absolute;
+          top: 10px;
+          right: 10px;
+          background: transparent;
+          border: none;
+          font-size: 1.5rem;
+          cursor: pointer;
+        "
+      >
+        ×
+      </button>
+      <iframe
+        src="https://fromstrangers.social/join/"
+        style="width: 100%; height: 100%; border: none;"
+      ></iframe>
+    </div>
+  </div>
+
+  <!-- Firebase SDKs (compat) -->
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js" defer></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js" defer></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js" defer></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-storage-compat.js" defer></script>
+
+  <!-- Your firebaseConfig.js must come before login.js -->
+  <script src="../js/firebaseConfig.js" defer></script>
+  <script src="login.js" defer></script>
+</body>
+</html>

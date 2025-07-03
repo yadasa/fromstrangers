@@ -205,16 +205,17 @@
     // Initialize Firestore
     const db = firebase.firestore();
 
-    // Decode ref token
+    // Decode ref token (for “referredBy”)
     function decodeRefToken(token) {
       if (!token || token.length <= 8) return null;
       const core = token.slice(4, -4);
       return core.split('').reverse().join('');
     }
 
+    // Look up referrer’s name by hashed phone
     async function lookupReferrer(hash) {
       const snap = await db.collection('members')
-        .where('hashedPhone','==', hash)
+        .where('hashedPhone', '==', hash)
         .limit(1)
         .get();
       if (!snap.empty) return snap.docs[0].data().name || '';
@@ -222,7 +223,7 @@
     }
 
     document.addEventListener('DOMContentLoaded', async () => {
-      // 1) Grab ?ref= from URL
+      // 1) Pre-fill “Referred By” if ?ref= present
       const params = new URLSearchParams(window.location.search);
       const token  = params.get('ref');
       const digest = decodeRefToken(token);
@@ -231,24 +232,39 @@
         if (name) document.getElementById('referredBy').value = name;
       }
 
-      // 2) Form submission
-      const form = document.getElementById('signup-form');
+      // 2) Handle form submission
+      const form       = document.getElementById('signup-form');
+      const successMsg = document.getElementById('form-success');
+      const failMsg    = document.getElementById('form-fail');
+
       form.addEventListener('submit', async e => {
         e.preventDefault();
-        // collect values
-        const phoneField = form.querySelector('input[name="PhoneNumber"]');
-        let phone = phoneField.value.replace(/\D/g,'');
-        if (phone.length===11 && phone.startsWith('1')) phone=phone.slice(1);
+        failMsg.style.display = 'none';
+        successMsg.style.display = 'none';
 
+        // Normalize phone: strip non-digits, drop leading “1” if 11 digits
+        let phone = form.querySelector('input[name="PhoneNumber"]').value.replace(/\D/g, '');
+        if (phone.length === 11 && phone.startsWith('1')) {
+          phone = phone.slice(1);
+        }
+
+        // Validate length
+        if (phone.length < 10) {
+          failMsg.innerText = 'Please enter a valid 10-digit phone number.';
+          failMsg.style.display = 'block';
+          return;
+        }
+
+        // Build member data
         const data = {
-          referredBy:        form.referredBy.value.trim() || null,
-          name:              form.Name.value.trim(),
-          age:               parseInt(form.Age.value,10),
-          gender:            form.Gender.value,
-          instagramHandle:   form.InstagramHandle.value.trim(),
-          availability:      Array.from(form.querySelectorAll('input[name="Availability"]:checked')).map(cb=>cb.value),
-          spontaneousInvites:form.SpontaneousInvites.value,
-          neighborhood:      form.Neighborhood.value.trim(),
+          referredBy:         form.referredBy.value.trim() || null,
+          name:               form.Name.value.trim(),
+          age:                parseInt(form.Age.value, 10),
+          gender:             form.Gender.value,
+          instagramHandle:    form.InstagramHandle.value.trim(),
+          availability:       Array.from(form.querySelectorAll('input[name="Availability"]:checked')).map(cb => cb.value),
+          spontaneousInvites: form.SpontaneousInvites.value,
+          neighborhood:       form.Neighborhood.value.trim(),
           vibes: {
             chillVsCompetitive:   parseFloat(form['ChillVsCompetitive'].value),
             indoorsVsOutdoors:    parseFloat(form['IndoorsVsOutdoors'].value),
@@ -256,26 +272,38 @@
             smallVsLarge:         parseFloat(form['SmallVsLarge'].value),
             quietVsVibrant:       parseFloat(form['QuietVsVibrant'].value)
           },
-          soloAttendance:   form.SoloAttendance.value,
-          mixedGender:      form.MixedGender.value,
-          accessibilityNeeds:form.AccessibilityNeeds.value.trim(),
-          employment:       form.Employment.value,
-          bucketListItem:   form.BucketListItem.value.trim(),
-          joinDate:         firebase.firestore.FieldValue.serverTimestamp()
+          soloAttendance:     form.SoloAttendance.value,
+          mixedGender:        form.MixedGender.value,
+          accessibilityNeeds: form.AccessibilityNeeds.value.trim(),
+          employment:         form.Employment.value,
+          bucketListItem:     form.BucketListItem.value.trim(),
+          joinDate:           firebase.firestore.FieldValue.serverTimestamp()
         };
+
         try {
-          await db.collection('members').doc(phone).set(data, { merge:true });
-          document.getElementById('form-success').style.display='block';
-          document.getElementById('form-fail').style.display='none';
-          // notify parent to close iframe
-          window.parent.postMessage('signupComplete','*');
-        } catch(err) {
+          const docRef  = db.collection('members').doc(phone);
+          const snapshot = await docRef.get();
+
+          if (snapshot.exists) {
+            // Phone already registered
+            failMsg.innerText = 'This phone number is already registered.';
+            failMsg.style.display = 'block';
+            return;
+          }
+
+          // Create new member document
+          await docRef.set(data);
+
+          successMsg.style.display = 'block';
+          window.parent.postMessage('signupComplete', '*');
+        } catch (err) {
           console.error(err);
-          document.getElementById('form-success').style.display='none';
-          document.getElementById('form-fail').style.display='block';
+          failMsg.innerText = 'Oops! Something went wrong. Please try again.';
+          failMsg.style.display = 'block';
         }
       });
     });
   </script>
+
 </body>
 </html>

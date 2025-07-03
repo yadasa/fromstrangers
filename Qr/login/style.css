@@ -1,0 +1,95 @@
+/* Ensure padding and borders are included in element’s total width/height */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+:root {
+  --muted-color1-start: rgba(172, 143, 114, 0.5);
+  --muted-color1-end:   rgba(190, 139, 179, 0.3);
+  --muted-color2-start: rgba(193,176,152, 0.5);
+  --muted-color2-end:   rgba(229,214,197, 0.3);
+  --muted-color3-start: rgba(156,154,156, 0.5);
+  --muted-color3-end:   rgba(217,214,219, 0.3);
+  --brown:              #8b5e3c;
+  --green:              #3e2f1b;
+  --green-light:        #5a4025;
+  --gold:               #b49e85;
+  --gold-light:         #d9c0a1;
+  --bg-start:           #f5efde;
+  --bg-end:             #e8d6bb;
+  --button-shadow:      0 4px 8px rgba(0,0,0,0.1);
+  --card-shadow:        0 8px 16px rgba(0,0,0,0.1);
+  --text:               #3e2f1b;
+}
+
+/* -------------------- Phone‐entry overlay -------------------- */
+#phone-entry {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+/* The white modal box */
+.phone-box {
+  position: relative; /* for back-arrow positioning */
+  background: #fff;
+  padding: 2rem 1rem;
+  border-radius: 1rem;
+  text-align: center;
+  width: 90%;
+  max-width: 320px;
+}
+
+/* BACK ARROW in top-left of each modal step */
+.back-arrow {
+  position: absolute;
+  top: -1.7rem;
+  left: -0.5rem;
+  font-size: 1.5rem;
+  color: #ccc;
+  cursor: pointer;
+  user-select: none;
+}
+
+/* Push down h2/p so they don’t overlap the arrow */
+#phone-screen h2,
+#code-screen p {
+  margin-top: 2.5rem;
+}
+
+/* Input fields */
+.phone-box input {
+  width: 100%;
+  padding: 0.75rem;
+  font-size: 1rem;
+  margin-bottom: 1rem;
+  border: 1px solid var(--green-light);
+  border-radius: 0.5rem;
+}
+
+/* Buttons */
+.phone-box button {
+  width: 100%;
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  background: var(--green);
+  color: var(--gold);
+  border: none;
+  border-radius: 0.5rem;
+  box-shadow: var(--button-shadow);
+}
+
+/* Stack buttons full-width */
+#phone-entry .phone-box button {
+  display: block;
+  width: 100%;
+}
+
+/* Space above the “Sign Up” button */
+#phone-entry .phone-box button#sign-up {
+  margin-top: 0.75rem;
+}

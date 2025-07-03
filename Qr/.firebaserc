@@ -1,5 +1,8 @@
 {
   "projects": {
-    "default": "fromstrangerssocial"
-  }
+    "default": "fromstrangerssocial",
+    "staging": "fromstrangerssocial"
+  },
+  "targets": {},
+  "etags": {}
 }
