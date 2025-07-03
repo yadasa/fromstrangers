@@ -268,6 +268,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const isMe   = profileDocId === me;
 
+    if (isMe) {
+      btnTransfer.style.display = 'none';
+    }
+
     // grab the wrappers for each section
     const vibeField       = vibeSimilarityEl.closest('.profile-field');
     const topMatchesField = document.getElementById('top-matches')
