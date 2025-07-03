@@ -352,8 +352,24 @@ async function uploadFiles(files) {
     // 14) Delete button (Firestore flag instead of Drive move)
     if (meta.ownerPhone === userPhone) {
       const delBtn = document.createElement('button');
-      delBtn.className = 'photo-delete';
-      delBtn.innerText = 'Request Delete';
+      delBtn.type = 'button';
+      delBtn.className = 'photo-delete-icon';
+      // use × (times) rather than text
+      delBtn.innerHTML = '&times;';
+
+      // inline styles for quick positioning—feel free to move these into your CSS
+      Object.assign(delBtn.style, {
+        position:   'absolute',
+        top:        '8px',
+        right:      '8px',
+        zIndex:     '100',
+        background: 'transparent',
+        border:     'none',
+        fontSize:   '18px',
+        lineHeight: '1',
+        cursor:     'pointer',
+      });
+
       delBtn.onclick = async () => {
         await db.collection('photos').doc(fileId).update({ deleted: true });
         card.style.display = 'none';
@@ -565,12 +581,22 @@ async function renderGallery(items, append = false) {
           // delete button
           if (item.ownerPhone === userPhone) {
             const delBtn = document.createElement('button');
-            delBtn.className = 'photo-delete';
-            delBtn.innerText = 'Request Delete';
+            delBtn.type = 'button';
+            delBtn.className = 'photo-delete-icon';
+            delBtn.innerHTML = '&times;';
+            Object.assign(delBtn.style, {
+              position:   'absolute',
+              top:        '8px',
+              right:      '8px',
+              zIndex:     '100',
+              background: 'transparent',
+              border:     'none',
+              fontSize:   '18px',
+              lineHeight: '1',
+              cursor:     'pointer',
+            });
             delBtn.onclick = async () => {
-              await db.collection('photos')
-                      .doc(item.id)
-                      .update({ deleted: true });
+              await db.collection('photos').doc(item.id).update({ deleted: true });
               card.style.display = 'none';
             };
             card.append(delBtn);
@@ -718,12 +744,22 @@ async function renderGallery(items, append = false) {
       // delete button
       if (item.ownerPhone === userPhone) {
         const delBtn = document.createElement('button');
-        delBtn.className = 'photo-delete';
-        delBtn.innerText = 'Request Delete';
+        delBtn.type = 'button';
+        delBtn.className = 'photo-delete-icon';
+        delBtn.innerHTML = '&times;';
+        Object.assign(delBtn.style, {
+          position:   'absolute',
+          top:        '8px',
+          right:      '8px',
+          zIndex:     '100',
+          background: 'transparent',
+          border:     'none',
+          fontSize:   '18px',
+          lineHeight: '1',
+          cursor:     'pointer',
+        });
         delBtn.onclick = async () => {
-          await db.collection('photos')
-                  .doc(item.id)
-                  .update({ deleted: true });
+          await db.collection('photos').doc(item.id).update({ deleted: true });
           card.style.display = 'none';
         };
         card.append(delBtn);
