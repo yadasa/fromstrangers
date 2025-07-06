@@ -1,11 +1,48 @@
 // js/profile.js
 import { computeVibeSimilarity } from './vibeSimilarity.js';
 
+// ─── A) LOCAL STORAGE HELPERS ──────────────────────────────────────
+function savePhone(phone) {
+  try { localStorage.setItem('userPhone', phone); } catch {}
+  document.cookie = `userPhone=${phone};max-age=${60*60*24*365};path=/;SameSite=Lax`;
+}
+function loadPhone() {
+  try { return localStorage.getItem('userPhone'); } catch {}
+  const m = document.cookie.match(/(?:^|; )userPhone=(\d{10})/);
+  return m ? m[1] : null;
+}
+function saveName(name) {
+  try { localStorage.setItem('userName', name); } catch {}
+}
+function loadName() {
+  return localStorage.getItem('userName') || '';
+}
+
+
 document.addEventListener('DOMContentLoaded', () => {
   if (!window.firebaseConfig) throw new Error('Missing firebaseConfig.js');
   firebase.initializeApp(window.firebaseConfig);
   const auth = firebase.auth();
   const db   = firebase.firestore();
+
+  // ─── B) SET PERSISTENCE (non-blocking) ─────────────────────────────
+  auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL)
+      .catch(err => console.warn('Auth persistence failed:', err));
+
+  // ─── C) OPTIMISTIC UI FROM CACHE ──────────────────────────────────
+  const cachedPhone = loadPhone();
+  const cachedName  = loadName();
+  if (cachedPhone) {
+    // 1) show the profile app shell immediately
+    const appEl    = document.getElementById('profile-app');
+    if (appEl) appEl.style.display = 'block';
+
+    // 2) set header title
+    const hdrTitle = document.getElementById('header-title');
+    if (hdrTitle) hdrTitle.innerText = cachedName;
+
+  
+  }
 
   // Your profile‐only Drive folder ID
   const PROFILE_DRIVE_FOLDER_ID = '1zmOhvhrskbhtnot2RD86MNU__6bmuxo2';
@@ -73,9 +110,28 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   auth.onAuthStateChanged(async user => {
-    if (!user) return location.replace('../index.html');
-    const me = localStorage.getItem('userPhone');
-    if (!me) return location.replace('../index.html');
+    // 1) Optimistic fall-back: bail to login if no Firebase session OR no cached phone
+    const cachedPhone = loadPhone();
+    if (!user || !cachedPhone) {
+      localStorage.removeItem('userPhone');
+      localStorage.removeItem('userName');
+      return location.replace('../index.html');
+    }
+    
+    // 2) We have a real user—sync canonical phone → cache
+    const me = user.phoneNumber.replace('+1','');
+    savePhone(me);
+    
+    // 3) Pull fresh displayName → cache
+    const memberSnap = await db.collection('members').doc(me).get();
+    const displayName = memberSnap.exists ? memberSnap.data().name : '';
+    saveName(displayName);
+    
+    // 4) Reveal app shell & header optimistically
+    const appEl    = document.getElementById('profile-app');
+    if (appEl) appEl.style.display = 'block';
+    const hdrTitle = document.getElementById('header-title');
+    if (hdrTitle) hdrTitle.innerText = displayName;
 
     // ensure we have a profileId in the URL
     let pid = getProfileId();

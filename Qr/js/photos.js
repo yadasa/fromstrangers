@@ -7,6 +7,24 @@ firebase.initializeApp(window.firebaseConfig);
 const auth    = firebase.auth();
 const db      = firebase.firestore();
 const storage = firebase.storage();
+
+// ── 0a) Helpers to persist phone & name locally ───────────────────────────
+function savePhone(phone) {
+  try { localStorage.setItem('userPhone', phone); } catch {}
+  document.cookie = `userPhone=${phone};max-age=${60*60*24*365};path=/;SameSite=Lax`;
+}
+function loadPhone() {
+  try { return localStorage.getItem('userPhone'); } catch {}
+  const m = document.cookie.match(/(?:^|; )userPhone=(\d{10})/);
+  return m ? m[1] : null;
+}
+function saveName(name) {
+  try { localStorage.setItem('userName', name); } catch {}
+}
+function loadName() {
+  return localStorage.getItem('userName') || '';
+}
+
 const PAGE_SIZE = 30;
 let lastDoc = null;
 
@@ -42,7 +60,7 @@ const modalLoading      = document.getElementById('modal-loading-overlay');
 const pointsOverlay     = document.getElementById('points-overlay');
 const pointsClose       = document.getElementById('points-close');
 
-let userPhone            = localStorage.getItem('userPhone') || '';
+let userPhone            = loadPhone() || '';
 let userName             = '';
 let userPoints           = 0;
 let uploadPointsToday    = 0, lastUploadDate = '';
@@ -83,13 +101,54 @@ async function initRecaptcha() {
 
 // 4) On load: either resume session or show phone-entry overlay ---------------
 window.addEventListener('DOMContentLoaded', async () => {
-  if (userPhone) {
-    // Attempt to fetch user data and show the app
-    await fetchUserNameAndShow(userPhone);
-  } else {
-    overlay.style.display = 'flex';
-    otpEntryDiv.style.display = 'none';
-  }
+  
+    // 4.0) Optimistically restore UI from cache:
+    const cachedPhone = loadPhone();
+    const cachedName  = loadName();
+    if (cachedPhone) {
+      overlay.style.display = 'none';
+      appDiv.style.display  = 'block';
+      userInfoEl.innerText  = `Logged in as ${cachedName}`;
+      // background refresh of full profile & points
+      fetchUserNameAndShow(cachedPhone);
+    } else {
+      overlay.style.display     = 'flex';
+      otpEntryDiv.style.display = 'none';
+    }
+
+    // immediately kick off the gallery load:
+    loadGallery();
+  
+    // 4.1) Fire-and-forget: persist session locally
+    auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL)
+        .catch(err => console.warn('Couldn’t set persistence:', err));
+  
+    // 4.2) Fire-and-forget: render invisible reCAPTCHA
+    initRecaptcha().catch(console.error);
+  
+    // 4.3) React to full Firebase Auth state
+    auth.onAuthStateChanged(async user => {
+      if (!user) {
+        // session expired → roll back to login
+        localStorage.removeItem('userPhone');
+        localStorage.removeItem('userName');
+        overlay.style.display     = 'flex';
+        appDiv.style.display      = 'none';
+        return;
+      }
+      // valid session → fetch membership, persist & update UI
+      const phone = user.phoneNumber.replace('1','');
+      const snap  = await db.collection('members').doc(phone).get();
+      const name  = snap.exists ? (snap.data().name||'') : '';
+      savePhone(phone);
+      saveName(name);
+      overlay.style.display     = 'none';
+      otpEntryDiv.style.display = 'none';
+      appDiv.style.display      = 'block';
+      userInfoEl.innerText      = `Logged in as ${name}`;
+      // re-load full profile (points, gallery, etc)
+      await fetchUserNameAndShow(phone);
+    });
 
   btnShare.style.display  = 'none';
   btnDelete.style.display = 'none';
@@ -139,7 +198,9 @@ btnVerifyOtp.onclick = async () => {
     const cred = await window.confirmationResult.confirm(code);
     const user = cred.user;
     userPhone = user.phoneNumber.replace('+1','');
-    localStorage.setItem('userPhone', userPhone);
+    savePhone(userPhone);
+    userName = data.name || data.Name || 'No Name';
+    saveName(userName);
 
     // Fetch Firestore membership
     const snap = await db.collection('members').doc(userPhone).get();
@@ -171,7 +232,7 @@ btnVerifyOtp.onclick = async () => {
       pointsOverlay.style.display = 'flex';
     };
 
-    loadGallery();
+    
   } catch (err) {
     console.error('OTP confirm error:', err);
     alert('Code incorrect: ' + err.message);
@@ -205,7 +266,7 @@ async function fetchUserNameAndShow(phone) {
     pointsOverlay.style.display = 'flex';
   };
 
-  loadGallery();
+  
 }
 
 // 8) Upload logic -----------------------------------------------------------

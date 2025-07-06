@@ -29,24 +29,15 @@
   <div id="recaptcha-container"></div>
 
   <div id="phone-entry">
-    <div class="phone-box">
-      <h2>Enter your phone number</h2>
-
-      <input id="phone-input" type="tel" placeholder="1234567890" maxlength="15"/>
-      <button id="phone-submit">Sign In</button>
-
-      <button id="sign-up"
-              class="btn-small"
-              style="margin-top: 0.5rem;"
-              onclick="window.location.href='https://fromstrangers.social/join';">
-        Sign Up
-      </button>
-
-      <div id="otp-entry" style="display:none;margin-top:1rem">
-        <input id="otp-input" type="text" placeholder="123456" maxlength="6"/>
-        <button id="otp-submit">Verify Code</button>
-      </div>
-    </div>
+    <iframe
+      id="login-iframe"
+      src="/login"
+      style="
+        width:100%;
+        height:100%;
+        border:none;
+      "
+    ></iframe>
   </div>
 
   <div

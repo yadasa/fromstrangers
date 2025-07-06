@@ -26,7 +26,7 @@
 #phone-entry {
   position: fixed;
   top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0,0,0,0.5);
+  background: rgba(0,0,0,0);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -35,7 +35,11 @@
 
 /* The white modal box */
 .phone-box {
-  position: relative; /* for back-arrow positioning */
+  /* position: relative;  for back-arrow positioning */
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
   background: #fff;
   padding: 2rem 1rem;
   border-radius: 1rem;
@@ -93,3 +97,6 @@
 #phone-entry .phone-box button#sign-up {
   margin-top: 0.75rem;
 }
+
+/* hide the bottom‐corner badge entirely */
+.grecaptcha-badge { display: none !important; }

@@ -6,8 +6,12 @@ if (!window.firebaseConfig) {
 }
 firebase.initializeApp(window.firebaseConfig);
 const auth    = firebase.auth();
+// avoid unnecessary token refreshes on each load:
+auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL)
+  .catch(err => console.error('Failed to set auth persistence:', err));
 const db      = firebase.firestore();
 const storage = firebase.storage();
+
 
 // If we’re on localhost, point to the emulators, not prod
 if (location.hostname === 'localhost') {
@@ -87,15 +91,15 @@ function formatEventDate(isoDateStr) {
 }
 
 // 2. Session persistence (phone in localStorage/cookie)
-function savePhone(phone) {
-  try { localStorage.setItem('userPhone', phone); } catch {}
-  document.cookie = `userPhone=${phone};max-age=${60*60*24*365};path=/;SameSite=Lax`;
-}
-function loadPhone() {
-  try { return localStorage.getItem('userPhone'); } catch {}
-  const m = document.cookie.match(/(?:^|; )userPhone=(\d{10})/);
-  return m ? m[1] : null;
-}
+//function savePhone(phone) {
+//  try { localStorage.setItem('userPhone', phone); } catch {}
+//  document.cookie = `userPhone=${phone};max-age=${60*60*24*365};path=/;SameSite=Lax`;
+//}
+//function loadPhone() {
+//  try { return localStorage.getItem('userPhone'); } catch {}
+//  const m = document.cookie.match(/(?:^|; )userPhone=(\d{10})/);
+//  return m ? m[1] : null;
+//}
 
 // 3. Parse event ID from URL
 let eventId = null;
@@ -132,6 +136,44 @@ let currentPhone = '';
 let currentName  = '';
 let isFirstLogin = true;
 
+
+// ───────────────────────────────────────────────────────────────────
+// 1) Listen for loginSuccess from the iframe
+// ───────────────────────────────────────────────────────────────────
+window.addEventListener('message', async event => {
+  if (event.origin !== window.location.origin) return;
+  const msg = event.data;
+  if (msg.type === 'loginSuccess' && msg.phone) {
+    await handleLogin(msg.phone, msg.name || '');
+  }
+});
+
+/**
+ * Called once the iframe tells us login succeeded
+ */
+async function handleLogin(phone, name) {
+  // ← new persistence
+  localStorage.setItem('userPhone', phone);
+  localStorage.setItem('userName',  name);
+  currentPhone = phone;
+  currentName  = name;
+  isFirstLogin = false;
+
+  // hide the login overlay
+  document.getElementById('phone-entry').style.display = 'none';
+
+  // update header
+  document.getElementById('signed-in').innerText = `Signed in as ${currentName}`;
+
+  // unlock UI…
+  unlockLoggedInFeatures();
+  // …then just refresh RSVP state and guest preview (no full reload)
+  await loadRSVPList();
+  // await loadGuestListPreview();
+}
+
+// ───────────────────────────────────────────────────────────────────
+
 // 4. Attach event listeners on DOMContentLoaded
 let currentGifTarget = null; 
 // START REVISION: Restructure DOMContentLoaded to prevent race condition
@@ -139,7 +181,32 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Always show the app shell immediately
   document.getElementById('app').style.display = 'block';
 
-  // Hide elements that require a login by default
+    // ** Optimistic restore **
+    const cachedPhone = localStorage.getItem('userPhone');
+    const cachedName  = localStorage.getItem('userName');
+    if (cachedPhone) {
+      currentPhone = cachedPhone;
+      currentName  = cachedName || '';
+      isFirstLogin = false;
+
+      // hide the overlay
+      const pe = document.getElementById('phone-entry');
+      if (pe) pe.style.display = 'none';
+
+      // update header
+      const hdr = document.getElementById('signed-in');
+      if (hdr) hdr.innerText = `Signed in as ${currentName}`;
+
+      // unlock features and load immediately
+      unlockLoggedInFeatures();
+      // don't await these—you can let them run
+      loadRSVPList();
+    
+    }
+
+
+  // Show login overlay (iframe) until we get postMessage
+  // Hide login overlay by default (so guests see the event/guest list immediately)
   document.getElementById('phone-entry').style.display = 'none';
   document.getElementById('comment-widget').style.display = 'block';
 
@@ -203,91 +270,70 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
   // END: ADD THIS FINAL BLOCK
 
-  // Attempt to resume session and set user state
-  const saved = loadPhone();
-  if (saved) {
-    try {
-      const snap = await db.collection('members').doc(saved).get();
-      if (snap.exists) {
-        // Successfully logged in from session
-        const data = snap.data();
-        currentPhone = saved;
-        currentName  = data.name || data.Name || 'No Name';
-        isFirstLogin = false;
-        document.getElementById('signed-in').innerText = `Signed in as ${currentName}`;
-        unlockLoggedInFeatures();
-      }
-    } catch (e) {
-      console.error('Auto-resume failed', e);
-      // Ensure user is treated as logged-out if session restore fails
-      currentPhone = ''; 
-    }
-  }
-  
-  // If, after checking the session, there is no user, set up the public/logged-out view
-  if (!currentPhone) {
-    setupLoggedOutView();
-  }
-
-  // CRITICAL FIX: Load all page data ONCE, after the login state has been determined.
-  // This single, sequential call prevents the race condition.
+  // ─────────────────────────────────────────────────────────────────
+  // REMOVED: any loadPhone()/savePhone() logic & auto-resume via localStorage.
+  // We no longer call loadEventData() here – it will be triggered by handleLogin().
+  //
+  // However, to let public (logged-out) users see the event details:
   await loadEventData();
+  await loadGuestListPreview();
   loadComments();
   setupRSVPButtons();
+  // ─────────────────────────────────────────────────────────────────
 
   // --- All other synchronous event listeners can be set up below ---
 
   // Phone and OTP Submission Logic
-  document.getElementById('phone-submit').onclick = async () => {
-    let raw = document.getElementById('phone-input').value.replace(/\D/g, '');
-    if (raw.length === 11 && raw.startsWith('1')) {
-      raw = raw.slice(1);
-    }
-    if (raw.length !== 10) {
-      alert('Enter a valid 10-digit phone.');
-      return;
-    }
-    try {
-      await initRecaptcha();
-      const confirmation = await auth.signInWithPhoneNumber('+1' + raw, window.recaptchaVerifier);
-      window.confirmationResult = confirmation;
-      document.getElementById('otp-entry').style.display = 'block';
-    } catch (err) {
-      console.error('signInWithPhoneNumber error:', err);
-      alert('SMS not sent: ' + err.message);
-    }
-  };
+  //document.getElementById('phone-submit').onclick = async () => {
+  //  let raw = document.getElementById('phone-input').value.replace(/\D/g, '');
+  //  if (raw.length === 11 && raw.startsWith('1')) {
+  //    raw = raw.slice(1);
+  //  }
+  //  if (raw.length !== 10) {
+  //    alert('Enter a valid 10-digit phone.');
+  //    return;
+  //  }
+  //  try {
+  //    await initRecaptcha();
+  //    const confirmation = await auth.signInWithPhoneNumber('+1' + raw, window.recaptchaVerifier);
+  //    window.confirmationResult = confirmation;
+  //    document.getElementById('otp-entry').style.display = 'block';
+  //  } catch (err) {
+  //    console.error('signInWithPhoneNumber error:', err);
+  //    alert('SMS not sent: ' + err.message);
+  //  }
+  //};
 
-  document.getElementById('otp-submit').onclick = async () => {
-    const code = document.getElementById('otp-input').value.trim();
-    if (code.length !== 6) {
-      alert('Enter the 6-digit code.');
-      return;
-    }
-    try {
-      const cred = await window.confirmationResult.confirm(code);
-      const user = cred.user;
-      currentPhone = user.phoneNumber.replace('+1', '');
-      savePhone(currentPhone);
-      const snap = await db.collection('members').doc(currentPhone).get();
-      if (!snap.exists) {
-        alert('No membership record found. Please sign up first.');
-        return;
-      }
-      const data = snap.data();
-      currentName = data.name || data.Name || 'No Name';
-      isFirstLogin = false;
-      document.getElementById('phone-entry').style.display = 'none';
-      document.getElementById('signed-in').innerText = `Signed in as ${currentName}`;
+  //document.getElementById('otp-submit').onclick = async () => {
+  //  const code = document.getElementById('otp-input').value.trim();
+  //  if (code.length !== 6) {
+  //    alert('Enter the 6-digit code.');
+  //    return;
+  //  }
+  //  try {
+  //    const cred = await window.confirmationResult.confirm(code);
+  //    const user = cred.user;
+  //    currentPhone = user.phoneNumber.replace('+1', '');
+  //    savePhone(currentPhone);
+  //    const snap = await db.collection('members').doc(currentPhone).get();
+  //    if (!snap.exists) {
+  //      alert('No membership record found. Please sign up first.');
+  //      return;
+  //    }
+  //    const data = snap.data();
+  //    currentName = data.name || data.Name || 'No Name';
+  //    isFirstLogin = false;
+  //    document.getElementById('phone-entry').style.display = 'none';
+  //    document.getElementById('signed-in').innerText = `Signed in as ${currentName}`;
 
-      // After a manual login, unlock features and reload data to get user-specific content
-      unlockLoggedInFeatures();
-      await loadEventData();
-    } catch (err) {
-      console.error('OTP confirm error:', err);
-      alert('Code incorrect: ' + err.message);
-    }
-  };
+  //    // After a manual login, unlock features and reload data to get user-specific content
+  //    unlockLoggedInFeatures();
+  //    await loadEventData();
+  //  } catch (err) {
+  //    console.error('OTP confirm error:', err);
+  //    alert('Code incorrect: ' + err.message);
+  //  }
+  //};
   
   // Other button listeners
   document.getElementById('btn-see-all').onclick = () => {
@@ -543,8 +589,7 @@ async function loadEventData() {
   // Calendar & share logic
   setupCalendarAndShare(e);
 
-  // Load guest list preview
-  await loadGuestListPreview();
+
 
   // Wire up “Pay Now” button
   document.getElementById('btn-pay').onclick = () => {
@@ -723,14 +768,22 @@ async function handleRSVP(status) {
       });
     }
 
-    // 3) if first‐ever RSVP and we still have a referrer, give them +5 once
+    // 3) if first‐ever RSVP, referrer exists, and user has 0 points, award bonus
     if (!doc.exists && referrerPhone) {
-      const refMemRef = db.collection('members').doc(referrerPhone);
-      const referralPts = status === 'Going' ? 200 : 50;
-      tx.update(refMemRef, {
-        sPoints: firebase.firestore.FieldValue.increment(referralPts)
-      });
-      tx.update(rsvpRef, { referrerAwarded: true }, { merge: true });
+      // read rsvp’ing user’s current sPoints
+      const userSnap = await tx.get(memberRef);
+      const currentPts = userSnap.exists
+        ? (userSnap.data().sPoints || 0)
+        : 0;
+
+      if (currentPts === 0) {
+        const refMemRef   = db.collection('members').doc(referrerPhone);
+        const referralPts = status === 'Going' ? 200 : 50;
+        tx.update(refMemRef, {
+          sPoints: firebase.firestore.FieldValue.increment(referralPts)
+        });
+        tx.update(rsvpRef, { referrerAwarded: true }, { merge: true });
+      }
     }
   });
 
