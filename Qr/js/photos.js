@@ -154,6 +154,13 @@ window.addEventListener('DOMContentLoaded', async () => {
   btnDelete.style.display = 'none';
 
   window.addEventListener('scroll', () => { autoTriggered = true; });
+  if (btnLoadMore) {
+    btnLoadMore.onclick = () => {
+      autoTriggered = true;
+      loadMore();
+    };
+  }
+
 });
 
 // 5) Phone submission -------------------------------------------------------
