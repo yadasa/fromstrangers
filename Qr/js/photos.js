@@ -161,6 +161,10 @@ window.addEventListener('DOMContentLoaded', async () => {
     };
   }
 
+  // 8) Upload logic -----------------------------------------------------------
+btnUpload.onclick = () => fileInput.click();
+fileInput.onchange = () => uploadFiles(fileInput.files);
+
 });
 
 // 5) Phone submission -------------------------------------------------------
@@ -276,9 +280,7 @@ async function fetchUserNameAndShow(phone) {
   
 }
 
-// 8) Upload logic -----------------------------------------------------------
-btnUpload.onclick = () => fileInput.click();
-fileInput.onchange = () => uploadFiles(fileInput.files);
+
 
 async function uploadFiles(files) {
   for (const file of files) {
