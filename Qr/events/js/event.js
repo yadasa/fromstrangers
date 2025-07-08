@@ -182,6 +182,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('app').style.display = 'block';
 
     // ** Optimistic restore **
+    setupRSVPButtons();
     const cachedPhone = localStorage.getItem('userPhone');
     const cachedName  = localStorage.getItem('userName');
     if (cachedPhone) {
@@ -278,7 +279,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   await loadEventData();
   await loadGuestListPreview();
   loadComments();
-  setupRSVPButtons();
+  
   // ─────────────────────────────────────────────────────────────────
 
   // --- All other synchronous event listeners can be set up below ---
