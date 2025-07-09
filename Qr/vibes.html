@@ -47,179 +47,517 @@
     <p class="slider-question">What's your vibe? We use this data to help us understand our community better, ensuring that our events are specifically tailored to you. </p>
 
     <div class="w-form">
-      <form id="vibe-form" name="vibe-form" method="post">
+        <!-- 1️⃣ Tab navigation -->
+        <ul class="tab-nav">
+          <li class="tab-nav__item active" data-tab="vibes">Vibes</li>
+          <li class="tab-nav__item"        data-tab="values">Values</li>
+          <li class="tab-nav__item"        data-tab="vision">Vision</li>
+        </ul>
 
-        <!-- All questions hidden/shown via JS -->
-        <div id="questionsContainer">
-          <!-- 1–20 sliders with questions -->
-          <p class="slider-question">How talkative are you?</p>
-          <div class="slider-wrap">
-            <div class="slider-labels"><span>Quiet</span><span>Chatty</span></div>
-            <input class="range-slider" type="range" name="q1"  min="-5" max="5" step="0.1" value="0">
-          </div>
+        <!-- 2️⃣ Vibes pane (your original form) -->
+        <div class="tab-content active" id="tab-vibes">
+          <form id="vibe-form" name="vibe-form" method="post">
+            <div id="questionsContainer">
+              <!-- 1–20 sliders with questions -->
+            <p class="slider-question">How talkative are you?</p>
+            <div class="slider-wrap">
+              <div class="slider-labels"><span>Quiet</span><span>Chatty</span></div>
+              <input class="range-slider" type="range" name="q1"  min="-5" max="5" step="0.1" value="0">
+            </div>
 
-          <!-- … repeat for q2–q20 … -->
-          <p class="slider-question">Do you seek excitement or calm?</p>
-          <div class="slider-wrap">
-            <div class="slider-labels"><span>Adrenaline</span><span>Relaxation</span></div>
-            <input class="range-slider" type="range" name="q2" min="-5" max="5" step="0.1" value="0">
-          </div>
+            <!-- … repeat for q2–q20 … -->
+            <p class="slider-question">Do you seek excitement or calm?</p>
+            <div class="slider-wrap">
+              <div class="slider-labels"><span>Adrenaline</span><span>Relaxation</span></div>
+              <input class="range-slider" type="range" name="q2" min="-5" max="5" step="0.1" value="0">
+            </div>
 
-          <p class="slider-question">When you recharge, do you prefer…?</p>
-          <div class="slider-wrap">
-            <div class="slider-labels"><span>Alone-Time</span><span>Group-Time</span></div>
-            <input class="range-slider" type="range" name="q3" min="-5" max="5" step="0.1" value="0">
-          </div>
+            <p class="slider-question">When you recharge, do you prefer…?</p>
+            <div class="slider-wrap">
+              <div class="slider-labels"><span>Alone-Time</span><span>Group-Time</span></div>
+              <input class="range-slider" type="range" name="q3" min="-5" max="5" step="0.1" value="0">
+            </div>
 
-          <p class="slider-question">How active do you like your activities?</p>
-          <div class="slider-wrap">
-            <div class="slider-labels"><span>Active</span><span>Passive</span></div>
-            <input class="range-slider" type="range" name="q4" min="-5" max="5" step="0.1" value="0">
-          </div>
+            <p class="slider-question">How active do you like your activities?</p>
+            <div class="slider-wrap">
+              <div class="slider-labels"><span>Active</span><span>Passive</span></div>
+              <input class="range-slider" type="range" name="q4" min="-5" max="5" step="0.1" value="0">
+            </div>
 
-          <p class="slider-question">What’s your ideal setting?</p>
-          <div class="slider-wrap">
-            <div class="slider-labels"><span>Nature</span><span>City</span></div>
-            <input class="range-slider" type="range" name="q5" min="-5" max="5" step="0.1" value="0">
-          </div>
+            <p class="slider-question">What’s your ideal setting?</p>
+            <div class="slider-wrap">
+              <div class="slider-labels"><span>Nature</span><span>City</span></div>
+              <input class="range-slider" type="range" name="q5" min="-5" max="5" step="0.1" value="0">
+            </div>
 
-          <p class="slider-question">When are you at your best?</p>
-          <div class="slider-wrap">
-            <div class="slider-labels"><span>Daytime</span><span>Nighttime</span></div>
-            <input class="range-slider" type="range" name="q6" min="-5" max="5" step="0.1" value="0">
-          </div>
+            <p class="slider-question">When are you at your best?</p>
+            <div class="slider-wrap">
+              <div class="slider-labels"><span>Daytime</span><span>Nighttime</span></div>
+              <input class="range-slider" type="range" name="q6" min="-5" max="5" step="0.1" value="0">
+            </div>
 
-          <p class="slider-question">How do you prefer to spend on outings?</p>
-          <div class="slider-wrap">
-            <div class="slider-labels"><span>Budget-Friendly</span><span>Splurge</span></div>
-            <input class="range-slider" type="range" name="q7" min="-5" max="5" step="0.1" value="0">
-          </div>
+            <p class="slider-question">How do you prefer to spend on outings?</p>
+            <div class="slider-wrap">
+              <div class="slider-labels"><span>Budget-Friendly</span><span>Splurge</span></div>
+              <input class="range-slider" type="range" name="q7" min="-5" max="5" step="0.1" value="0">
+            </div>
 
-          <p class="slider-question">Do you focus on details or possibilities?</p>
-          <div class="slider-wrap">
-            <div class="slider-labels"><span>Concrete Details</span><span>Big Picture</span></div>
-            <input class="range-slider" type="range" name="q8" min="-5" max="5" step="0.1" value="0">
-          </div>
+            <p class="slider-question">Do you focus on details or possibilities?</p>
+            <div class="slider-wrap">
+              <div class="slider-labels"><span>Concrete Details</span><span>Big Picture</span></div>
+              <input class="range-slider" type="range" name="q8" min="-5" max="5" step="0.1" value="0">
+            </div>
 
-          <p class="slider-question">How do you make decisions?</p>
-          <div class="slider-wrap">
-            <div class="slider-labels"><span>Heartfelt Connections</span><span>Objective Analysis</span></div>
-            <input class="range-slider" type="range" name="q9" min="-5" max="5" step="0.1" value="0">
-          </div>
+            <p class="slider-question">How do you make decisions?</p>
+            <div class="slider-wrap">
+              <div class="slider-labels"><span>Heartfelt Connections</span><span>Objective Analysis</span></div>
+              <input class="range-slider" type="range" name="q9" min="-5" max="5" step="0.1" value="0">
+            </div>
 
-          <p class="slider-question">What do you prioritize at an event?</p>
-          <div class="slider-wrap">
-            <div class="slider-labels"><span>Foodie Focus</span><span>Activity Focus</span></div>
-            <input class="range-slider" type="range" name="q10" min="-5" max="5" step="0.1" value="0">
-          </div>
+            <p class="slider-question">What do you prioritize at an event?</p>
+            <div class="slider-wrap">
+              <div class="slider-labels"><span>Foodie Focus</span><span>Activity Focus</span></div>
+              <input class="range-slider" type="range" name="q10" min="-5" max="5" step="0.1" value="0">
+            </div>
 
-          <p class="slider-question">How do you approach decisions?</p>
-          <div class="slider-wrap">
-            <div class="slider-labels"><span>Decisive</span><span>Adaptable</span></div>
-            <input class="range-slider" type="range" name="q11" min="-5" max="5" step="0.1" value="0">
-          </div>
+            <p class="slider-question">How do you approach decisions?</p>
+            <div class="slider-wrap">
+              <div class="slider-labels"><span>Decisive</span><span>Adaptable</span></div>
+              <input class="range-slider" type="range" name="q11" min="-5" max="5" step="0.1" value="0">
+            </div>
 
-          <p class="slider-question">How do you handle plans?</p>
-          <div class="slider-wrap">
-            <div class="slider-labels"><span>Structured</span><span>Flexible</span></div>
-            <input class="range-slider" type="range" name="q12" min="-5" max="5" step="0.1" value="0">
-          </div>
+            <p class="slider-question">How do you handle plans?</p>
+            <div class="slider-wrap">
+              <div class="slider-labels"><span>Structured</span><span>Flexible</span></div>
+              <input class="range-slider" type="range" name="q12" min="-5" max="5" step="0.1" value="0">
+            </div>
 
-          <p class="slider-question">What pace suits you best?</p>
-          <div class="slider-wrap">
-            <div class="slider-labels"><span>Fast-Paced</span><span>Slow-Paced</span></div>
-            <input class="range-slider" type="range" name="q13" min="-5" max="5" step="0.1" value="0">
-          </div>
+            <p class="slider-question">What pace suits you best?</p>
+            <div class="slider-wrap">
+              <div class="slider-labels"><span>Fast-Paced</span><span>Slow-Paced</span></div>
+              <input class="range-slider" type="range" name="q13" min="-5" max="5" step="0.1" value="0">
+            </div>
 
-          <p class="slider-question">How do you approach new experiences?</p>
-          <div class="slider-wrap">
-            <div class="slider-labels"><span>Risk-Taking</span><span>Cautious</span></div>
-            <input class="range-slider" type="range" name="q14" min="-5" max="5" step="0.1" value="0">
-          </div>
+            <p class="slider-question">How do you approach new experiences?</p>
+            <div class="slider-wrap">
+              <div class="slider-labels"><span>Risk-Taking</span><span>Cautious</span></div>
+              <input class="range-slider" type="range" name="q14" min="-5" max="5" step="0.1" value="0">
+            </div>
 
-          <p class="slider-question">Do you prefer new ideas or tried methods?</p>
-          <div class="slider-wrap">
-            <div class="slider-labels"><span>Innovator</span><span>Traditionalist</span></div>
-            <input class="range-slider" type="range" name="q15" min="-5" max="5" step="0.1" value="0">
-          </div>
+            <p class="slider-question">Do you prefer new ideas or tried methods?</p>
+            <div class="slider-wrap">
+              <div class="slider-labels"><span>Innovator</span><span>Traditionalist</span></div>
+              <input class="range-slider" type="range" name="q15" min="-5" max="5" step="0.1" value="0">
+            </div>
 
-          <p class="slider-question">How do you like to present yourself?</p>
-          <div class="slider-wrap">
-            <div class="slider-labels"><span>Photogenic</span><span>Low-Key</span></div>
-            <input class="range-slider" type="range" name="q16" min="-5" max="5" step="0.1" value="0">
-          </div>
+            <p class="slider-question">How do you like to present yourself?</p>
+            <div class="slider-wrap">
+              <div class="slider-labels"><span>Photogenic</span><span>Low-Key</span></div>
+              <input class="range-slider" type="range" name="q16" min="-5" max="5" step="0.1" value="0">
+            </div>
 
-          <p class="slider-question">How do you express yourself?</p>
-          <div class="slider-wrap">
-            <div class="slider-labels"><span>Reserved</span><span>Expressive</span></div>
-            <input class="range-slider" type="range" name="q17" min="-5" max="5" step="0.1" value="0">
-          </div>
+            <p class="slider-question">How do you express yourself?</p>
+            <div class="slider-wrap">
+              <div class="slider-labels"><span>Reserved</span><span>Expressive</span></div>
+              <input class="range-slider" type="range" name="q17" min="-5" max="5" step="0.1" value="0">
+            </div>
 
-          <p class="slider-question">Do you stick with familiar spots or seek new ones?</p>
-          <div class="slider-wrap">
-            <div class="slider-labels"><span>Local Hangout</span><span>Explore New</span></div>
-            <input class="range-slider" type="range" name="q18" min="-5" max="5" step="0.1" value="0">
-          </div>
+            <p class="slider-question">Do you stick with familiar spots or seek new ones?</p>
+            <div class="slider-wrap">
+              <div class="slider-labels"><span>Local Hangout</span><span>Explore New</span></div>
+              <input class="range-slider" type="range" name="q18" min="-5" max="5" step="0.1" value="0">
+            </div>
 
-          <p class="slider-question">What’s your problem-solving style?</p>
-          <div class="slider-wrap">
-            <div class="slider-labels"><span>Analytical</span><span>Creative</span></div>
-            <input class="range-slider" type="range" name="q19" min="-5" max="5" step="0.1" value="0">
-          </div>
+            <p class="slider-question">What’s your problem-solving style?</p>
+            <div class="slider-wrap">
+              <div class="slider-labels"><span>Analytical</span><span>Creative</span></div>
+              <input class="range-slider" type="range" name="q19" min="-5" max="5" step="0.1" value="0">
+            </div>
 
-          <p class="slider-question">What’s your goal for activities?</p>
-          <div class="slider-wrap">
-            <div class="slider-labels"><span>Skill-Build</span><span>Just Fun</span></div>
-            <input class="range-slider" type="range" name="q20" min="-5" max="5" step="0.1" value="0">
-          </div>
+            <p class="slider-question">What’s your goal for activities?</p>
+            <div class="slider-wrap">
+              <div class="slider-labels"><span>Skill-Build</span><span>Just Fun</span></div>
+              <input class="range-slider" type="range" name="q20" min="-5" max="5" step="0.1" value="0">
+            </div>
 
-          <hr style="margin:1.5rem 0; border:none; border-top:1px solid #DDD;">
+            <hr style="margin:1.5rem 0; border:none; border-top:1px solid #DDD;">
 
-          <!-- 21–25: original sliders -->
-          <p class="slider-question">Chill vs. Competitive</p>
-          <div class="slider-wrap">
-            <div class="slider-labels"><span>Chill</span><span>Competitive</span></div>
-            <input class="range-slider" type="range" name="chillVsCompetitive" min="-5" max="5" step="0.1" value="0">
-          </div>
+            <!-- 21–25: original sliders -->
+            <p class="slider-question">Chill vs. Competitive</p>
+            <div class="slider-wrap">
+              <div class="slider-labels"><span>Chill</span><span>Competitive</span></div>
+              <input class="range-slider" type="range" name="chillVsCompetitive" min="-5" max="5" step="0.1" value="0">
+            </div>
 
-          <p class="slider-question">Indoors vs. Outdoors</p>
-          <div class="slider-wrap">
-            <div class="slider-labels"><span>Indoors</span><span>Outdoors</span></div>
-            <input class="range-slider" type="range" name="indoorsVsOutdoors" min="-5" max="5" step="0.1" value="0">
-          </div>
+            <p class="slider-question">Indoors vs. Outdoors</p>
+            <div class="slider-wrap">
+              <div class="slider-labels"><span>Indoors</span><span>Outdoors</span></div>
+              <input class="range-slider" type="range" name="indoorsVsOutdoors" min="-5" max="5" step="0.1" value="0">
+            </div>
 
-          <p class="slider-question">Planned vs. Spontaneous</p>
-          <div class="slider-wrap">
-            <div class="slider-labels"><span>Planned</span><span>Spontaneous</span></div>
-            <input class="range-slider" type="range" name="plannedVsSpontaneous" min="-5" max="5" step="0.1" value="0">
-          </div>
+            <p class="slider-question">Planned vs. Spontaneous</p>
+            <div class="slider-wrap">
+              <div class="slider-labels"><span>Planned</span><span>Spontaneous</span></div>
+              <input class="range-slider" type="range" name="plannedVsSpontaneous" min="-5" max="5" step="0.1" value="0">
+            </div>
 
-          <p class="slider-question">Quiet vs. Vibrant</p>
-          <div class="slider-wrap">
-            <div class="slider-labels"><span>Quiet</span><span>Vibrant</span></div>
-            <input class="range-slider" type="range" name="quietVsVibrant" min="-5" max="5" step="0.1" value="0">
-          </div>
+            <p class="slider-question">Quiet vs. Vibrant</p>
+            <div class="slider-wrap">
+              <div class="slider-labels"><span>Quiet</span><span>Vibrant</span></div>
+              <input class="range-slider" type="range" name="quietVsVibrant" min="-5" max="5" step="0.1" value="0">
+            </div>
 
-          <p class="slider-question">Small Groups vs. Large Groups</p>
-          <div class="slider-wrap">
-            <div class="slider-labels"><span>Small</span><span>Large</span></div>
-            <input class="range-slider" type="range" name="smallVsLarge" min="-5" max="5" step="0.1" value="0">
-          </div>
+            <p class="slider-question">Small Groups vs. Large Groups</p>
+            <div class="slider-wrap">
+              <div class="slider-labels"><span>Small</span><span>Large</span></div>
+              <input class="range-slider" type="range" name="smallVsLarge" min="-5" max="5" step="0.1" value="0">
+            </div>
+              </div>
+              <button id="saveBtn" class="w-button">Save</button>
+              <div id="postSaveButtons" style="display:none; margin-top:1rem; text-align:center;">
+                <button id="returnHome" class="w-button" type="button" style="margin-right:8px;">Return Home</button>
+                <button id="editBtn" class="w-button" type="button">Edit Responses</button>
+              </div>
+          </form>
+          <div class="w-form-done">✅ Vibes saved!</div>
+          <div class="w-form-fail">❌ Oops, try again.</div>
         </div>
 
-        <!-- initial Save button -->
-        <button id="saveBtn" class="w-button" style="width:100%">Save</button>
+        <!-- 3️⃣ Values pane -->
+        <div class="tab-content" id="tab-values">
+          <form id="values-form" name="values-form" method="post">
+            <div id="valuesContainer">
+              <!-- ← insert your 25 values questions here -->
+               <div id="questionsContainer">
+                <p class="slider-question">Lead with values or charm?</p>
+                <div class="slider-wrap">
+                  <div class="slider-labels"><span>Values</span><span>Charm</span></div>
+                  <input class="range-slider" type="range" name="va1" min="-5" max="5" step="0.1" value="0">
+                </div>
 
-        <!-- shown after save -->
-        <div id="postSaveButtons" style="display:none; margin-top:1rem; text-align:center;">
-          <button id="returnHome" class="w-button" type="button" style="margin-right:8px;">Return Home</button>
-          <button id="editBtn" class="w-button" type="button">Edit Responses</button>
+                <p class="slider-question">Prioritize impact or comfort?</p>
+                <div class="slider-wrap">
+                  <div class="slider-labels"><span>Impact</span><span>Comfort</span></div>
+                  <input class="range-slider" type="range" name="va2" min="-5" max="5" step="0.1" value="0">
+                </div>
+
+                <p class="slider-question">Seek purpose or pleasure?</p>
+                <div class="slider-wrap">
+                  <div class="slider-labels"><span>Purpose</span><span>Pleasure</span></div>
+                  <input class="range-slider" type="range" name="va3" min="-5" max="5" step="0.1" value="0">
+                </div>
+
+                <p class="slider-question">Master one field or explore many?</p>
+                <div class="slider-wrap">
+                  <div class="slider-labels"><span>Depth</span><span>Breadth</span></div>
+                  <input class="range-slider" type="range" name="va4" min="-5" max="5" step="0.1" value="0">
+                </div>
+
+                <p class="slider-question">Stay true or adapt on the fly?</p>
+                <div class="slider-wrap">
+                  <div class="slider-labels"><span>Authenticity</span><span>Adaptability</span></div>
+                  <input class="range-slider" type="range" name="va5" min="-5" max="5" step="0.1" value="0">
+                </div>
+
+                <p class="slider-question">Lift others or lift yourself?</p>
+                <div class="slider-wrap">
+                  <div class="slider-labels"><span>Service</span><span>Self-Advancement</span></div>
+                  <input class="range-slider" type="range" name="va6" min="-5" max="5" step="0.1" value="0">
+                </div>
+
+                <p class="slider-question">Honor tradition or spark change?</p>
+                <div class="slider-wrap">
+                  <div class="slider-labels"><span>Tradition</span><span>Transformation</span></div>
+                  <input class="range-slider" type="range" name="va7" min="-5" max="5" step="0.1" value="0">
+                </div>
+
+                <p class="slider-question">Play it safe or dive into the unknown?</p>
+                <div class="slider-wrap">
+                  <div class="slider-labels"><span>Security</span><span>Adventure</span></div>
+                  <input class="range-slider" type="range" name="va8" min="-5" max="5" step="0.1" value="0">
+                </div>
+
+                <p class="slider-question">Give back or get ahead?</p>
+                <div class="slider-wrap">
+                  <div class="slider-labels"><span>Give Back</span><span>Get Ahead</span></div>
+                  <input class="range-slider" type="range" name="va9" min="-5" max="5" step="0.1" value="0">
+                </div>
+
+                <p class="slider-question">Speak bluntly or keep the peace?</p>
+                <div class="slider-wrap">
+                  <div class="slider-labels"><span>Honesty</span><span>Harmony</span></div>
+                  <input class="range-slider" type="range" name="va10" min="-5" max="5" step="0.1" value="0">
+                </div>
+
+                <p class="slider-question">Think it through or follow your heart?</p>
+                <div class="slider-wrap">
+                  <div class="slider-labels"><span>Reason</span><span>Emotion</span></div>
+                  <input class="range-slider" type="range" name="va11" min="-5" max="5" step="0.1" value="0">
+                </div>
+
+                <p class="slider-question">Absorb knowledge or share wisdom?</p>
+                <div class="slider-wrap">
+                  <div class="slider-labels"><span>Learning</span><span>Teaching</span></div>
+                  <input class="range-slider" type="range" name="va12" min="-5" max="5" step="0.1" value="0">
+                </div>
+
+                <p class="slider-question">Feel with others or stay objective?</p>
+                <div class="slider-wrap">
+                  <div class="slider-labels"><span>Empathy</span><span>Objectivity</span></div>
+                  <input class="range-slider" type="range" name="va13" min="-5" max="5" step="0.1" value="0">
+                </div>
+
+                <p class="slider-question">Avoid risk or chase reward?</p>
+                <div class="slider-wrap">
+                  <div class="slider-labels"><span>Risk-Averse</span><span>Risk-Seeking</span></div>
+                  <input class="range-slider" type="range" name="va14" min="-5" max="5" step="0.1" value="0">
+                </div>
+
+                <p class="slider-question">Invent new paths or follow proven roads?</p>
+                <div class="slider-wrap">
+                  <div class="slider-labels"><span>Innovation</span><span>Reliability</span></div>
+                  <input class="range-slider" type="range" name="va15" min="-5" max="5" step="0.1" value="0">
+                </div>
+
+                <p class="slider-question">Follow passion or plan carefully?</p>
+                <div class="slider-wrap">
+                  <div class="slider-labels"><span>Passion</span><span>Prudence</span></div>
+                  <input class="range-slider" type="range" name="va16" min="-5" max="5" step="0.1" value="0">
+                </div>
+
+                <p class="slider-question">Show your colors or blend in?</p>
+                <div class="slider-wrap">
+                  <div class="slider-labels"><span>Expression</span><span>Restraint</span></div>
+                  <input class="range-slider" type="range" name="va17" min="-5" max="5" step="0.1" value="0">
+                </div>
+
+                <p class="slider-question">Blend with the crowd or stand out?</p>
+                <div class="slider-wrap">
+                  <div class="slider-labels"><span>Community</span><span>Individuality</span></div>
+                  <input class="range-slider" type="range" name="va18" min="-5" max="5" step="0.1" value="0">
+                </div>
+
+                <p class="slider-question">Push boundaries or stay grounded?</p>
+                <div class="slider-wrap">
+                  <div class="slider-labels"><span>Growth</span><span>Stability</span></div>
+                  <input class="range-slider" type="range" name="va19" min="-5" max="5" step="0.1" value="0">
+                </div>
+
+                <p class="slider-question">Juggle many things or focus on one?</p>
+                <div class="slider-wrap">
+                  <div class="slider-labels"><span>Multitasking</span><span>Focus</span></div>
+                  <input class="range-slider" type="range" name="va20" min="-5" max="5" step="0.1" value="0">
+                </div>
+
+                <p class="slider-question">Think long-term or live in the moment?</p>
+                <div class="slider-wrap">
+                  <div class="slider-labels"><span>Legacy</span><span>Present</span></div>
+                  <input class="range-slider" type="range" name="va21" min="-5" max="5" step="0.1" value="0">
+                </div>
+
+                <p class="slider-question">Take bold leaps or tread carefully?</p>
+                <div class="slider-wrap">
+                  <div class="slider-labels"><span>Boldness</span><span>Caution</span></div>
+                  <input class="range-slider" type="range" name="va22" min="-5" max="5" step="0.1" value="0">
+                </div>
+
+                <p class="slider-question">Share openly or guard secrets?</p>
+                <div class="slider-wrap">
+                  <div class="slider-labels"><span>Openness</span><span>Privacy</span></div>
+                  <input class="range-slider" type="range" name="va23" min="-5" max="5" step="0.1" value="0">
+                </div>
+
+                <p class="slider-question">Honor the past or innovate now?</p>
+                <div class="slider-wrap">
+                  <div class="slider-labels"><span>Heritage</span><span>Progress</span></div>
+                  <input class="range-slider" type="range" name="va24" min="-5" max="5" step="0.1" value="0">
+                </div>
+
+                <p class="slider-question">See the horizon or notice every detail?</p>
+                <div class="slider-wrap">
+                  <div class="slider-labels"><span>Vision</span><span>Detail</span></div>
+                  <input class="range-slider" type="range" name="va25" min="-5" max="5" step="0.1" value="0">
+                </div>
+              </div>
+
+            </div>
+            <button id="saveValuesBtn" class="w-button">Save</button>
+            <div id="postSaveValuesButtons" style="display:none; margin-top:1rem; text-align:center;">
+              <button id="editValuesBtn" class="w-button" type="button">Edit Responses</button>
+            </div>
+          </form>
+          <div class="w-form-done">✅ Values saved!</div>
+          <div class="w-form-fail">❌ Oops, try again.</div>
         </div>
-      </form>
 
-      <div class="w-form-done">✅ Vibes saved!</div>
-      <div class="w-form-fail">❌ Oops, try again.</div>
-    </div>
+        <!-- 4️⃣ Vision pane -->
+        <div class="tab-content" id="tab-vision">
+          <form id="vision-form" name="vision-form" method="post">
+            <div id="visionContainer">
+              <!-- ← insert your 25 vision questions here -->
+               <div id="questionsContainer">
+                <p class="slider-question">Explore space or protect Earth’s nature?</p>
+                <div class="slider-wrap">
+                  <div class="slider-labels"><span>Space Explorer</span><span>Earth Guardian</span></div>
+                  <input class="range-slider" type="range" name="vi1" min="-5" max="5" step="0.1" value="0">
+                </div>
+
+                <p class="slider-question">Certainty or surprise?</p>
+                <div class="slider-wrap">
+                  <div class="slider-labels"><span>Certainty</span><span>Surprise</span></div>
+                  <input class="range-slider" type="range" name="vi2" min="-5" max="5" step="0.1" value="0">
+                </div>
+
+                <p class="slider-question">Chart unknown territories or navigate known paths?</p>
+                <div class="slider-wrap">
+                  <div class="slider-labels"><span>Explorer</span><span>Navigator</span></div>
+                  <input class="range-slider" type="range" name="vi3" min="-5" max="5" step="0.1" value="0">
+                </div>
+
+                <p class="slider-question">Build a company or spark a movement?</p>
+                <div class="slider-wrap">
+                  <div class="slider-labels"><span>Corporate Founder</span><span>Activist</span></div>
+                  <input class="range-slider" type="range" name="vi4" min="-5" max="5" step="0.1" value="0">
+                </div>
+
+                <p class="slider-question">Influence many or master one?</p>
+                <div class="slider-wrap">
+                  <div class="slider-labels"><span>Influence</span><span>Mastery</span></div>
+                  <input class="range-slider" type="range" name="vi5" min="-5" max="5" step="0.1" value="0">
+                </div>
+
+                <p class="slider-question">Write a bestselling book or start a legacy foundation?</p>
+                <div class="slider-wrap">
+                  <div class="slider-labels"><span>Author</span><span>Philanthropist</span></div>
+                  <input class="range-slider" type="range" name="vi6" min="-5" max="5" step="0.1" value="0">
+                </div>
+
+                <p class="slider-question">Launch a startup or guide a nonprofit?</p>
+                <div class="slider-wrap">
+                  <div class="slider-labels"><span>Startup Founder</span><span>Nonprofit Leader</span></div>
+                  <input class="range-slider" type="range" name="vi7" min="-5" max="5" step="0.1" value="0">
+                </div>
+
+                <p class="slider-question">Broad network or deep bonds?</p>
+                <div class="slider-wrap">
+                  <div class="slider-labels"><span>Network</span><span>Bonds</span></div>
+                  <input class="range-slider" type="range" name="vi8" min="-5" max="5" step="0.1" value="0">
+                </div>
+
+                <p class="slider-question">Achieve global fame or local respect?</p>
+                <div class="slider-wrap">
+                  <div class="slider-labels"><span>Global Star</span><span>Community Hero</span></div>
+                  <input class="range-slider" type="range" name="vi9" min="-5" max="5" step="0.1" value="0">
+                </div>
+
+                <p class="slider-question">Amass wealth or gain wisdom?</p>
+                <div class="slider-wrap">
+                  <div class="slider-labels"><span>Wealth</span><span>Wisdom</span></div>
+                  <input class="range-slider" type="range" name="vi10" min="-5" max="5" step="0.1" value="0">
+                </div>
+
+                <p class="slider-question">Own your time or lead an industry?</p>
+                <div class="slider-wrap">
+                  <div class="slider-labels"><span>Time Freedom</span><span>Industry Leader</span></div>
+                  <input class="range-slider" type="range" name="vi11" min="-5" max="5" step="0.1" value="0">
+                </div>
+
+                <p class="slider-question">Assets or experiences?</p>
+                <div class="slider-wrap">
+                  <div class="slider-labels"><span>Assets</span><span>Experiences</span></div>
+                  <input class="range-slider" type="range" name="vi12" min="-5" max="5" step="0.1" value="0">
+                </div>
+
+                <p class="slider-question">Live in a smart city or off-grid retreat?</p>
+                <div class="slider-wrap">
+                  <div class="slider-labels"><span>Smart City</span><span>Off-Grid</span></div>
+                  <input class="range-slider" type="range" name="vi13" min="-5" max="5" step="0.1" value="0">
+                </div>
+
+                <p class="slider-question">Automate everything or craft by hand?</p>
+                <div class="slider-wrap">
+                  <div class="slider-labels"><span>Automation</span><span>Artisanal</span></div>
+                  <input class="range-slider" type="range" name="vi14" min="-5" max="5" step="0.1" value="0">
+                </div>
+
+                <p class="slider-question">Solo success or shared victory?</p>
+                <div class="slider-wrap">
+                  <div class="slider-labels"><span>Solo</span><span>Shared</span></div>
+                  <input class="range-slider" type="range" name="vi15" min="-5" max="5" step="0.1" value="0">
+                </div>
+
+                <p class="slider-question">Shape policies or create new markets?</p>
+                <div class="slider-wrap">
+                  <div class="slider-labels"><span>Policy-Maker</span><span>Market-Maker</span></div>
+                  <input class="range-slider" type="range" name="vi16" min="-5" max="5" step="0.1" value="0">
+                </div>
+
+                <p class="slider-question">Dream big or map every detail?</p>
+                <div class="slider-wrap">
+                  <div class="slider-labels"><span>Visionary</span><span>Planner</span></div>
+                  <input class="range-slider" type="range" name="vi17" min="-5" max="5" step="0.1" value="0">
+                </div>
+
+                <p class="slider-question">Plan for the distant future or focus on today?</p>
+                <div class="slider-wrap">
+                  <div class="slider-labels"><span>Futurist</span><span>Nowist</span></div>
+                  <input class="range-slider" type="range" name="vi18" min="-5" max="5" step="0.1" value="0">
+                </div>
+
+                <p class="slider-question">Raise a big family or mentor through your work?</p>
+                <div class="slider-wrap">
+                  <div class="slider-labels"><span>Family</span><span>Mentorship</span></div>
+                  <input class="range-slider" type="range" name="vi19" min="-5" max="5" step="0.1" value="0">
+                </div>
+
+                <p class="slider-question">Have unlimited leisure or endless productivity?</p>
+                <div class="slider-wrap">
+                  <div class="slider-labels"><span>Leisure</span><span>Productivity</span></div>
+                  <input class="range-slider" type="range" name="vi20" min="-5" max="5" step="0.1" value="0">
+                </div>
+
+                <p class="slider-question">Hold a steady job or chase freelance freedom?</p>
+                <div class="slider-wrap">
+                  <div class="slider-labels"><span>Steady Job</span><span>Freelance</span></div>
+                  <input class="range-slider" type="range" name="vi21" min="-5" max="5" step="0.1" value="0">
+                </div>
+
+                <p class="slider-question">Fast-track your career or savor each step?</p>
+                <div class="slider-wrap">
+                  <div class="slider-labels"><span>Fast-Track</span><span>Savour</span></div>
+                  <input class="range-slider" type="range" name="vi22" min="-5" max="5" step="0.1" value="0">
+                </div>
+
+                <p class="slider-question">Own a private retreat or host a vibrant hub?</p>
+                <div class="slider-wrap">
+                  <div class="slider-labels"><span>Private Retreat</span><span>Public Space</span></div>
+                  <input class="range-slider" type="range" name="vi23" min="-5" max="5" step="0.1" value="0">
+                </div>
+
+                <p class="slider-question">Big dreams or small joys?</p>
+                <div class="slider-wrap">
+                  <div class="slider-labels"><span>Dreams</span><span>Joys</span></div>
+                  <input class="range-slider" type="range" name="vi24" min="-5" max="5" step="0.1" value="0">
+                </div>
+
+                <p class="slider-question">Stay connected 24/7 or unplug weekly?</p>
+                <div class="slider-wrap">
+                  <div class="slider-labels"><span>Always On</span><span>Weekly Off</span></div>
+                  <input class="range-slider" type="range" name="vi25" min="-5" max="5" step="0.1" value="0">
+                </div>
+              </div>
+
+            </div>
+            <button id="saveVisionBtn" class="w-button">Save</button>
+            <div id="postSaveVisionButtons" style="display:none; margin-top:1rem; text-align:center;">
+              <button id="editVisionBtn" class="w-button" type="button">Edit Responses</button>
+            </div>
+          </form>
+          <div class="w-form-done">✅ Vision saved!</div>
+          <div class="w-form-fail">❌ Oops, try again.</div>
+        </div>
+      </div>
+    
   </div>
 </body>
 </html>

@@ -205,4 +205,20 @@ document.addEventListener('DOMContentLoaded', () => {
     showVibesApp();
     initVibes(phone);
   });
+
+  // ─── 4) TAB SWITCHING ───────────────────────────────────────────────────
+  const tabs     = document.querySelectorAll('.tab-nav__item');
+  const panes    = document.querySelectorAll('.tab-content');
+
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      // deactivate all
+      tabs.forEach(t => t.classList.remove('active'));
+      panes.forEach(p => p.classList.remove('active'));
+      // activate clicked + matching pane
+      tab.classList.add('active');
+      document.getElementById('tab-' + tab.dataset.tab)
+              .classList.add('active');
+    });
+  });
 });

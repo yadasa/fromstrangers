@@ -11,7 +11,24 @@ auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL)
   .catch(err => console.error('Failed to set auth persistence:', err));
 const db      = firebase.firestore();
 const storage = firebase.storage();
-
+// 1a) Watch for real auth state and force login if needed
+firebase.auth().onAuthStateChanged(user => {
+  if (user) {
+    // valid session → hydrate
+    const phone = user.phoneNumber.replace('+1','');
+    db.collection('members').doc(phone).get().then(snap => {
+      const name = snap.exists ? snap.data().name : '';
+      handleLogin(phone, name);
+    });
+  } else {
+    // no session → force login
+    document.getElementById('phone-entry').style.display = 'flex';
+    currentPhone = '';
+    currentName  = '';
+    document.querySelectorAll('.rsvp-button.active')
+            .forEach(btn => btn.classList.remove('active'));
+  }
+});
 
 // If we’re on localhost, point to the emulators, not prod
 if (location.hostname === 'localhost') {
