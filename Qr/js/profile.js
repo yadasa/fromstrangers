@@ -3,16 +3,16 @@ import { computeVibeSimilarity } from './vibeSimilarity.js';
 
 // ─── A) LOCAL STORAGE HELPERS ──────────────────────────────────────
 function savePhone(phone) {
-  try { localStorage.setItem('userPhone', phone); } catch {}
-  document.cookie = `userPhone=${phone};max-age=${60*60*24*365};path=/;SameSite=Lax`;
+  try { localStorage.setItem('userPhone', phone); } catch { }
+  document.cookie = `userPhone=${phone};max-age=${60 * 60 * 24 * 365};path=/;SameSite=Lax`;
 }
 function loadPhone() {
-  try { return localStorage.getItem('userPhone'); } catch {}
+  try { return localStorage.getItem('userPhone'); } catch { }
   const m = document.cookie.match(/(?:^|; )userPhone=(\d{10})/);
   return m ? m[1] : null;
 }
 function saveName(name) {
-  try { localStorage.setItem('userName', name); } catch {}
+  try { localStorage.setItem('userName', name); } catch { }
 }
 function loadName() {
   return localStorage.getItem('userName') || '';
@@ -23,58 +23,58 @@ document.addEventListener('DOMContentLoaded', () => {
   if (!window.firebaseConfig) throw new Error('Missing firebaseConfig.js');
   firebase.initializeApp(window.firebaseConfig);
   const auth = firebase.auth();
-  const db   = firebase.firestore();
+  const db = firebase.firestore();
 
   // ─── B) SET PERSISTENCE (non-blocking) ─────────────────────────────
   auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL)
-      .catch(err => console.warn('Auth persistence failed:', err));
+    .catch(err => console.warn('Auth persistence failed:', err));
 
   // ─── C) OPTIMISTIC UI FROM CACHE ──────────────────────────────────
   const cachedPhone = loadPhone();
-  const cachedName  = loadName();
+  const cachedName = loadName();
   if (cachedPhone) {
     // 1) show the profile app shell immediately
-    const appEl    = document.getElementById('profile-app');
+    const appEl = document.getElementById('profile-app');
     if (appEl) appEl.style.display = 'block';
 
     // 2) set header title
     const hdrTitle = document.getElementById('header-title');
     if (hdrTitle) hdrTitle.innerText = cachedName;
 
-  
+
   }
 
   // Your profile‐only Drive folder ID
   const PROFILE_DRIVE_FOLDER_ID = '1zmOhvhrskbhtnot2RD86MNU__6bmuxo2';
 
-  const appEl       = document.getElementById('profile-app');
-  const hdrTitle    = document.getElementById('header-title');
-  const backArrow   = document.getElementById('back-arrow');
+  const appEl = document.getElementById('profile-app');
+  const hdrTitle = document.getElementById('header-title');
+  const backArrow = document.getElementById('back-arrow');
 
-  const profileImg   = document.getElementById('profile-img');
+  const profileImg = document.getElementById('profile-img');
   const changePicBtn = document.getElementById('change-pic');
-  const imgInput     = document.getElementById('img-input');
+  const imgInput = document.getElementById('img-input');
 
-  const nameView   = document.getElementById('name-view');
-  const nameInput  = document.getElementById('name-input');
-  const instaView  = document.getElementById('insta-view');
+  const nameView = document.getElementById('name-view');
+  const nameInput = document.getElementById('name-input');
+  const instaView = document.getElementById('insta-view');
   const instaInput = document.getElementById('insta-input');
 
-  const pinInput     = document.getElementById('pin-input');
-  const confirmPin   = document.getElementById('confirm-pin-input');
-  const pwError      = document.getElementById('pw-error');
+  const pinInput = document.getElementById('pin-input');
+  const confirmPin = document.getElementById('confirm-pin-input');
+  const pwError = document.getElementById('pw-error');
 
-  const editBtn   = document.getElementById('edit-btn');
+  const editBtn = document.getElementById('edit-btn');
   const cancelBtn = document.getElementById('cancel-btn');
-  const saveBtn   = document.getElementById('save-btn');
+  const saveBtn = document.getElementById('save-btn');
 
-  const cropOverlay   = document.getElementById('crop-overlay');
+  const cropOverlay = document.getElementById('crop-overlay');
   const cropContainer = document.getElementById('crop-container');
-  const cropConfirm   = document.getElementById('crop-confirm');
-  const cropCancel    = document.getElementById('crop-cancel');
+  const cropConfirm = document.getElementById('crop-confirm');
+  const cropCancel = document.getElementById('crop-cancel');
 
-  const instagramLink     = document.getElementById('instagram-link');
-  const vibeSimilarityEl  = document.getElementById('vibe-similarity');
+  const instagramLink = document.getElementById('instagram-link');
+  const vibeSimilarityEl = document.getElementById('vibe-similarity');
 
   let profileDocId = null;
   let originalName = '', originalInsta = '';
@@ -86,7 +86,7 @@ document.addEventListener('DOMContentLoaded', () => {
       new TextEncoder().encode(str)
     );
     return Array.from(new Uint8Array(buf))
-      .map(b => b.toString(16).padStart(2,'0'))
+      .map(b => b.toString(16).padStart(2, '0'))
       .join('');
   }
 
@@ -94,12 +94,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const rev = phone.split('').reverse();
     let noise = '';
     for (const d of rev) {
-      noise += d + Math.floor(Math.random()*100).toString().padStart(2,'0');
+      noise += d + Math.floor(Math.random() * 100).toString().padStart(2, '0');
     }
-    const prefix = Math.floor(Math.random()*10000)
-                     .toString().padStart(4,'0');
-    const suffix = Math.floor(Math.random()*10000)
-                     .toString().padStart(4,'0');
+    const prefix = Math.floor(Math.random() * 10000)
+      .toString().padStart(4, '0');
+    const suffix = Math.floor(Math.random() * 10000)
+      .toString().padStart(4, '0');
     return await hashHex(prefix + noise + suffix);
   }
 
@@ -117,18 +117,18 @@ document.addEventListener('DOMContentLoaded', () => {
       localStorage.removeItem('userName');
       return location.replace('../index.html');
     }
-    
+
     // 2) We have a real user—sync canonical phone → cache
-    const me = user.phoneNumber.replace('+1','');
+    const me = user.phoneNumber.replace('+1', '');
     savePhone(me);
-    
+
     // 3) Pull fresh displayName → cache
     const memberSnap = await db.collection('members').doc(me).get();
     const displayName = memberSnap.exists ? memberSnap.data().name : '';
     saveName(displayName);
-    
+
     // 4) Reveal app shell & header optimistically
-    const appEl    = document.getElementById('profile-app');
+    const appEl = document.getElementById('profile-app');
     if (appEl) appEl.style.display = 'block';
     const hdrTitle = document.getElementById('header-title');
     if (hdrTitle) hdrTitle.innerText = displayName;
@@ -149,12 +149,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // load the profile being viewed
     const qs = await db.collection('members')
-                       .where('profileId','==',pid)
-                       .get();
+      .where('profileId', '==', pid)
+      .get();
     if (qs.empty) return alert('Profile not found');
-    const doc  = qs.docs[0];
+    const doc = qs.docs[0];
     profileDocId = doc.id;
-    const data   = doc.data();
+    const data = doc.data();
     // ——— show sPoints ———
     const spoints = data.sPoints || 0;
     const spointsLink = document.getElementById('spoints-link');
@@ -167,21 +167,21 @@ document.addEventListener('DOMContentLoaded', () => {
     // ▼ INSERT STEP 3 ▼
     // ▼ STEP 3: pill ↔ children toggle, auto-collapse, modals, etc. ─────
     // grab all the elements we need
-    const spointsBox        = document.getElementById('spoints-box');
+    const spointsBox = document.getElementById('spoints-box');
     const childrenContainer = document.getElementById('spoints-children-container');
-    const btnLeaderboard    = document.getElementById('btn-leaderboard');
-    const btnTransfer       = document.getElementById('btn-transfer');
-    const btnInfo           = document.getElementById('btn-info');
+    const btnLeaderboard = document.getElementById('btn-leaderboard');
+    const btnTransfer = document.getElementById('btn-transfer');
+    const btnInfo = document.getElementById('btn-info');
 
-    const transferModal     = document.getElementById('transfer-modal');
-    const transferInput     = document.getElementById('transfer-amount');
-    const transferError     = document.getElementById('transfer-error');
-    const transferOk        = document.getElementById('transfer-confirm');
-    const transferCancel    = document.getElementById('transfer-cancel');
+    const transferModal = document.getElementById('transfer-modal');
+    const transferInput = document.getElementById('transfer-amount');
+    const transferError = document.getElementById('transfer-error');
+    const transferOk = document.getElementById('transfer-confirm');
+    const transferCancel = document.getElementById('transfer-cancel');
 
-    const infoModal         = document.getElementById('info-modal');
-    const infoText          = document.getElementById('info-text');
-    const infoClose         = document.getElementById('info-close');
+    const infoModal = document.getElementById('info-modal');
+    const infoText = document.getElementById('info-text');
+    const infoClose = document.getElementById('info-close');
 
     // collapse logic & timer
     let collapseTimer;
@@ -231,7 +231,7 @@ document.addEventListener('DOMContentLoaded', () => {
       try {
         await db.runTransaction(async tx => {
           const fromRef = db.collection('members').doc(me);
-          const toRef   = db.collection('members').doc(profileDocId);
+          const toRef = db.collection('members').doc(profileDocId);
 
           const [fromSnap, toSnap] = await Promise.all([
             tx.get(fromRef),
@@ -239,18 +239,18 @@ document.addEventListener('DOMContentLoaded', () => {
           ]);
 
           const fromPts = (fromSnap.data().sPoints || 0);
-          const toPts   = (toSnap.data().sPoints   || 0);
+          const toPts = (toSnap.data().sPoints || 0);
 
           if (amt > fromPts) throw new Error('INSUFFICIENT');
 
           tx.update(fromRef, { sPoints: fromPts - amt });
-          tx.update(toRef,   { sPoints: toPts   + amt });
+          tx.update(toRef, { sPoints: toPts + amt });
         });
 
         // **fetch the updated recipient balance**  
         const updatedSnap = await db.collection('members')
-                                    .doc(profileDocId)
-                                    .get();
+          .doc(profileDocId)
+          .get();
         const updatedPts = updatedSnap.data().sPoints || 0;
 
         transferError.style.color = 'green';
@@ -282,7 +282,7 @@ document.addEventListener('DOMContentLoaded', () => {
     btnInfo.addEventListener('click', async () => {
       clearTimeout(collapseTimer);
       // fetch the rubric
-      const res    = await fetch('/rubric.json');
+      const res = await fetch('/rubric.json');
       const rubric = await res.json();
 
       // build human‐readable HTML
@@ -322,37 +322,37 @@ document.addEventListener('DOMContentLoaded', () => {
     // ────────────────────────────────────────────────────────────────
 
 
-    const isMe   = profileDocId === me;
+    const isMe = profileDocId === me;
 
     if (isMe) {
       btnTransfer.style.display = 'none';
     }
 
     // grab the wrappers for each section
-    const vibeField       = vibeSimilarityEl.closest('.profile-field');
+    const vibeField = vibeSimilarityEl.closest('.profile-field');
     const topMatchesField = document.getElementById('top-matches')
-                                  .closest('.profile-field');
+      .closest('.profile-field');
 
     // hide/show appropriately
     if (isMe) {
       // you’re on your own page → hide Vibe Similarity, show Most Similar Strangers
-      vibeField.style.display       = 'none';
+      vibeField.style.display = 'none';
       topMatchesField.style.display = '';
     } else {
       // you’re on someone else’s page → show Vibe Similarity, hide Most Similar Strangers
-      vibeField.style.display       = '';
+      vibeField.style.display = '';
       topMatchesField.style.display = 'none';
     }
 
     // populate name / instagram
-    originalName  = data.name || '';
+    originalName = data.name || '';
     originalInsta = data.instagramHandle || '';
-    nameView.innerText   = originalName;
-    nameInput.value      = originalName;
-    instaView.innerText  = originalInsta.replace('@','');
-    instaInput.value     = originalInsta.replace('@','');
-    instagramLink.href   =
-      `instagram://user?username=${originalInsta.replace('@','')}`;
+    nameView.innerText = originalName;
+    nameInput.value = originalName;
+    instaView.innerText = originalInsta.replace('@', '');
+    instaInput.value = originalInsta.replace('@', '');
+    instagramLink.href =
+      `instagram://user?username=${originalInsta.replace('@', '')}`;
 
     // header & profile image
     hdrTitle.innerText = `${originalName}`;
@@ -364,19 +364,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // compute vibe similarity when viewing another user
     if (!isMe && vibeSimilarityEl) {
-      const meSnap       = await db.collection('members').doc(me).get();
-      const meVibes      = meSnap.data()?.vibes || {};
-      const otherVibes   = data.vibes || {};
+      const meSnap = await db.collection('members').doc(me).get();
+      const meVibes = meSnap.data()?.vibes || {};
+      const otherVibes = data.vibes || {};
       const pct = computeVibeSimilarity(meVibes, otherVibes)
-                    .toFixed(1);
+        .toFixed(1);
       vibeSimilarityEl.innerText = `${pct}%`;
       // Load Venn diagram with the similarity percentage
       const vennFrame = document.getElementById('vibe-venn');
       if (vennFrame) {
-          vennFrame.src = `./venn.html?pct=${pct}`;
-          vennFrame.style.display = '';  // reveal the iframe now that src is set
+        vennFrame.src = `./venn.html?pct=${pct}`;
+        vennFrame.style.display = '';  // reveal the iframe now that src is set
       }
-      
+
     } else if (vibeSimilarityEl) {
       vibeSimilarityEl.innerText = '—';
     }
@@ -384,7 +384,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // inside auth.onAuthStateChanged, after you determine `isMe`…
     if (isMe) {
       // fetch your vibes
-      const meSnap  = await db.collection('members').doc(me).get();
+      const meSnap = await db.collection('members').doc(me).get();
       const meVibes = meSnap.data()?.vibes || {};
 
       // ——————— NEW: check if you’ve answered >=11 questions ———————
@@ -395,7 +395,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (nonZeroCount < 11) {
         // hide the matches wrapper (optional)
         const topField = document.getElementById('top-matches')
-                                .closest('.profile-field');
+          .closest('.profile-field');
         if (topField) topField.style.display = 'block';
 
         // clear out any old content
@@ -418,20 +418,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // load everyone else
       const allSnap = await db.collection('members').get();
-      const scores  = allSnap.docs
+      const scores = allSnap.docs
         .filter(d => d.id !== me && d.data().vibes)
         .map(d => ({
-          name:       d.data().name,
-          phone:      d.id, 
-          name:       d.data().name,
+          name: d.data().name,
+          phone: d.id,
+          name: d.data().name,
           profilePic: d.data().profilePic || null,
-          profileId:  d.data().profileId  || null,
-          score:      computeVibeSimilarity(meVibes, d.data().vibes)
+          profileId: d.data().profileId || null,
+          score: computeVibeSimilarity(meVibes, d.data().vibes)
         }));
 
       // sort & take top 5
-      scores.sort((a,b) => b.score - a.score);
-      const top5 = scores.slice(0,5);
+      scores.sort((a, b) => b.score - a.score);
+      const top5 = scores.slice(0, 5);
 
       // render as horizontal cards
       const container = document.getElementById('top-matches');
@@ -462,8 +462,8 @@ document.addEventListener('DOMContentLoaded', () => {
             // no profileId yet: generate one and save it
             pid = await generateProfileId(u.phone);
             await db.collection('members')
-                    .doc(u.phone)
-                    .update({ profileId: pid });
+              .doc(u.phone)
+              .update({ profileId: pid });
           }
           // now redirect
           window.location.href = `/profile?id=${pid}`;
@@ -475,16 +475,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
-    
+
 
     // mark inputs dirty on change
     [nameInput, instaInput, pinInput, confirmPin]
       .forEach(el => {
         el.addEventListener('input', () => {
           dirty = true;
-          if ((el===pinInput || el===confirmPin) &&
-              confirmPin.value &&
-              pinInput.value !== confirmPin.value) {
+          if ((el === pinInput || el === confirmPin) &&
+            confirmPin.value &&
+            pinInput.value !== confirmPin.value) {
             pwError.style.display = 'block';
           } else {
             pwError.style.display = 'none';
@@ -502,7 +502,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   backArrow.addEventListener('click', e => {
     if (dirty && !saved &&
-        !confirm('You have unsaved changes. Leave anyway?')) {
+      !confirm('You have unsaved changes. Leave anyway?')) {
       e.preventDefault();
     }
   });
@@ -513,11 +513,11 @@ document.addEventListener('DOMContentLoaded', () => {
     appEl.classList.add('editing');
   };
   cancelBtn.onclick = () => {
-    nameInput.value      = originalName;
-    instaInput.value     = originalInsta;
-    pinInput.value       = '';
-    confirmPin.value     = '';
-    pwError.style.display= 'none';
+    nameInput.value = originalName;
+    instaInput.value = originalInsta;
+    pinInput.value = '';
+    confirmPin.value = '';
+    pwError.style.display = 'none';
     dirty = false;
     appEl.classList.remove('editing');
   };
@@ -529,8 +529,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!f) return;
     if (window.cropper) window.cropper.destroy();
     window.cropper = new Croppie(cropContainer, {
-      viewport: { width:300, height:300, type:'square' },
-      boundary: { width:300, height:300 }
+      viewport: { width: 300, height: 300, type: 'square' },
+      boundary: { width: 300, height: 300 }
     });
     const reader = new FileReader();
     reader.onload = () => window.cropper.bind({ url: reader.result });
@@ -551,10 +551,10 @@ document.addEventListener('DOMContentLoaded', () => {
     window.cropper = null;
 
     const fd = new FormData();
-    fd.append('owner',     localStorage.getItem('userPhone'));
+    fd.append('owner', localStorage.getItem('userPhone'));
     fd.append('ownerName', nameInput.value);
-    fd.append('file',      blob);
-    fd.append('folderId',  PROFILE_DRIVE_FOLDER_ID);
+    fd.append('file', blob, 'profile.png');
+    fd.append('folderId', PROFILE_DRIVE_FOLDER_ID);
 
     const xhr = new XMLHttpRequest();
     xhr.open('POST', '/api/drive/uploadpfp');
@@ -572,9 +572,9 @@ document.addEventListener('DOMContentLoaded', () => {
           if (!udoc.exists) throw new Error('User doc not found');
           const udata = udoc.data();
           const now = new Date();
-          const weekAgo = new Date(now - 7*24*60*60*1000);
+          const weekAgo = new Date(now - 7 * 24 * 60 * 60 * 1000);
           const uploads = udata.profileImageUploads || [];
-          const recent  = uploads.filter(ts => ts.toDate() > weekAgo);
+          const recent = uploads.filter(ts => ts.toDate() > weekAgo);
           const eligible = recent.length < 2;
 
           const updateData = {
@@ -591,8 +591,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // create hidden photo record
         await db.collection('photos')
-                .doc(res.id)
-                .set({ visibility:false }, { merge:true });
+          .doc(res.id)
+          .set({ visibility: false }, { merge: true });
 
         profileImg.src = `/api/drive/thumb?id=${res.id}&sz=512`;
         alert('Profile picture updated!');
@@ -628,19 +628,19 @@ document.addEventListener('DOMContentLoaded', () => {
     const newName = nameInput.value.trim();
     if (newName && newName !== originalName) {
       updates.ogname = originalName;
-      updates.name   = newName;
+      updates.name = newName;
     }
     updates.instagramHandle = instaInput.value.trim();
     if (pw) updates.pin = await hashHex(pw);
 
     try {
       await db.collection('members')
-              .doc(profileDocId)
-              .update(updates);
+        .doc(profileDocId)
+        .update(updates);
       saved = true;
       dirty = false;
       appEl.classList.remove('editing');
-      originalName  = nameView.innerText  =
+      originalName = nameView.innerText =
         updates.name || originalName;
       originalInsta = instaView.innerText =
         updates.instagramHandle || originalInsta;
