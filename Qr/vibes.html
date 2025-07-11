@@ -44,8 +44,10 @@
     <!-- Back‐button + title -->
     <a id="back-arrow" class="back-arrow" href="index.html">←</a>
     <h1 id="vibes-title">Vibes</h1>
-    <p class="slider-question">What's your vibe? We use this data to help us understand our community better, ensuring that our events are specifically tailored to you. </p>
+    <p class="slider-question">What's your vibe? We use this data to help us understand our community better, ensuring that our events are specifically tailored to you.
+       </p>
 
+    
     <div class="w-form">
         <!-- 1️⃣ Tab navigation -->
         <ul class="tab-nav">
@@ -58,6 +60,11 @@
         <div class="tab-content active" id="tab-vibes">
           <form id="vibe-form" name="vibe-form" method="post">
             <div id="questionsContainer">
+            <p class="slider-question">What's the maximum you'd be willing to spend per outing?</p>
+            <div class="slider-wrap">
+              <div class="slider-labels"><span><$5</span><span>$75+</span></div>
+              <input class="range-slider" type="range" name="budget"  min="-5" max="5" step="0.1" value="0">
+            </div>
               <!-- 1–20 sliders with questions -->
             <p class="slider-question">How talkative are you?</p>
             <div class="slider-wrap">
@@ -265,6 +272,12 @@
                   <input class="range-slider" type="range" name="va6" min="-5" max="5" step="0.1" value="0">
                 </div>
 
+                <p class="slider-question">What's the maximum you'd be willing to spend per outing?</p>
+                <div class="slider-wrap">
+                  <div class="slider-labels"><span><$5</span><span>$75+</span></div>
+                  <input class="range-slider" type="range" name="budget"  min="-5" max="5" step="0.1" value="0">
+                </div>
+
                 <p class="slider-question">Honor tradition or spark change?</p>
                 <div class="slider-wrap">
                   <div class="slider-labels"><span>Tradition</span><span>Transformation</span></div>
@@ -412,6 +425,12 @@
                 <div class="slider-wrap">
                   <div class="slider-labels"><span>Explorer</span><span>Navigator</span></div>
                   <input class="range-slider" type="range" name="vi3" min="-5" max="5" step="0.1" value="0">
+                </div>
+
+                <p class="slider-question">What's the maximum you'd be willing to spend per outing?</p>
+                <div class="slider-wrap">
+                  <div class="slider-labels"><span><$5</span><span>$75+</span></div>
+                  <input class="range-slider" type="range" name="budget"  min="-5" max="5" step="0.1" value="0">
                 </div>
 
                 <p class="slider-question">Build a company or spark a movement?</p>

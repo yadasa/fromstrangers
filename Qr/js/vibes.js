@@ -132,7 +132,7 @@ async function initVibes(phone) {
 
     let newPts = 0;
     Object.entries(vibes).forEach(([k,v]) => {
-      if (v !== 0 && !answeredBefore.has(k)) newPts += 7;
+      if (v !== 0 && !answeredBefore.has(k)) newPts += 35;
     });
 
     try {
@@ -158,6 +158,149 @@ async function initVibes(phone) {
       alert('Error saving—please try again');
     }
   });
+
+    // — fetch existing Values & Vision answers so we know what’s already been scored —
+    const existingValues = data.values || {};
+    const answeredValues = new Set();
+    Object.entries(existingValues).forEach(([k, v]) => {
+      if (v !== 0) answeredValues.add(k);
+    });
+
+    const existingVision = data.vision || {};
+    const answeredVision = new Set();
+    Object.entries(existingVision).forEach(([k, v]) => {
+      if (v !== 0) answeredVision.add(k);
+    });
+
+    // — VALUES form submit: save values + award points —
+    const valuesForm       = document.getElementById('values-form');
+    const saveValuesBtn    = document.getElementById('saveValuesBtn');
+    const postSaveValues   = document.getElementById('postSaveValuesButtons');
+    const editValuesBtn    = document.getElementById('editValuesBtn');
+    const valuesDoneMsg    = document.querySelector('#tab-values .w-form-done');
+    const valuesFailMsg    = document.querySelector('#tab-values .w-form-fail');
+
+    if (valuesForm) valuesForm.addEventListener('submit', async e => {
+      e.preventDefault();
+      // collect va1…va25
+      const values = {};
+      for (let i = 1; i <= 25; i++) {
+        values[`va${i}`] = parseFloat(valuesForm.elements[`va${i}`].value);
+      }
+      // compute new points
+      let newPts = 0;
+      Object.entries(values).forEach(([k, v]) => {
+        if (v !== 0 && !answeredValues.has(k)) newPts += 35;
+      });
+      try {
+        const ref = db.collection('members').doc(phone);
+        // save answers
+        await ref.set({ values }, { merge: true });
+        // award points
+        if (newPts) {
+          await ref.update({
+            sPoints: firebase.firestore.FieldValue.increment(newPts)
+          });
+        }
+        // update UI
+        saveValuesBtn.style.display      = 'none';
+        postSaveValues.style.display     = 'flex';
+        valuesDoneMsg.style.display      = 'block';
+        valuesFailMsg.style.display      = 'none';
+      } catch (err) {
+        console.error(err);
+        valuesFailMsg.style.display       = 'block';
+      }
+    });
+
+    // allow re-editing Values
+    if (editValuesBtn) editValuesBtn.addEventListener('click', () => {
+      valuesDoneMsg.style.display      = 'none';
+      postSaveValues.style.display     = 'none';
+      saveValuesBtn.style.display      = 'block';
+    });
+
+    // — VISION form submit: save vision + award points —
+    const visionForm      = document.getElementById('vision-form');
+    const saveVisionBtn   = document.getElementById('saveVisionBtn');
+    const postSaveVision  = document.getElementById('postSaveVisionButtons');
+    const editVisionBtn   = document.getElementById('editVisionBtn');
+    const visionDoneMsg   = document.querySelector('#tab-vision .w-form-done');
+    const visionFailMsg   = document.querySelector('#tab-vision .w-form-fail');
+
+    if (visionForm) visionForm.addEventListener('submit', async e => {
+      e.preventDefault();
+      // collect vi1…vi25
+      const vision = {};
+      for (let i = 1; i <= 25; i++) {
+        vision[`vi${i}`] = parseFloat(visionForm.elements[`vi${i}`].value);
+      }
+      // compute new points
+      let newPts = 0;
+      Object.entries(vision).forEach(([k, v]) => {
+        if (v !== 0 && !answeredVision.has(k)) newPts += 35;
+      });
+      try {
+        const ref = db.collection('members').doc(phone);
+        // save answers
+        await ref.set({ vision }, { merge: true });
+        // award points
+        if (newPts) {
+          await ref.update({
+            sPoints: firebase.firestore.FieldValue.increment(newPts)
+          });
+        }
+        // update UI
+        saveVisionBtn.style.display      = 'none';
+        postSaveVision.style.display     = 'flex';
+        visionDoneMsg.style.display      = 'block';
+        visionFailMsg.style.display      = 'none';
+      } catch (err) {
+        console.error(err);
+        visionFailMsg.style.display       = 'block';
+      }
+    });
+
+    // allow re-editing Vision
+    if (editVisionBtn) editVisionBtn.addEventListener('click', () => {
+      visionDoneMsg.style.display      = 'none';
+      postSaveVision.style.display     = 'none';
+      saveVisionBtn.style.display      = 'block';
+    });
+
+      // === Budget‐slider integration for Vibes, Values & Vision ===
+      const tabConfigs = [
+        { key: 'vibes', formId: 'vibe-form'   },
+        { key: 'values', formId: 'values-form'},
+        { key: 'vision', formId: 'vision-form'}
+      ];
+
+      tabConfigs.forEach(({ key, formId }) => {
+        const formEl = document.getElementById(formId);
+        if (!formEl) return;
+
+        // 1) Prefill the slider from Firestore data
+        const existingSection = data[key] || {};
+        const slider = formEl.querySelector('input[name="budget"]');
+        if (slider) {
+          slider.value = existingSection.budget || 0;
+          slider.dispatchEvent(new Event('input'));
+        }
+
+        // 2) On submit, merge in the new budget
+        formEl.addEventListener('submit', async e => {
+          e.preventDefault();
+          const budgetVal = parseFloat(slider.value) || 0;
+          const ref = db.collection('members').doc(phone);
+          await ref.set(
+            { [key]: { ...existingSection, budget: budgetVal } },
+            { merge: true }
+          );
+          // — optionally: update UI here if needed —
+        });
+      });
+
+
 
   // — return home & edit buttons —
   if (returnHome) returnHome.addEventListener('click', () => {

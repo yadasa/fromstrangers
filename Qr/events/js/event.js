@@ -794,7 +794,7 @@ async function handleRSVP(status) {
         ? (userSnap.data().sPoints || 0)
         : 0;
 
-      if (currentPts === 0) {
+      if (currentPts < 17) {
         const refMemRef   = db.collection('members').doc(referrerPhone);
         const referralPts = status === 'Going' ? 200 : 50;
         tx.update(refMemRef, {
