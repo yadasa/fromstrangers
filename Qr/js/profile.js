@@ -546,66 +546,67 @@ document.addEventListener('DOMContentLoaded', () => {
   cropConfirm.onclick = async () => {
     if (!window.cropper) return;
     const blob = await window.cropper.result('blob');
+    // tear down the crop UI
     cropOverlay.style.display = 'none';
     window.cropper.destroy();
     window.cropper = null;
 
-    const fd = new FormData();
-    fd.append('owner', localStorage.getItem('userPhone'));
-    fd.append('ownerName', nameInput.value);
-    fd.append('file', blob, 'profile.png');
-    fd.append('folderId', PROFILE_DRIVE_FOLDER_ID);
+    // 1) Upload to Firebase Storage under "pfps/<profileDocId>_<timestamp>"
+    const timestamp = Date.now();
+    const filePath  = `pfps/${profileDocId}_${timestamp}.jpg`;  // or .png
+    const storageRef = firebase.storage().ref(filePath);
+    let snapshot;
+    try {
+      snapshot = await storageRef.put(blob);
+    } catch (err) {
+      console.error('Storage upload failed:', err);
+      return alert('Upload failed');
+    }
 
-    const xhr = new XMLHttpRequest();
-    xhr.open('POST', '/api/drive/uploadpfp');
-    xhr.onload = async () => {
-      if (xhr.status !== 200) {
-        console.error('Upload failed:', xhr.responseText);
-        return alert('Upload failed');
-      }
-      const res = JSON.parse(xhr.responseText);
+    // 2) Get the public download URL
+    let downloadURL;
+    try {
+      downloadURL = await snapshot.ref.getDownloadURL();
+    } catch (err) {
+      console.error('Getting download URL failed:', err);
+      return alert('Could not retrieve image URL');
+    }
 
-      const memberRef = db.collection('members').doc(profileDocId);
-      try {
-        await db.runTransaction(async tx => {
-          const udoc = await tx.get(memberRef);
-          if (!udoc.exists) throw new Error('User doc not found');
-          const udata = udoc.data();
-          const now = new Date();
-          const weekAgo = new Date(now - 7 * 24 * 60 * 60 * 1000);
-          const uploads = udata.profileImageUploads || [];
-          const recent = uploads.filter(ts => ts.toDate() > weekAgo);
-          const eligible = recent.length < 2;
+    // 3) Write to Firestore (award points if still under weekly cap)
+    const memberRef = db.collection('members').doc(profileDocId);
+    try {
+      await db.runTransaction(async tx => {
+        const userDoc = await tx.get(memberRef);
+        if (!userDoc.exists) throw new Error('User doc not found');
 
-          const updateData = {
-            profilePic: res.id,
-            lastUpdated: firebase.firestore.FieldValue.serverTimestamp(),
-            profileImageUploads: [...recent, ...(eligible ? [now] : [])]
-          };
-          if (eligible) {
-            updateData.sPoints =
-              firebase.firestore.FieldValue.increment(75);
-          }
-          tx.update(memberRef, updateData);
-        });
+        const data = userDoc.data();
+        const uploads     = data.profileImageUploads || [];
+        const weekAgo     = Date.now() - 7*24*60*60*1000;
+        const recent      = uploads.filter(ts => ts.toMillis() > weekAgo);
+        const eligible    = recent.length < 2;
+        const newUploads  = [...recent, firebase.firestore.Timestamp.fromMillis(timestamp)];
 
-        // create hidden photo record
-        await db.collection('photos')
-          .doc(res.id)
-          .set({ visibility: false }, { merge: true });
+        const updateData = {
+          profilePic: downloadURL,
+          lastUpdated: firebase.firestore.FieldValue.serverTimestamp(),
+          profileImageUploads: newUploads
+        };
+        if (eligible) {
+          updateData.sPoints = firebase.firestore.FieldValue.increment(75);
+        }
+        tx.update(memberRef, updateData);
+      });
+    } catch (err) {
+      console.error('Firestore transaction failed:', err);
+      alert('Error saving your profile picture.');
+      return;
+    }
 
-        profileImg.src = `/api/drive/thumb?id=${res.id}&sz=512`;
-        alert('Profile picture updated!');
-      } catch (err) {
-        console.error('Transaction failed:', err);
-        alert('Error updating profile picture.');
-      }
-    };
-    xhr.send(fd);
-
-
-
+    // 4) Reflect it immediately in the UI
+    profileImg.src = downloadURL;
+    alert('Profile picture updated!');
   };
+
 
   saveBtn.onclick = async e => {
     e.preventDefault();

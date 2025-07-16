@@ -172,6 +172,26 @@ async function initVibes(phone) {
       if (v !== 0) answeredVision.add(k);
     });
 
+    // — PREFILL & ANIMATE VALUES SLIDERS —
+    document.querySelectorAll('#tab-values .range-slider').forEach(slider => {
+      const key = slider.name;
+      const val = existingValues[key] || 0;
+      // reset to zero so animateSlider always runs from 0→val
+      slider.value = 0;
+      slider.dispatchEvent(new Event('input'));
+      if (val !== 0) animateSlider(slider, 0, val);
+    });
+
+    // — PREFILL & ANIMATE VISION SLIDERS —
+    document.querySelectorAll('#tab-vision .range-slider').forEach(slider => {
+      const key = slider.name;
+      const val = existingVision[key] || 0;
+      slider.value = 0;
+      slider.dispatchEvent(new Event('input'));
+      if (val !== 0) animateSlider(slider, 0, val);
+    });
+
+
     // — VALUES form submit: save values + award points —
     const valuesForm       = document.getElementById('values-form');
     const saveValuesBtn    = document.getElementById('saveValuesBtn');
@@ -230,49 +250,62 @@ async function initVibes(phone) {
 
     if (visionForm) visionForm.addEventListener('submit', async e => {
       e.preventDefault();
-      // collect vi1…vi25
+
+      // 1) collect vi1…vi25
       const vision = {};
       for (let i = 1; i <= 25; i++) {
         vision[`vi${i}`] = parseFloat(visionForm.elements[`vi${i}`].value);
       }
-      // compute new points
+
+      // 2) compute new points
       let newPts = 0;
       Object.entries(vision).forEach(([k, v]) => {
         if (v !== 0 && !answeredVision.has(k)) newPts += 35;
       });
+
       try {
         const ref = db.collection('members').doc(phone);
-        // save answers
+        // 3) write to Firestore
         await ref.set({ vision }, { merge: true });
-        // award points
         if (newPts) {
           await ref.update({
             sPoints: firebase.firestore.FieldValue.increment(newPts)
           });
         }
-        // update UI
-        saveVisionBtn.style.display      = 'none';
-        postSaveVision.style.display     = 'flex';
-        visionDoneMsg.style.display      = 'block';
-        visionFailMsg.style.display      = 'none';
+
+        // 4) swap out UI (just like Vibes)
+        // hide the sliders/questions
+        document.getElementById('visionContainer').style.display = 'none';
+        // hide this Save button
+        saveVisionBtn.style.display = 'none';
+        // show the “saved” message + post‑save buttons
+        postSaveVision.parentNode.insertBefore(visionDoneMsg, postSaveVision);
+        visionDoneMsg.style.display = 'block';
+        postSaveVision.style.display = 'flex';
       } catch (err) {
         console.error(err);
-        visionFailMsg.style.display       = 'block';
+        visionFailMsg.style.display = 'block';
       }
     });
 
-    // allow re-editing Vision
+
+
+    // allow re‑editing Vision
     if (editVisionBtn) editVisionBtn.addEventListener('click', () => {
-      visionDoneMsg.style.display      = 'none';
-      postSaveVision.style.display     = 'none';
-      saveVisionBtn.style.display      = 'block';
+      // hide the “saved” message + post‑save controls
+      visionDoneMsg.style.display    = 'none';
+      postSaveVision.style.display   = 'none';
+
+      // show the slider container and Save button again
+      document.getElementById('visionContainer').style.display = 'block';
+      saveVisionBtn.style.display = 'block';
     });
 
       // === Budget‐slider integration for Vibes, Values & Vision ===
       const tabConfigs = [
         { key: 'vibes', formId: 'vibe-form'   },
-        { key: 'values', formId: 'values-form'},
-        { key: 'vision', formId: 'vision-form'}
+        // { key: 'values', formId: 'values-form'},
+        // { key: 'vision', formId: 'vision-form'}
       ];
 
       tabConfigs.forEach(({ key, formId }) => {
