@@ -161,9 +161,19 @@ window.addEventListener('DOMContentLoaded', async () => {
     };
   }
 
+  // wire up the “X” button to close the overlay
+  modalClose.addEventListener('click', (e) => {
+    e.preventDefault();
+    modalOverlay.style.display = 'none';
+    modalLoading.style.display = 'none';
+    if (modalVideo) modalVideo.pause();
+  });
+
   // 8) Upload logic -----------------------------------------------------------
 btnUpload.onclick = () => fileInput.click();
 fileInput.onchange = () => uploadFiles(fileInput.files);
+
+
 
 });
 

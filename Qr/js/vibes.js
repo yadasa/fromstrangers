@@ -102,6 +102,17 @@ async function initVibes(phone) {
     };
     slider.addEventListener('input', updateGradient);
     updateGradient();
+    // mark any Values or Vision slider change as “dirty”
+    document
+      .querySelectorAll('#tab-values .range-slider, #tab-vision .range-slider')
+      .forEach(slider => {
+        slider.addEventListener('input', e => {
+          if (e.isTrusted) dirty = true;
+        });
+      });
+
+
+    
   });
 
   // — warn on unload or back if dirty & not saved —
@@ -157,6 +168,28 @@ async function initVibes(phone) {
       console.error(err);
       alert('Error saving—please try again');
     }
+
+      // ─── 5) WARN ON UNSAVED PROGRESS (only register once) ───────────────
+      if (!window._unsavedWarningRegistered) {
+        window._unsavedWarningRegistered = true;
+
+        window.addEventListener('beforeunload', e => {
+          if (!saved && dirty) {
+            e.preventDefault();
+            e.returnValue = '';
+          }
+        });
+
+        if (backArrow) {
+          backArrow.addEventListener('click', e => {
+            if (!saved && dirty &&
+                !confirm('You have unsaved changes. Leave anyway?')) {
+              e.preventDefault();
+            }
+          });
+        }
+      }
+
   });
 
     // — fetch existing Values & Vision answers so we know what’s already been scored —

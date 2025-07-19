@@ -173,6 +173,14 @@ document.addEventListener('DOMContentLoaded', () => {
         alert('Profile not found. Check the number and try again.');
         return;
       }
+
+      // ← INSERT DENIED CHECK HERE
+      if (profileSnap.data().status === 'denied') {
+        alert('Your access has been denied. Please contact support.');
+        return;
+      }
+
+      
     } catch (err) {
       console.error('Error checking profile:', err);
       alert('Error verifying profile. Please try again later.');
