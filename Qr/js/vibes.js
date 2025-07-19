@@ -47,6 +47,7 @@ async function initVibes(phone) {
   const data = snap.data() || {};
   const existing = data.vibes || {};
   existingPoints = data.sPoints || 0;
+  const status = data.status || 'pending';
   Object.entries(existing).forEach(([k, v]) => {
     if (v !== 0) answeredBefore.add(k);
   });
@@ -149,7 +150,7 @@ async function initVibes(phone) {
     try {
       const ref = db.collection('members').doc(phone);
       await ref.set({ vibes }, { merge: true });
-      if (newPts) {
+      if (status === 'approved' && newPts) {
         await ref.update({
           sPoints: firebase.firestore.FieldValue.increment(newPts)
         });
