@@ -161,13 +161,31 @@ window.addEventListener('DOMContentLoaded', async () => {
     };
   }
 
-  // wire up the “X” button to close the overlay
-  modalClose.addEventListener('click', (e) => {
-    e.preventDefault();
+  // helper to close both image *and* video
+  function closeModal() {
     modalOverlay.style.display = 'none';
     modalLoading.style.display = 'none';
-    if (modalVideo) modalVideo.pause();
+    modalVideo.pause?.();     // stop the video if it’s playing
+    modalImage.src   = '';    // clear out the old src
+    modalVideo.src   = '';    // clear out the old src
+  }
+
+  // — X BUTTON —
+  modalClose.addEventListener('click', e => {
+    e.preventDefault();
+    closeModal();
   });
+
+  // — CLICK ON BACKDROP —
+  modalOverlay.addEventListener('click', e => {
+    if (e.target === modalOverlay) closeModal();
+  });
+
+  //  — PREVENT CLICK INSIDE CONTENT FROM BUBBLING UP —
+  modalContent.addEventListener('click', e => {
+    e.stopPropagation();
+  });
+
 
   // 8) Upload logic -----------------------------------------------------------
 btnUpload.onclick = () => fileInput.click();
@@ -969,11 +987,7 @@ function showMedia(item) {
   modalDownload.href     = item.url;
   modalDownload.download = item.name || '';
 }
-modalClose.onclick = () => {
-  modalOverlay.style.display = 'none';
-  modalLoading.style.display = 'none';
-  modalVideo.pause?.();
-};
+
 modalOverlay.onclick = (e) => {
   if (e.target === modalOverlay) {
     modalOverlay.style.display = 'none';
