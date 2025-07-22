@@ -1028,7 +1028,8 @@ function loadComments() {
 
         if (c.user && member && member.profilePic) {
           avatarEl.innerHTML = '';
-          const img = makeAvatarImg(memberSnap.data().profilePic, 64);
+          const img = document.createElement('img');
+          img.src = `/api/drive/thumb?id=${member.profilePic}&sz=64`;
           avatarEl.appendChild(img);
         } else if (c.user) {
           const name = member ? (member.name || member.Name || 'Unknown') : 'Unknown';
@@ -1327,8 +1328,8 @@ function loadReplies(parentId, repliesContainer) {
         const memSnap = await db.collection('members').doc(r.user).get();
         if (memSnap.exists && memSnap.data().profilePic) {
           avatarEl.innerHTML = '';
-          const img = makeAvatarImg(memberSnap.data().profilePic, 64);
-          
+          const img = document.createElement('img');
+          img.src = `/api/drive/thumb?id=${memSnap.data().profilePic}&sz=64`;
           avatarEl.appendChild(img);
         } else {
           const name = memSnap.exists
@@ -1623,7 +1624,7 @@ async function searchGiphy(query) {
     data.forEach(item => {
       const thumbUrl = item.images.fixed_width_small.webp || item.images.fixed_width_small.url;
       const fullUrl  = item.images.original.webp || item.images.original.url;
-      const img      = makeAvatarImg(memberSnap.data().profilePic, 64);
+      const img      = document.createElement('img');
       img.src       = thumbUrl;
       img.className = 'giphy-thumb';
       img.onclick   = () => {
