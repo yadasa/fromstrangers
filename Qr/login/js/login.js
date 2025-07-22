@@ -191,6 +191,11 @@ document.addEventListener('DOMContentLoaded', () => {
       await initRecaptcha();
     }
 
+    // — SHOW LOADING STATE —
+    confirmBtn.disabled    = true;
+    const origText         = confirmBtn.textContent;
+    confirmBtn.textContent = 'Verifying…';
+
     try {
       const confirmation = await auth.signInWithPhoneNumber(
         '+1' + raw,

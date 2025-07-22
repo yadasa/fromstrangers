@@ -11,6 +11,19 @@ auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL)
   .catch(err => console.error('Failed to set auth persistence:', err));
 const db      = firebase.firestore();
 const storage = firebase.storage();
+
+function makeAvatarImg(pfpId, size = 64) {
+  const img = document.createElement('img');
+  img.width = img.height = size;
+  img.style.objectFit = 'cover';
+  img.style.borderRadius = '50%';
+  img.src = pfpId;
+  img.onerror = () => {
+    img.onerror = null;
+    img.src     = `/api/drive/thumb?id=${encodeURIComponent(pfpId)}&sz=${size}`;
+  };
+  return img;
+}
 // 1a) Watch for real auth state and force login if needed
 firebase.auth().onAuthStateChanged(user => {
   if (user) {
@@ -691,8 +704,8 @@ async function loadGuestListPreview() {
     avatarEl.dataset.phone = phone;
 
     if (memberSnap.exists && memberSnap.data().profilePic) {
-      const img = document.createElement('img');
-      img.src = `/api/drive/thumb?id=${memberSnap.data().profilePic}&sz=64`;
+      const img = makeAvatarImg(memberSnap.data().profilePic, 64);
+      
       avatarEl.appendChild(img);
     } else {
       const name = memberSnap.exists
@@ -834,8 +847,8 @@ async function populateSeeAllList(statusFilter) {
     const avatarEl = document.createElement('div');
     avatarEl.className = 'see-all-avatar';
     if (memberSnap.exists && memberSnap.data().profilePic) {
-      const img = document.createElement('img');
-      img.src = `/api/drive/thumb?id=${memberSnap.data().profilePic}&sz=64`;
+      const img = makeAvatarImg(memberSnap.data().profilePic, 64);
+      
       avatarEl.appendChild(img);
     } else {
       const name = memberSnap.exists
@@ -1015,8 +1028,7 @@ function loadComments() {
 
         if (c.user && member && member.profilePic) {
           avatarEl.innerHTML = '';
-          const img = document.createElement('img');
-          img.src = `/api/drive/thumb?id=${member.profilePic}&sz=64`;
+          const img = makeAvatarImg(memberSnap.data().profilePic, 64);
           avatarEl.appendChild(img);
         } else if (c.user) {
           const name = member ? (member.name || member.Name || 'Unknown') : 'Unknown';
@@ -1315,8 +1327,8 @@ function loadReplies(parentId, repliesContainer) {
         const memSnap = await db.collection('members').doc(r.user).get();
         if (memSnap.exists && memSnap.data().profilePic) {
           avatarEl.innerHTML = '';
-          const img = document.createElement('img');
-          img.src = `/api/drive/thumb?id=${memSnap.data().profilePic}&sz=64`;
+          const img = makeAvatarImg(memberSnap.data().profilePic, 64);
+          
           avatarEl.appendChild(img);
         } else {
           const name = memSnap.exists
@@ -1611,7 +1623,7 @@ async function searchGiphy(query) {
     data.forEach(item => {
       const thumbUrl = item.images.fixed_width_small.webp || item.images.fixed_width_small.url;
       const fullUrl  = item.images.original.webp || item.images.original.url;
-      const img      = document.createElement('img');
+      const img      = makeAvatarImg(memberSnap.data().profilePic, 64);
       img.src       = thumbUrl;
       img.className = 'giphy-thumb';
       img.onclick   = () => {
