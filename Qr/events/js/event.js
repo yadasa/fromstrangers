@@ -1028,8 +1028,7 @@ function loadComments() {
 
         if (c.user && member && member.profilePic) {
           avatarEl.innerHTML = '';
-          const img = document.createElement('img');
-          img.src = `/api/drive/thumb?id=${member.profilePic}&sz=64`;
+          const img = makeAvatarImg(member.profilePic, 64);
           avatarEl.appendChild(img);
         } else if (c.user) {
           const name = member ? (member.name || member.Name || 'Unknown') : 'Unknown';
