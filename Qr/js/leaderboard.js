@@ -53,7 +53,28 @@ function loadName() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 4) Pull & render the leaderboard for a given phone
+// 4) Build an <img> with a fallback to the old thumb API
+// ─────────────────────────────────────────────────────────────────────────────
+function makeAvatarImg(pfpId) {
+  const img = document.createElement('img');
+  img.width = img.height = 32;
+  img.style.objectFit   = 'cover';
+  img.style.borderRadius = '50%';
+  img.style.marginRight  = '8px';
+
+  // try direct URL first…
+  img.src = pfpId;
+
+  // if that fails once, swap to the old thumbnail endpoint
+  img.onerror = () => {
+    img.onerror = null;
+    img.src     = `/api/drive/thumb?id=${encodeURIComponent(pfpId)}&sz=32`;
+  };
+  return img;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 5) Pull & render the leaderboard for a given phone
 // ─────────────────────────────────────────────────────────────────────────────
 async function runLeaderboard(currentPhone) {
   const db   = firebase.firestore();
@@ -64,7 +85,7 @@ async function runLeaderboard(currentPhone) {
     phone:      d.id,
     name:       d.data().name,
     sPoints:    d.data().sPoints || 0,
-    rank:       i +  1,
+    rank:       i + 1,
     profilePic: d.data().profilePic || null,
     profileId:  d.data().profileId  || null
   }));
@@ -90,17 +111,17 @@ async function runLeaderboard(currentPhone) {
     // avatar + clickable name
     const nameSpan = document.createElement('span');
     nameSpan.style.cursor = 'pointer';
-    const img = document.createElement('img');
-    img.src = u.profilePic
-      ? `/api/drive/thumb?id=${u.profilePic}&sz=32`
-      : '../assets/defaultpfp.png';
-    img.width = img.height = 32;
-    img.style.borderRadius   = '50%';
-    img.style.marginRight     = '8px';
+
+    const img = u.profilePic
+      ? makeAvatarImg(u.profilePic)
+      : Object.assign(document.createElement('img'), {
+          src: '../assets/defaultpfp.png',
+          width: 32, height: 32,
+          style: 'object-fit:cover;border-radius:50%;margin-right:8px;'
+        });
+
     nameSpan.appendChild(img);
-    nameSpan.appendChild(
-      document.createTextNode(`${u.rank}. ${u.name}`)
-    );
+    nameSpan.appendChild(document.createTextNode(`${u.rank}. ${u.name}`));
     nameSpan.addEventListener('click', () => handleNameClick(u));
 
     // points
@@ -130,7 +151,7 @@ async function runLeaderboard(currentPhone) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 5) Main entry: wire up auth + optimistic UI + rubric modal
+// 6) Main entry: wire up auth + optimistic UI + rubric modal
 // ─────────────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   if (!window.firebaseConfig) {
@@ -139,11 +160,11 @@ document.addEventListener('DOMContentLoaded', () => {
   firebase.initializeApp(window.firebaseConfig);
   const auth = firebase.auth();
 
-  // 5.1) Don’t block on this—persist session in background
+  // 6.1) Don’t block on this—persist session in background
   auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL)
       .catch(err => console.warn('Auth persistence failed:', err));
 
-  // 5.2) Optimistically restore from localStorage
+  // 6.2) Optimistically restore from localStorage
   const cachedPhone = loadPhone();
   const cachedName  = loadName();
   if (cachedPhone) {
@@ -157,7 +178,7 @@ document.addEventListener('DOMContentLoaded', () => {
     runLeaderboard(cachedPhone);
   }
 
-  // 5.3) React to real auth state changes
+  // 6.3) React to real auth state changes
   auth.onAuthStateChanged(async user => {
     const phoneEntryEl = document.getElementById('phone-entry');
     const appEl        = document.getElementById('app');
@@ -190,7 +211,7 @@ document.addEventListener('DOMContentLoaded', () => {
     runLeaderboard(phone);
   });
 
-  // 5.4) Rubric modal logic (unchanged)
+  // 6.4) Rubric modal logic (unchanged)
   const linkRubric = document.getElementById('link-rubric');
   if (linkRubric) {
     linkRubric.onclick = async e => {

@@ -80,6 +80,9 @@
                    box-shadow: var(--button-shadow);">
       + Create New Event
     </button>
+    <button id="btn-payment-status" style="display:none;">
+      Payment Status
+    </button>
 
 
     <!-- Event header -->
@@ -349,6 +352,19 @@
             Create Event
           </button>
         </form>
+      </div>
+    </div>
+
+    
+
+    <!-- Modal -->
+    <div id="payment-modal" class="modal" style="display:none">
+      <div class="modal-content">
+        <span id="payment-modal-close" class="modal-close">&times;</span>
+        <h2>Payment Status</h2>
+        <div id="payment-list"><!-- rows go here --></div>
+        <!-- Use a plain button, not a form -->
+        <button id="payment-save" type="button">Save</button>
       </div>
     </div>
 

@@ -219,7 +219,34 @@ document.addEventListener('DOMContentLoaded', async () => {
       unlockLoggedInFeatures();
       // don't await these—you can let them run
       loadRSVPList();
-    
+      // sanity‐check:
+      const saveBtn = document.getElementById('payment-save');
+      console.log('found save button →', saveBtn);
+
+      if (saveBtn) {
+        saveBtn.addEventListener('click', async () => {
+          console.log('💾 Save clicked');   // <-- now you should see this
+          const checked = document.querySelectorAll('#payment-list input:checked');
+          for (const cb of checked) {
+            const phone = cb.dataset.phone;
+            const mSnap = await db.collection('members').doc(phone).get();
+            const full  = mSnap.exists ? mSnap.data().name : '';
+            const parts = full.split(' ');
+            const text  = `${parts[0]} ${parts.slice(-1)[0][0]}. has paid`;
+
+            await db.collection('events')
+              .doc(eventId)
+              .collection('comments')
+              .add({
+                text,
+                green:    true,
+                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+              });
+          }
+          // close
+          document.getElementById('payment-modal').style.display = 'none';
+        });
+      }
     }
 
 
@@ -480,6 +507,9 @@ async function loadEventData() {
       if (userSnap.exists && userSnap.data().isAdmin === true) {
         document.getElementById('btn-create-event').style.display = 'inline-block';
       }
+
+      
+
     } catch (err) {
       console.error('Error checking admin flag:', err);
     }
@@ -506,46 +536,51 @@ async function loadEventData() {
   createForm.addEventListener('submit', async e => {
     e.preventDefault();
 
-    // 2a) Gather inputs
-    const title       = document.getElementById('new-event-name').value.trim();
-    const date        = document.getElementById('new-event-date').value;
-    const time        = document.getElementById('new-event-time').value;
-    const address     = document.getElementById('new-event-address').value.trim();
-    const description = document.getElementById('new-event-description').value.trim();
-    const imageUrl    = document.getElementById('new-event-image').value.trim();
-
-    // 2b) Build tickets array
-    const tickets = [];
-    document.querySelectorAll('.ticket-row-input').forEach(row => {
-      const name  = row.querySelector('.ticket-name').value.trim();
-      const desc  = row.querySelector('.ticket-desc').value.trim();
-      const price = parseFloat(row.querySelector('.ticket-price').value) || 0;
-      const link  = row.querySelector('.ticket-link').value.trim();
-      if (name && link) {
-        tickets.push({ name, description: desc, price, link });
-      }
-    });
+    // 1) Gather only the *event* fields (no tickets):
+    const eventData = {
+      title:       document.getElementById('new-event-name').value.trim(),
+      date:        document.getElementById('new-event-date').value,
+      time:        document.getElementById('new-event-time').value,
+      address:     document.getElementById('new-event-address').value.trim(),
+      description: document.getElementById('new-event-description').value.trim(),
+      imageUrl:    document.getElementById('new-event-image').value.trim(),
+      createdBy:   currentPhone,
+      createdAt:   firebase.firestore.FieldValue.serverTimestamp()
+    };
 
     try {
-      // 2c) Add to Firestore
-      const ref = await db.collection('events').add({
-        title,
-        date,
-        time,
-        address,
-        description,
-        imageUrl,
-        tickets,
-        createdBy: currentPhone,                                      // from your auth flow
-        createdAt: firebase.firestore.FieldValue.serverTimestamp()
-      });
+      // 2) First, create the *event* document without tickets:
+      const evRef = await db.collection('events').add(eventData);
 
-      // 2d) Redirect to the new event’s page
-      window.location.href = `eventid.html?e=${ref.id}`;
+      // 3) Then for each ticket-row input, add a doc to the subcollection:
+      const rows = document.querySelectorAll('.ticket-row-input');
+      for (const row of rows) {
+        const name  = row.querySelector('.ticket-name').value.trim();
+        const desc  = row.querySelector('.ticket-desc').value.trim();
+        const price = parseFloat(row.querySelector('.ticket-price').value) || 0;
+        const link  = row.querySelector('.ticket-link').value.trim();
+
+        if (name && link) {
+          await db
+            .collection('events')
+            .doc(evRef.id)
+            .collection('tickets')
+            .add({
+              name,
+              description: desc,
+              price,
+              link
+            });
+        }
+      }
+
+      // 4) Finally, redirect to view the new event:
+      window.location.href = `eventid.html?e=${evRef.id}`;
     } catch (err) {
-      console.error('Error creating event:', err);
-      alert('There was an error creating your event.');
+      console.error('Error creating event and tickets:', err);
+      alert('There was an error creating your event or tickets.');
     }
+
   });
 
 
@@ -556,6 +591,19 @@ async function loadEventData() {
     return;
   }
   const e = eventSnap.data();
+
+  // 6d) If the current user *is* the event’s host, show Payment Status
+  if (currentPhone && e.createdBy === currentPhone) {
+    const payBtn = document.getElementById('btn-payment-status');
+    payBtn.style.display = 'inline-block';
+    payBtn.onclick = showPaymentModal;
+  }
+
+  // Wire up the × in the payment modal
+  document.getElementById('payment-modal-close')
+    .addEventListener('click', () => {
+      document.getElementById('payment-modal').style.display = 'none';
+    });
 
   // Title, host
   document.getElementById('event-title').innerText = e.title || 'Untitled Event';
@@ -693,6 +741,81 @@ async function showSeeAllModal(statusFilter) {
   });
   await populateSeeAllList(statusFilter);
 }
+
+// Revised showPaymentModal: shows modal immediately & loads names in parallel
+async function showPaymentModal() {
+  const listEl = document.getElementById('payment-list');
+  const modal  = document.getElementById('payment-modal');
+
+  // 1) Show modal immediately
+  listEl.innerHTML = '<p>Loading…</p>';
+  modal.style.display = 'flex';
+
+  try {
+    // 2) Fetch all “Going” / “Maybe” RSVPs
+    const rsvpsSnap = await db.collection('events')
+      .doc(eventId)
+      .collection('rsvps')
+      .where('status','in',['Going','Maybe'])
+      .get();
+
+    const phones = rsvpsSnap.docs.map(doc => doc.id);
+
+    // 3) Load all member names in parallel
+    const members = await Promise.all(phones.map(phone =>
+      db.collection('members').doc(phone).get()
+        .then(snap => ({
+          phone,
+          name: snap.exists ? snap.data().name : 'Unknown'
+        }))
+    ));
+
+    // 4) Render checkboxes
+    listEl.innerHTML = '';
+    members.forEach(({ phone, name }) => {
+      const parts = name.split(' ');
+      const label = `${parts[0]} ${parts.slice(-1)[0][0]}.`; // “Alice B.”
+
+      const row = document.createElement('div');
+      row.style.margin = '0.5rem 0';
+
+      const cb = document.createElement('input');
+      cb.type          = 'checkbox';
+      cb.dataset.phone = phone;
+
+      row.append(cb, document.createTextNode(' ' + label));
+      listEl.appendChild(row);
+    });
+  } catch (err) {
+    console.error('Error loading payment list:', err);
+    listEl.innerHTML = '<p style="color:red">Failed to load list</p>';
+  }
+}
+
+// Replace the form submit with a plain Save button handler (no redirect)
+document.getElementById('payment-save')
+  .addEventListener('click', async () => {
+    console.log('💾 Save clicked');
+    const checked = document.querySelectorAll('#payment-list input:checked');
+    for (const cb of checked) {
+      const phone = cb.dataset.phone;
+      const mSnap = await db.collection('members').doc(phone).get();
+      const full  = mSnap.exists ? mSnap.data().name : '';
+      const parts = full.split(' ');
+      const text  = `${parts[0]} ${parts.slice(-1)[0][0]}. has paid`;
+
+      await db.collection('events')
+        .doc(eventId)
+        .collection('comments')
+        .add({
+          text,
+          green:    true,
+          timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        });
+    }
+    // Close modal without redirect
+    document.getElementById('payment-modal').style.display = 'none';
+  });
 
 async function populateSeeAllList(statusFilter) {
   const list = document.getElementById('see-all-list');

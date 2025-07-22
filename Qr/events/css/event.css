@@ -1591,3 +1591,109 @@ textarea:focus,
 #app.event-gradient-active::before {
   opacity: 1;
 }
+
+/* ──────────────────────────────────────────────────────────────────── */
+/* “Payment Status” Button                                            */
+/* ──────────────────────────────────────────────────────────────────── */
+#btn-payment-status {
+  display: none;                     /* shown via JS only for the host */
+  background: var(--green);
+  color: var(--gold);
+  border: none;
+  border-radius: 4px;
+  padding: 0.6rem 1rem;
+  font-size: 0.95rem;
+  cursor: pointer;
+  box-shadow: var(--button-shadow);
+  margin-left: 0.5rem;               /* adjust spacing as needed */
+  transition: background 0.2s ease;
+}
+
+#btn-payment-status:hover {
+  background: var(--green-light);
+}
+
+/* ───────────────────────────────────────────────────────────────
+   Payment Status Modal (host-only)
+─────────────────────────────────────────────────────────────── */
+#payment-modal {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+}
+
+#payment-modal .modal-content {
+  background: #fff;
+  border-radius: 8px;
+  padding: 1.2rem;
+  width: 90%;
+  max-width: 360px;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: var(--card-shadow);
+  position: relative;
+  box-sizing: border-box;
+}
+
+/* Close “×” */
+#payment-modal-close {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.75rem;
+  font-size: 1.25rem;
+  cursor: pointer;
+  color: #666;
+}
+
+/* List of attendees with checkboxes */
+#payment-list {
+  margin: 0.5rem 0 1rem;
+  padding: 0;
+  list-style: none;
+}
+
+#payment-list div {
+  display: flex;
+  align-items: center;
+  margin: 0.5rem 0;
+}
+
+#payment-list input[type="checkbox"] {
+  width: 1rem;
+  height: 1rem;
+  accent-color: var(--green);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+#payment-list label {
+  margin-left: 0.5rem;
+  font-size: 0.9rem;
+  color: var(--text);
+  flex: 1;
+}
+
+/* “Save” button at bottom-right */
+#payment-form {
+  text-align: right;
+}
+
+#payment-form button[type="submit"] {
+  background: var(--brown);
+  color: var(--gold);
+  border: none;
+  border-radius: 4px;
+  padding: 0.5rem 1rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+  box-shadow: var(--button-shadow);
+  transition: background 0.2s ease;
+}
+
+#payment-form button[type="submit"]:hover {
+  background: #7a4e2e;
+}
