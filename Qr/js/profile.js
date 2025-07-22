@@ -1,6 +1,13 @@
 // js/profile.js
 import { computeVibeSimilarity } from './vibeSimilarity.js';
-
+function randomChars(len = 7) {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let out = '';
+  for (let i = 0; i < len; i++) {
+    out += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return out;
+}
 // ─── A) LOCAL STORAGE HELPERS ──────────────────────────────────────
 function savePhone(phone) {
   try { localStorage.setItem('userPhone', phone); } catch { }
@@ -228,8 +235,11 @@ document.addEventListener('DOMContentLoaded', () => {
       transferOk.disabled = true;
       transferError.textContent = 'Processing…';
 
+      
+
       try {
         await db.runTransaction(async tx => {
+          const FieldValue = firebase.firestore.FieldValue;
           const fromRef = db.collection('members').doc(me);
           const toRef = db.collection('members').doc(profileDocId);
 
@@ -245,6 +255,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
           tx.update(fromRef, { sPoints: fromPts - amt });
           tx.update(toRef, { sPoints: toPts + amt });
+
+          const timestamp = FieldValue.serverTimestamp();
+          const recdId = `recd-${amt}sP-${randomChars()}`;
+          const sentId = `sent-${amt}sP-${randomChars()}`;
+          const senderLogRef    = fromRef.collection('sPointsLog').doc(sentId);
+          const recipientLogRef = toRef  .collection('sPointsLog').doc(recdId);
+
+          
+          tx.set(senderLogRef, {
+            type:      'sent',
+            amount:    amt,
+            to:        profileDocId,
+            timestamp: timestamp
+          });
+          tx.set(recipientLogRef, {
+            type:      'received',
+            amount:    amt,
+            from:      me,
+            timestamp: timestamp
+          });
         });
 
         // **fetch the updated recipient balance**  
@@ -355,10 +385,23 @@ document.addEventListener('DOMContentLoaded', () => {
       `instagram://user?username=${originalInsta.replace('@', '')}`;
 
     // header & profile image
+    // header & profile image
     hdrTitle.innerText = `${originalName}`;
-    profileImg.src = data.profilePic
-      ? `/api/drive/thumb?id=${data.profilePic}&sz=128`
-      : '../assets/defaultpfp.png';
+
+    if (data.profilePic) {
+      // 1) Try the raw Storage download URL first
+      profileImg.src = data.profilePic;
+
+      // 2) If that fails (invalid URL or network error), fall back to Drive thumbnail
+      profileImg.onerror = () => {
+        profileImg.onerror = null;  // prevent infinite loop
+        profileImg.src = `/api/drive/thumb?id=${data.profilePic}&sz=128`;
+      };
+    } else {
+      // 3) No profilePic at all → use default avatar
+      profileImg.src = '../assets/defaultpfp.png';
+    }
+
     // hide edit if not your own
     if (!isMe) editBtn.style.display = 'none';
 
