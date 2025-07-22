@@ -17,6 +17,12 @@ export default async function handler(req, res) {
     return res.status(400).send('missing id');
   }
 
+  // ── NEW ── if they passed in a fully‑qualified URL, just redirect straight to it
+  if (id.startsWith('http://') || id.startsWith('https://')) {
+    console.log(`[thumb.js] id is a URL, redirecting directly: ${id}`);
+    return res.redirect(id);
+  }
+
   console.log(`[thumb.js]  incoming id=${id}`);
 
   /* ─── Credential handling ───────────────────────────────────── */
