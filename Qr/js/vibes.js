@@ -244,7 +244,7 @@ async function initVibes(phone) {
       // compute new points
       let newPts = 0;
       Object.entries(values).forEach(([k, v]) => {
-        if (v !== 0 && !answeredValues.has(k)) newPts += 49;
+        if (v !== 0 && !answeredValues.has(k)) newPts += 9;
       });
       try {
         const ref = db.collection('members').doc(phone);
