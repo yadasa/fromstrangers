@@ -17,6 +17,16 @@ function loadName() {
   return localStorage.getItem('userName') || '';
 }
 
+// ─── RANDOM 7‑CHAR ID GENERATOR ──────────────────────────────────────
+function randomChars(len = 7) {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let out = '';
+  for (let i = 0; i < len; i++) {
+    out += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return out;
+}
+
 // ─── 1) APP SHELL SHOW/HIDE ─────────────────────────────────────────────────
 function showVibesApp() {
   const pe = document.getElementById('phone-entry');
@@ -151,10 +161,28 @@ async function initVibes(phone) {
       const ref = db.collection('members').doc(phone);
       await ref.set({ vibes }, { merge: true });
       if (status === 'approved' && newPts) {
-        await ref.update({
-          sPoints: firebase.firestore.FieldValue.increment(newPts)
+        const FieldValue = firebase.firestore.FieldValue;
+        // build a custom ID like "vibes-70sP-Ab3X9Ld"
+        const logId = `vibes-${newPts}sP-${randomChars()}`;
+
+        await db.runTransaction(async tx => {
+          // 1) bump their sPoints
+          tx.update(ref, {
+            sPoints: FieldValue.increment(newPts)
+          });
+
+          // 2) write a "vibes" entry into sPointsLog subcollection
+          tx.set(
+            ref.collection('sPointsLog').doc(logId),
+            {
+              type:      'vibes',
+              amount:    newPts,
+              timestamp: FieldValue.serverTimestamp()
+            }
+          );
         });
       }
+
       saved = true;
       dirty = false;
 
@@ -251,11 +279,29 @@ async function initVibes(phone) {
         // save answers
         await ref.set({ values }, { merge: true });
         // award points
-        if (newPts) {
-          await ref.update({
-            sPoints: firebase.firestore.FieldValue.increment(newPts)
+        if (status === 'approved' && newPts) {
+          const FieldValue = firebase.firestore.FieldValue;
+          // build a custom ID like "vibes-70sP-Ab3X9Ld"
+          const logId = `values-${newPts}sP-${randomChars()}`;
+
+          await db.runTransaction(async tx => {
+            // 1) bump their sPoints
+            tx.update(ref, {
+              sPoints: FieldValue.increment(newPts)
+            });
+
+            // 2) write a "vibes" entry into sPointsLog subcollection
+            tx.set(
+              ref.collection('sPointsLog').doc(logId),
+              {
+                type:      'values',
+                amount:    newPts,
+                timestamp: FieldValue.serverTimestamp()
+              }
+            );
           });
         }
+
         // update UI
         saveValuesBtn.style.display      = 'none';
         postSaveValues.style.display     = 'flex';
@@ -301,11 +347,29 @@ async function initVibes(phone) {
         const ref = db.collection('members').doc(phone);
         // 3) write to Firestore
         await ref.set({ vision }, { merge: true });
-        if (newPts) {
-          await ref.update({
-            sPoints: firebase.firestore.FieldValue.increment(newPts)
+        if (status === 'approved' && newPts) {
+          const FieldValue = firebase.firestore.FieldValue;
+          // build a custom ID like "vibes-70sP-Ab3X9Ld"
+          const logId = `vision-${newPts}sP-${randomChars()}`;
+
+          await db.runTransaction(async tx => {
+            // 1) bump their sPoints
+            tx.update(ref, {
+              sPoints: FieldValue.increment(newPts)
+            });
+
+            // 2) write a "vibes" entry into sPointsLog subcollection
+            tx.set(
+              ref.collection('sPointsLog').doc(logId),
+              {
+                type:      'vision',
+                amount:    newPts,
+                timestamp: FieldValue.serverTimestamp()
+              }
+            );
           });
         }
+
 
         // 4) swap out UI (just like Vibes)
         // hide the sliders/questions
