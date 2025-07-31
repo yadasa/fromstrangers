@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Flippable Ticket + Live QR + Modal</title>
+  <title>Ticket Details</title>
   <style>
     /* prevent selection */
     html, body, #ticketContainer, #ticketContainer *, #modalOverlay, #modalOverlay * {
@@ -21,6 +21,25 @@
       justify-content:center;
       align-items:center;
     }
+
+    /* Logo overlay */
+    #logoOverlay {
+      position: fixed;
+      top: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 10002;
+    }
+    #logoOverlay img {
+      height: 40px;
+      width: auto;
+      display: block;
+    }
+
+    #logoOverlay img:active {
+        transform: scale(1.1);
+        filter: invert(1);
+        }
 
     /* Flip container */
     #ticketContainer {
@@ -186,6 +205,11 @@
   </style>
 </head>
 <body>
+
+  <!-- Logo fixed overlay -->
+  <div id="logoOverlay">
+    <a href="/"><img src="../assets/mainlogo.png" alt="Home" /></a>
+  </div>
 
   <div id="ticketContainer">
     <div class="flipper">

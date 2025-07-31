@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Ticket Details</title>
+  <style>
+    * { user-select: none; -webkit-user-select: none; }
+    html, body {
+      margin:0; padding:0;
+      width:100%; height:100%;
+      background:#ece3d6;
+      font-family:"Helvetica Neue",sans-serif;
+      color:#333;
+    }
+    body {
+      display:flex; justify-content:center; align-items:center;
+      padding:1rem;
+    }
+    .card {
+      background:#f5efe6; border-radius:12px;
+      max-width:400px; width:100%; padding:1.5rem;
+      box-shadow:0 4px 12px rgba(0,0,0,0.1);
+      position:relative;
+    }
+    h1 {
+      font-size:1.25rem; color:#5c5146;
+      text-align:center; margin-bottom:0.5rem;
+    }
+    #userName {
+      text-align:center; font-weight:600;
+      color:#5c5146; margin-bottom:1rem;
+    }
+    .question { margin-bottom:1rem; transition:opacity 200ms ease; }
+    .question.disabled { opacity:0.5; pointer-events:none; }
+    .question label { display:block; font-weight:600; margin-bottom:0.5rem; }
+    .question a { color:#5c5146; text-decoration:underline; cursor:pointer; }
+    .question input { margin-right:0.5rem; transform:scale(1.2); }
+    #showBoat, #editBtn {
+      width:100%; padding:0.75rem; border:none; border-radius:999px;
+      background:rgba(92,81,70,0.3); color:#fff;
+      font-weight:800; text-transform:uppercase; letter-spacing:1px;
+      cursor:not-allowed; transition:background 200ms ease;
+      margin-top:1rem;
+    }
+    #showBoat.enabled, #editBtn.enabled {
+      background:#5c5146; cursor:pointer;
+    }
+    .iframeOverlay {
+      display:none; position:fixed; top:0; left:0;
+      width:100vw; height:100vh;
+      background:rgba(0,0,0,0.5);
+      justify-content:center; align-items:center;
+      z-index:2000;
+    }
+    .iframeOverlay iframe {
+      width:90vw; height:90vh;
+      border:none; border-radius:8px;
+    }
+    .iframeOverlay button {
+      position:absolute; top:10px; right:10px;
+      font-size:1.5rem; background:transparent;
+      border:none; color:#fff; cursor:pointer;
+    }
+    #countdown {
+      font-size:2rem; text-align:center; color:#5c5146;
+      margin-top:1rem;
+    }
+    /* Terms modal: use <pre> to preserve raw RTF styling */
+    #tncOverlay pre {
+      width:40vw; height:50vh;
+      background:#fff; border-radius:8px;
+      padding:1rem; overflow:auto;
+      white-space:pre-wrap; word-wrap:break-word;
+      font-family:monospace; font-size:0.9rem;
+      margin:0;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <!-- Form -->
+    <div id="formContainer">
+      <h1>Check-In Details</h1>
+      <div id="userName"></div>
+
+      <div id="q1" class="question">
+        <label><input type="checkbox" id="waiverChk" /> Have you filled out your waiver?</label>
+        <span>If not, <a id="waiverLink">click here</a>.</span>
+      </div>
+
+      <div id="q2" class="question disabled">
+        <label>Do you want to ride the jet ski(s)?</label>
+        <label><input type="radio" name="jet" value="yes" /> Yes</label>
+        <label><input type="radio" name="jet" value="no"  /> No</label>
+      </div>
+
+      <div id="q3" class="question disabled">
+        <label>Do you have a preference for which boat?</label>
+        <label><input type="radio" name="boat" value="A"      /> Boat A</label>
+        <label><input type="radio" name="boat" value="B"      /> Boat B</label>
+        <label><input type="radio" name="boat" value="random" /> Random</label>
+      </div>
+
+      <div id="q4" class="question disabled">
+        <span><a id="vibeLink">Set your vibe preferences</a></span>
+      </div>
+
+      <div id="q5" class="question disabled">
+        <label><input type="checkbox" id="tncChk" /> I agree to the <a id="tncLink">terms &amp; conditions</a>.</label>
+      </div>
+
+      <button id="showBoat">Show Me My Boat</button>
+    </div>
+
+    <!-- Countdown -->
+    <div id="countdownContainer" style="display:none">
+      <h1>Your party starts in:</h1>
+      <div id="countdown">--:--:--</div>
+      <button id="editBtn" class="enabled">Edit Responses</button>
+    </div>
+  </div>
+
+  <!-- Overlays -->
+  <div id="waiverOverlay" class="iframeOverlay">
+    <button id="waiverClose">&times;</button>
+    <iframe id="waiverIframe"></iframe>
+  </div>
+  <div id="vibeOverlay" class="iframeOverlay">
+    <button id="vibeClose">&times;</button>
+    <iframe src="/vibes.html"></iframe>
+  </div>
+  <div id="tncOverlay" class="iframeOverlay" style="background:rgba(0,0,0,0.6);">
+    
+    <div style="margin-top:8px;color:#8a7567;text-align:center;font-size:0.9rem;">
+      Tap anywhere to close
+      <button id="tncClose">&times;</button>
+      <pre id="tncBox">Loading terms…</pre>
+    
+      
+    </div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+  <script src="../js/firebaseConfig.js"></script>
+  <script>
+    firebase.initializeApp(window.firebaseConfig);
+    const db = firebase.firestore();
+
+    function loadPhone() { try { return localStorage.getItem('userPhone'); } catch { return null; } }
+    async function getMemberDoc(p){
+      const r = db.collection('members').doc(p);
+      try { const s = await r.get({source:'cache'}); if(s.exists) return s; }
+      catch{}
+      return r.get();
+    }
+
+    (async ()=>{
+      const phone = loadPhone();
+      if(!phone) { alert('No phone found'); return; }
+      const memSnap = await getMemberDoc(phone);
+      if(!memSnap.exists) { alert('Member not found'); return; }
+      const name = memSnap.data().name || '';
+
+      // Elements
+      const formC  = document.getElementById('formContainer'),
+            cntC   = document.getElementById('countdownContainer'),
+            qEls   = ['q1','q2','q3','q4','q5'].map(id=>document.getElementById(id)),
+            waiverChk = document.getElementById('waiverChk'),
+            tncChk    = document.getElementById('tncChk'),
+            showBtn   = document.getElementById('showBoat'),
+            editBtn   = document.getElementById('editBtn'),
+            countdown = document.getElementById('countdown'),
+            userName  = document.getElementById('userName'),
+            wlLink    = document.getElementById('waiverLink'),
+            wlOv      = document.getElementById('waiverOverlay'),
+            wlIf      = document.getElementById('waiverIframe'),
+            wlClose   = document.getElementById('waiverClose'),
+            vbLink    = document.getElementById('vibeLink'),
+            vbOv      = document.getElementById('vibeOverlay'),
+            vbClose   = document.getElementById('vibeClose'),
+            tncLink   = document.getElementById('tncLink'),
+            tncOv     = document.getElementById('tncOverlay'),
+            tncClose  = document.getElementById('tncClose'),
+            tncBox    = document.getElementById('tncBox');
+
+      userName.textContent = name;
+
+      // waiver URLs
+      const waiverUrls = [
+        'https://mono.wherewolf.co.nz/0343dcb2de4830ec23283ed4f3252dbe9a23cbae7c26cfa536585f624dc53ddbcb062e317e30845c08a2af2136fa1211c0358813bd175e62dcbbc49eee39c3bb6efe384b4b131e0bf2c94a739745f088a01365a684dd9222111ef8fdbb77fd22b2c48bdc738046d9b753dc7a9b8065b3c717968fcc78e9b9e681ddecd7cdf0537f336e23e4085f661d300ef880c07852$6fca1075be0f2b5b8715cfcc4f02a78b$93c4fd0897a382594b15133a3286581ed82144038035f2ae199c944a70299e28?ae=957041b1ea58113aa6688d3a30127639$f2d5dabd59e04c0c29605f07aa732e5b$22eee8caa0232b92ffe3d4ecbc2226eb6a681e7949790c899de24f9594ce0922',
+        'https://mono.wherewolf.co.nz/59e13a73b109934283f9c3828892b6efb3b1a84cb7d700ac6a668a78b9c2e32cd1397a5b83fa97fcfbf46b52fb7fef10be8ca958de96559c5b69667d374901091d1b39692a55d64fe70e84752bda7762ee3e5c2af5f40ff1b94d0179ea0f6c0a6591c5ffde1af23ab9f838e94025fa4e197e844eb45f410e762e53db1a2eee709f009aef9e16cd5c948b40998b71f437$e31f014db184dd63f8d4a13457dd44c2$6b8b7830dcdefc97a54592abde63d94e25932a83d1a13c40a7262a23b667d92d?ae=9fcc7260b971c255c227c9119b540f64$8a221bd3a220694f8e65519587d7e5a1$5e4422466bb64579b2e9cf684f56a75d9a9ff3aeadd1a1b16044ef731e2b4073'
+      ];
+
+      // waiver overlay logic
+      wlLink.onclick = e=>{
+        e.preventDefault();
+        const url = waiverUrls[Math.floor(Math.random()*waiverUrls.length)];
+        wlIf.src = url;
+        wlOv.style.display = 'flex';
+      };
+      wlClose.onclick = ()=> wlOv.style.display = 'none';
+      wlOv.onclick    = e=>{ if(e.target===wlOv) wlOv.style.display='none'; };
+
+      // vibe overlay logic
+      vbLink.onclick = e=>{
+        e.preventDefault();
+        vbOv.style.display = 'flex';
+      };
+      vbClose.onclick = ()=>{
+        vbOv.style.display='none';
+        qEls[4].classList.remove('disabled');
+      };
+      vbOv.onclick = e=>{ if(e.target===vbOv){ vbOv.style.display='none'; qEls[4].classList.remove('disabled'); }};
+
+      // Terms modal logic (fetch & display raw RTF)
+      let tncLoaded = false;
+      async function loadTnC(){
+        if(tncLoaded) return;
+        try {
+          const txt = await fetch('/ticket/fstc.rtf').then(r=>r.text());
+          tncBox.textContent = txt;
+        } catch {
+          tncBox.textContent = 'Unable to load Terms & Conditions.';
+        }
+        tncLoaded = true;
+      }
+      tncLink.onclick = async e=>{
+        e.preventDefault();
+        await loadTnC();
+        tncOv.style.display = 'flex';
+      };
+      tncClose.onclick = ()=> tncOv.style.display='none';
+      tncOv.onclick    = e=>{ if(e.target===tncOv) tncOv.style.display='none'; };
+
+      // fetch last responses
+      const lastSnap = await db.collection('members').doc(phone)
+        .collection('boatParty').orderBy('timestamp','desc').limit(1).get();
+      let resp = lastSnap.empty? null : lastSnap.docs[0].data();
+
+      // countdown setup
+      const target = new Date("2025-08-02T02:00:00Z");
+      function startCountdown(){
+        function up(){
+          let d = target - new Date();
+          if(d<0) d = 0;
+          const h = String(Math.floor(d/3600000)).padStart(2,'0'),
+                m = String(Math.floor(d%3600000/60000)).padStart(2,'0'),
+                s = String(Math.floor(d%60000/1000)).padStart(2,'0');
+          countdown.textContent = `${h}:${m}:${s}`;
+        }
+        up(); setInterval(up,1000);
+      }
+
+      function showCountdown(){
+        formC.style.display='none';
+        cntC.style.display='block';
+        startCountdown();
+        editBtn.onclick = ()=>{
+          cntC.style.display='none';
+          formC.style.display='block';
+          // ungrey all
+          qEls.forEach(q=>q.classList.remove('disabled'));
+          // terms locked
+          tncChk.checked = true;
+          tncChk.disabled = true;
+          showBtn.classList.add('enabled');
+          showBtn.disabled = false;
+          // preload
+          loadForm(resp);
+        };
+      }
+
+      // check complete
+      const done = resp &&
+        resp.waiver && resp.jet && resp.boatPref && resp.vibes && resp.terms;
+      if(done){
+        showCountdown();
+        return;
+      }
+
+      // show form
+      cntC.style.display='none';
+      formC.style.display='block';
+
+      // helpers
+      const unlock = i=>qEls[i].classList.remove('disabled');
+      const resetFrom = i=>{
+        for(let j=i;j<qEls.length;j++){
+          qEls[j].classList.add('disabled');
+          qEls[j].querySelectorAll('input').forEach(inp=>inp.checked = false);
+        }
+        showBtn.classList.remove('enabled');
+        showBtn.disabled = true;
+      };
+      const toggleShow = ok=>{
+        showBtn.classList.toggle('enabled', ok);
+        showBtn.disabled = !ok;
+      };
+
+      // preload
+      function loadForm(r){
+        if(!r) return;
+        if(r.waiver){ waiverChk.checked=true; unlock(1); }
+        if(r.jet){
+          unlock(1);
+          qEls[1].querySelector(`input[value="${r.jet}"]`).checked = true;
+          unlock(2);
+        }
+        if(r.boatPref){
+          unlock(2);
+          qEls[2].querySelector(`input[value="${r.boatPref}"]`).checked = true;
+          unlock(3);
+        }
+        if(r.vibes){
+          unlock(3);
+          unlock(4);
+        }
+        if(r.terms){
+          tncChk.checked = true;
+          unlock(4);
+          toggleShow(true);
+        }
+      }
+      loadForm(resp);
+
+      // handlers
+      waiverChk.onchange = ()=> waiverChk.checked? unlock(1): resetFrom(1);
+      qEls[1].querySelectorAll('input').forEach(i=>i.onchange = ()=> unlock(2));
+      qEls[2].querySelectorAll('input').forEach(i=>i.onchange = ()=> unlock(3));
+      tncChk.onchange = ()=> toggleShow(tncChk.checked);
+
+      // submit
+      showBtn.onclick = async ()=>{
+        const answers = {
+          waiver: waiverChk.checked,
+          jet: qEls[1].querySelector('input:checked')?.value||'',
+          boatPref: qEls[2].querySelector('input:checked')?.value||'',
+          vibes: true,
+          terms: tncChk.checked,
+          timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        };
+        await db.collection('members').doc(phone)
+          .collection('boatParty').add(answers);
+        resp = answers;
+        showCountdown();
+      };
+
+      // init
+      showBtn.disabled = true;
+    })();
+  </script>
+</body>
+</html>
