@@ -24,7 +24,8 @@
 
     /* Flip container */
     #ticketContainer {
-      perspective: 1000px;
+      -webkit-perspective: 1000px;
+              perspective: 1000px;
       display: inline-block;
       overflow: visible;
     }
@@ -33,14 +34,19 @@
       position: relative;
       width: 100%;
       height: 100%;
-      transform-style: preserve-3d;
-      transform: rotateY(180deg);
-      transition: transform 0.6s;
+      -webkit-transform-style: preserve-3d;
+              transform-style: preserve-3d;
+      will-change: transform;
+      -webkit-transform: rotateY(180deg);
+              transform: rotateY(180deg);
+      -webkit-transition: -webkit-transform 0.6s;
+              transition: transform 0.6s;
       cursor: pointer;
     }
     /* when “flipped” class is present: rotate to 0°, showing front */
     #ticketContainer.flipped .flipper {
-      transform: rotateY(0deg);
+      -webkit-transform: rotateY(0deg);
+              transform: rotateY(0deg);
     }
 
     /* Front & back faces */
@@ -50,13 +56,15 @@
       top: 0; left: 0;
       width: 100%;
       height: 100%;
-      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+              backface-visibility: hidden;
       display: flex;
       justify-content: center;
       align-items: center;
     }
     #ticketContainer .back {
-      transform: rotateY(180deg);
+      -webkit-transform: rotateY(180deg);
+              transform: rotateY(180deg);
       background: #ece3d6;
     }
 
@@ -203,7 +211,7 @@
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
-  <script>
+    <script>
     firebase.initializeApp(window.firebaseConfig);
     const db = firebase.firestore();
 
