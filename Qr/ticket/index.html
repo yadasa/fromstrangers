@@ -47,7 +47,20 @@
               perspective: 1000px;
       display:inline-block;
       overflow:visible;
+
+      /* ▼ NEW: start off-screen and invisible */
+        transform: translateY(120%);
+        opacity:0;
+        transition: transform 0.6s ease-out, opacity 0.6s ease-out;
     }
+
+    /* ▼ NEW: when this class is added, slide into place */
+    #ticketContainer.ready {
+    transform: translateY(0);
+    opacity:1;
+    }
+
+
     #ticketContainer .flipper {
       position:relative;
       width:100%; height:100%;
@@ -328,6 +341,9 @@
 
       generateQr();
       setInterval(generateQr, QR_REFRESH * 1000);
+      // slide-in once canvases are sized and first frame drawn
+        document.getElementById('ticketContainer').classList.add('ready');
+
     }
 
     function drawFrame() {
