@@ -310,39 +310,6 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   const scannedMap = {};
-
-  /**
-   * Replace the old QR‐only display:
-   * If memberDoc.bP === true, show the /ticket iframe instead.
-   * Otherwise fall back to toggleQRDisplay().
-   */
-  async function showTicketOrQr() {
-    const phone = loadPhone();
-    if (!phone) {
-      return alert('Enter your phone first.');
-    }
-    const snap = await getMemberDoc(phone);
-    if (!snap.exists) {
-      return alert('No record found for your phone.');
-    }
-    const data = snap.data();
-    if (data.bp) {
-      // show the ticket iframe modal
-      document.getElementById('ticket-modal').style.display = 'flex';
-    } else {
-      // fall back to your QR flow
-      toggleQRDisplay();
-    }
-  }
-
-  // close ticket modal when clicking outside the iframe
-  document.addEventListener('click', (e) => {
-    const modal = document.getElementById('ticket-modal');
-    if (modal.style.display === 'flex' && e.target === modal) {
-      modal.style.display = 'none';
-    }
-  });
-
   async function startQRScan() {
     clearInterval(qrInterval);
     clearInterval(timerInterval);
@@ -427,11 +394,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnSuggest  = document.getElementById('btn-suggest');
     const linkScan    = document.getElementById('link-scan');
     const btnQrClose  = document.getElementById('qr-close');
-    const ticketModal   = document.getElementById('ticket-modal');
     const btnSignOut  = document.getElementById('sign-out');
     const btnSignUp   = document.getElementById('sign-up');  // just redirects
 
-    if (btnDisplay) btnDisplay.onclick = showTicketOrQr;
+    if (btnDisplay) btnDisplay.onclick = toggleQRDisplay;
     if (btnPhotos)  btnPhotos.onclick  = openPhotos;
     if (btnChat)    btnChat.onclick    = openChat;
     if (btnSuggest) btnSuggest.onclick = suggestActivity;
