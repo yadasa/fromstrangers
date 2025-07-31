@@ -167,6 +167,23 @@
         <div id="qr-timer"></div>
       </div>
 
+      <!-- right after your existing #qr-wrapper -->
+      <div id="ticket-modal" style="
+        display: none;
+        position: fixed;
+        top: 0; left: 0;
+        width: 100vw; height: 100vh;
+        background: rgba(0,0,0,0.5);
+        z-index: 2000;
+        justify-content: center;
+        align-items: center;
+      ">
+        <iframe
+          src="/ticket"
+          style="width:90%; height:90%; border:none; border-radius:8px;"
+        ></iframe>
+      </div>
+
       <div id="qr-scanner"></div>
       <div id="scan-result"></div>
     </main>
