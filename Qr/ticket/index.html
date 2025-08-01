@@ -248,11 +248,18 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
   <script>
-    // Init Firebase
+    // ─── Init & Globals ────────────────────────────────────────
     firebase.initializeApp(window.firebaseConfig);
     const db = firebase.firestore();
 
-    // Persist/load phone
+    let flickerTimer = null;
+    let qrTimer      = null;
+    const QR_REFRESH = 4;
+    const COLORS     = { green:"#5c5146", gold:"#b49e85" };
+    let memberName   = '', flickerIndex = 0, flickerLayers;
+    const mainImg = new Image(), layerA = new Image(), layerB = new Image();
+
+    // ─── Persist / load phone ───────────────────────────────────
     function savePhone(phone) {
       try { localStorage.setItem('userPhone', phone); } catch {}
       document.cookie = `userPhone=${phone};max-age=${60*60*24*365};path=/;SameSite=Lax`;
@@ -261,7 +268,7 @@
       try { return localStorage.getItem('userPhone'); } catch { return null; }
     }
 
-    // Listen for loginSuccess from iframe
+    // ─── Listen for login iframe postMessage ────────────────────
     window.addEventListener('message', e => {
       if (e.origin !== window.location.origin) return;
       if (e.data?.type === 'loginSuccess') {
@@ -271,13 +278,13 @@
       }
     });
 
-    // If already logged in, skip iframe
+    // ─── Auto-init if already logged in ────────────────────────
     if (loadPhone()) {
       document.getElementById('phone-entry').style.display = 'none';
       init().catch(console.error);
     }
 
-    // Fetch member doc
+    // ─── Firestore helper & error UI ──────────────────────────
     async function getMemberDoc(phone) {
       const ref = db.collection('members').doc(phone);
       try {
@@ -286,8 +293,6 @@
       } catch {}
       return ref.get();
     }
-
-    // Show error
     function showNoTicketError() {
       document.getElementById('ticketContainer')?.remove();
       document.getElementById('modalOverlay')?.remove();
@@ -297,31 +302,27 @@
       document.body.append(msg);
     }
 
-    // Flicker & QR
-    const QR_REFRESH = 4;
-    const COLORS = { green:"#5c5146", gold:"#b49e85" };
-    let memberName = '', flickerIndex = 0, flickerLayers;
-    const mainImg = new Image(), layerA = new Image(), layerB = new Image();
-
+    // ─── Core init (runs exactly once per login or reload) ─────
     async function init() {
       const phone = loadPhone();
-      if (!phone) return;
-      const snap = await getMemberDoc(phone);
+      if (!phone) return;                    // not signed in yet
+      const snap  = await getMemberDoc(phone);
       if (!snap.exists) return showNoTicketError();
-      const data = snap.data();
-      memberName = data.name || '';
+      const data  = snap.data();
+      memberName  = data.name || '';
       if (!data.bp) return showNoTicketError();
 
+      // load images
       mainImg.src = '/ticket/MAIN.png';
       layerA.src  = '/ticket/layer_a.png';
       layerB.src  = '/ticket/layer_b.png';
       await Promise.all([ mainImg.decode(), layerA.decode(), layerB.decode() ]);
       flickerLayers = [ layerA, layerB ];
 
+      // size canvas & container
       const canvas = document.getElementById('ticketCanvas');
       canvas.width  = mainImg.width;
       canvas.height = mainImg.height;
-
       requestAnimationFrame(() => {
         const rect = document.getElementById('canvasContainer').getBoundingClientRect();
         const tc = document.getElementById('ticketContainer');
@@ -329,18 +330,28 @@
         tc.style.height = rect.height + 'px';
       });
 
+      // initial draw
       drawFrame();
-      setInterval(() => {
-        flickerIndex = (flickerIndex + 1) % flickerLayers.length;
-        drawFrame();
-      }, 500);
 
+      // ─── SCHEDULE FLICKER ─────────────────────────────────
+      if (!flickerTimer) {
+        flickerTimer = setInterval(() => {
+          flickerIndex = (flickerIndex + 1) % flickerLayers.length;
+          drawFrame();
+        }, 500);
+      }
+
+      // ─── SCHEDULE QR REGEN ────────────────────────────────
       generateQr();
-      setInterval(generateQr, QR_REFRESH * 1000);
+      if (!qrTimer) {
+        qrTimer = setInterval(generateQr, QR_REFRESH * 1000);
+      }
 
+      // slide into view
       document.getElementById('ticketContainer').classList.add('ready');
     }
 
+    // ─── draw + QR helpers ─────────────────────────────────────
     function drawFrame() {
       const canvas = document.getElementById('ticketCanvas');
       const ctx = canvas.getContext('2d');
@@ -356,13 +367,12 @@
       ctx.textBaseline = 'top';
       ctx.fillText(memberName, canvas.width/2, canvas.height*0.08);
     }
-
     function generateQr() {
       const overlay = document.getElementById('qrCanvasOverlay');
       overlay.style.opacity = 0;
       setTimeout(() => {
         overlay.innerHTML = '';
-        const phone = loadPhone();
+        const phone   = loadPhone();
         const payload = `${nowStr()}R${phone}`;
         const cipher  = randomNoise(5) + btoa(payload) + randomNoise(5);
         const size    = overlay.clientWidth;
@@ -376,7 +386,6 @@
         overlay.style.opacity = 1;
       }, 300);
     }
-
     function randomNoise(n) {
       const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
       return Array.from({ length: n }, () =>
@@ -391,25 +400,23 @@
            + pad2(d.getSeconds());
     }
 
-    // Flip
-    document.getElementById('ticketContainer').addEventListener('click', () => {
-      document.getElementById('ticketContainer').classList.toggle('flipped');
-    });
-
-    // Check details
-    document.getElementById('checkDetails').addEventListener('click', e => {
+    // ─── UI bindings ──────────────────────────────────────────
+    document.getElementById('ticketContainer')
+            .addEventListener('click', () =>
+      document.getElementById('ticketContainer')
+              .classList.toggle('flipped')
+    );
+    document.getElementById('checkDetails')
+            .addEventListener('click', e => {
       e.preventDefault(); e.stopPropagation();
       document.getElementById('modalOverlay').style.display = 'flex';
     });
-
-    // Modal close
-    document.getElementById('modalClose').onclick = () => {
+    document.getElementById('modalClose').onclick = () =>
       document.getElementById('modalOverlay').style.display = 'none';
-    };
-    document.getElementById('modalOverlay').onclick = () => {
+    document.getElementById('modalOverlay').onclick = () =>
       document.getElementById('modalOverlay').style.display = 'none';
-    };
-    document.getElementById('modalBox').addEventListener('click', e => e.stopPropagation());
+    document.getElementById('modalBox')
+            .addEventListener('click', e => e.stopPropagation());
   </script>
 </body>
 </html>
