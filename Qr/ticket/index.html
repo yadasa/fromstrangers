@@ -24,7 +24,6 @@
       position: relative;
     }
 
-    /* ────────────────────────────────────────────────────────────── */
     /* Login overlay */
     #phone-entry {
       position: fixed;
@@ -36,7 +35,6 @@
     #loginIframe {
       width:100%; height:100%; border:none;
     }
-    /* ────────────────────────────────────────────────────────────── */
 
     /* Logo overlay */
     #logoOverlay {
@@ -333,15 +331,28 @@
       // initial draw
       drawFrame();
 
-      // ─── SCHEDULE FLICKER ─────────────────────────────────
-      if (!flickerTimer) {
-        flickerTimer = setInterval(() => {
-          flickerIndex = (flickerIndex + 1) % flickerLayers.length;
-          drawFrame();
-        }, 500);
+      // ―― boatStatus override? ――
+      const status = data.boatStatus; // expects 'A' or 'B'
+      if (status === 'A' || status === 'B') {
+        // stop any flicker
+        if (flickerTimer) {
+          clearInterval(flickerTimer);
+          flickerTimer = null;
+        }
+        // lock onto layer A (0) or B (1)
+        flickerIndex = (status === 'A') ? 0 : 1;
+        drawFrame();
+      } else {
+        // normal flicker
+        if (!flickerTimer) {
+          flickerTimer = setInterval(() => {
+            flickerIndex = (flickerIndex + 1) % flickerLayers.length;
+            drawFrame();
+          }, 500);
+        }
       }
 
-      // ─── SCHEDULE QR REGEN ────────────────────────────────
+      // ─── QR regen ──────────────────────────────────────────────
       generateQr();
       if (!qrTimer) {
         qrTimer = setInterval(generateQr, QR_REFRESH * 1000);
