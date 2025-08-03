@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Scan QR</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div id="scan-container">
+    <div id="controls">
+      <button id="btn-scan">Scan QR Code</button>
+    </div>
+    <div id="qr-scanner"></div>
+    <div id="scan-popup">
+      <span id="scan-popup-msg"></span>
+      
+    </div>
+  </div>
+
+  <script src="js/vendor/html5-qrcode.min.js"></script>
+  <script src="js/vendor/firebase-app-compat.js"></script>
+  <script src="js/vendor/firebase-firestore-compat.js"></script>
+  <script src="js/firebaseConfig.js"></script>
+  <script src="js/boatscan.js"></script>
+</body>
+</html>
