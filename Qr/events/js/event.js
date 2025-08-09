@@ -24,24 +24,44 @@ function makeAvatarImg(pfpId, size = 64) {
   };
   return img;
 }
-// 1a) Watch for real auth state and force login if needed
+
+function makeProfileLink(name, profileId) {
+  const el = document.createElement('a');
+  el.textContent = name || 'Unknown';
+  if (profileId) {
+    el.href = 'https://portal.fromstrangers.social/profile?id=' + encodeURIComponent(profileId);
+    el.target = '_blank';
+    el.rel = 'noopener noreferrer';
+    el.className = 'profile-link';
+  } else {
+    // keep it a non-link if missing profileId
+    el.href = 'javascript:void(0)';
+    el.style.pointerEvents = 'none';
+    el.style.textDecoration = 'none';
+    el.style.color = 'inherit';
+  }
+  return el;
+}
+
+// 1a) Watch for auth state; do NOT auto-open the sign-in overlay
 firebase.auth().onAuthStateChanged(user => {
   if (user) {
-    // valid session → hydrate
     const phone = user.phoneNumber.replace('+1','');
     db.collection('members').doc(phone).get().then(snap => {
       const name = snap.exists ? snap.data().name : '';
       handleLogin(phone, name);
     });
   } else {
-    // no session → force login
-    document.getElementById('phone-entry').style.display = 'flex';
+    // stay logged out silently
     currentPhone = '';
     currentName  = '';
+    document.getElementById('phone-entry').style.display = 'none'; // keep hidden
     document.querySelectorAll('.rsvp-button.active')
             .forEach(btn => btn.classList.remove('active'));
+    setupLoggedOutView(); // blur comments + add header Sign In button
   }
 });
+
 
 // If we’re on localhost, point to the emulators, not prod
 if (location.hostname === 'localhost') {
@@ -582,7 +602,7 @@ async function loadEventData() {
               name,
               description: desc,
               price,
-              link
+              paymmentlink
             });
         }
       }
