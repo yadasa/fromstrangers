@@ -574,7 +574,7 @@ async function loadEventData() {
       title:       document.getElementById('new-event-name').value.trim(),
       date:        document.getElementById('new-event-date').value,
       time:        document.getElementById('new-event-time').value,
-      address:     document.getElementById('new-event-address').value.trim(),
+      location:     document.getElementById('new-event-address').value.trim(),
       description: document.getElementById('new-event-description').value.trim(),
       imageUrl:    document.getElementById('new-event-image').value.trim(),
       createdBy:   currentPhone,
