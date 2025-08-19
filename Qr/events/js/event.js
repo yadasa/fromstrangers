@@ -602,7 +602,7 @@ async function loadEventData() {
               name,
               description: desc,
               price,
-              paymmentlink
+              paymentlink
             });
         }
       }
@@ -1831,15 +1831,33 @@ function setupCalendarAndShare(e) {
 
 }
 
+function processCashPayment(ticketData) {
+  if (!ticketData) return;
+  if (!currentPhone) {
+    document.getElementById('phone-entry').style.display = 'flex';
+    return;
+  }
+  // Try correct field, then legacy misspelling if it exists in your data
+  let url = (ticketData.paymentlink || ticketData.link || '').trim();
+  if (!url) {
+    alert('No payment link available for this ticket.');
+    return;
+  }
+  if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
+  window.open(url, '_blank');
+}
 
 // 18. Show ticket modal
 function showTicketModal() {
   const ticketListEl = document.getElementById('ticket-list');
   ticketListEl.innerHTML = '';
+
   db.collection('events').doc(eventId).collection('tickets').get()
     .then(ticketsSnap => {
       ticketsSnap.forEach(doc => {
         const t   = doc.data();
+        const id  = doc.id;
+
         const row = document.createElement('div');
         row.className = 'ticket-row';
         row.style.display = 'flex';
@@ -1848,16 +1866,21 @@ function showTicketModal() {
         row.style.padding = '0.75rem';
         row.style.borderBottom = '1px solid #eee';
 
-        // Left side: name + description + price
+        // Left side: name + description + prices
         const left = document.createElement('div');
         left.style.flex = '1';
+
+        const hasSP = Number.isFinite(Number(t.sPrice)) && Number(t.sPrice) > 0;
+        const spLine = hasSP ? `<p style="margin:0; color:#555;">sP Price: ${Number(t.sPrice)} sP</p>` : '';
+
         left.innerHTML = `
-          <h3 style="margin:0; color:#333;"><span class="math-inline">${t.name}</h3\>
-          <p style\="margin\:0\.25rem 0; color\:\#555;"\></span>${t.description}</p>
-          <p style="margin:0; color:#555;">Price: $${Number(t.price).toFixed(2)}</p>
+          <h3 style="margin:0; color:#333;">${t.name || 'Ticket'}</h3>
+          <p style="margin:0.25rem 0; color:#555;">${t.description || ''}</p>
+          <p style="margin:0; color:#555;">Price: $${Number(t.price || 0).toFixed(2)}</p>
+          ${spLine}
         `;
 
-        // Right side: “Pay” button
+        // Right side: Pay button → either modal (if sPrice) or direct cash link
         const right = document.createElement('div');
         const payBtn = document.createElement('button');
         payBtn.className = 'btn-pay-ticket';
@@ -1870,31 +1893,238 @@ function showTicketModal() {
         payBtn.style.fontSize = '0.9rem';
         payBtn.style.cursor = 'pointer';
         payBtn.style.boxShadow = 'var(--button-shadow)';
+
         payBtn.onclick = () => {
           if (!currentPhone) {
             document.getElementById('phone-entry').style.display = 'flex';
             return;
           }
-          if (t.paymentlink && t.paymentlink.trim() !== '') {
-            let url = t.paymentlink.trim();
-            if (!/^https?:\/\//i.test(url)) {
-              url = "https://" + url;
-            }
-            window.open(url, '_blank');
+          if (hasSP) {
+            openPaymentChoiceModal(id, t); // show $ vs sP modal
           } else {
-            alert('No payment link available for this ticket.');
+            processCashPayment(t); // no sPrice → behave exactly like before
           }
         };
-        right.appendChild(payBtn);
 
+        right.appendChild(payBtn);
         row.appendChild(left);
         row.appendChild(right);
         ticketListEl.appendChild(row);
       });
+
       document.getElementById('ticket-modal').style.display = 'flex';
     })
     .catch(err => {
       console.error('Failed to load tickets:', err);
       alert('Error loading tickets.');
     });
+}
+
+
+function ensurePaymentChoiceModal() {
+  let modal = document.getElementById('payment-choice-modal');
+  if (modal) return modal;
+
+  modal = document.createElement('div');
+  modal.id = 'payment-choice-modal';
+  Object.assign(modal.style, {
+    display: 'none',
+    position: 'fixed',
+    inset: '0',
+    background: 'rgba(0,0,0,0.4)',
+    zIndex: '1000',
+    alignItems: 'center',
+    justifyContent: 'center'
+  });
+
+  modal.innerHTML = `
+    <div id="payment-choice-card" style="
+      background: var(--panel, #fff);
+      color: var(--text, #222);
+      border-radius: 12px;
+      padding: 1rem 1.25rem;
+      min-width: 300px;
+      max-width: 90%;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+    ">
+      <div style="display:flex; align-items:center; justify-content:space-between;">
+        <h3 id="payment-choice-title" style="margin:0; font-size:1.1rem;">Choose payment</h3>
+        <button id="payment-choice-close" style="
+          border:none; background:transparent; font-size:1.25rem; cursor:pointer; line-height:1;
+        " aria-label="Close">×</button>
+      </div>
+      <div id="payment-choice-details" style="margin-top:0.5rem; font-size:0.95rem;"></div>
+      <div id="payment-choice-error" style="display:none; color:#B00020; margin-top:0.5rem;"></div>
+      <div style="display:flex; gap:0.5rem; margin-top:0.75rem;">
+        <button id="btn-pay-cash" style="
+          flex:1; padding:0.6rem 0.8rem; border:none; border-radius:8px; cursor:pointer;
+          background: var(--brown, #8d6e63); color: var(--gold, #fff);
+        ">Pay with $</button>
+        <button id="btn-pay-sp" style="
+          flex:1; padding:0.6rem 0.8rem; border:none; border-radius:8px; cursor:pointer;
+          background: #016b5a; color: #fff;
+        ">Pay with sP</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  // Close interactions
+  modal.addEventListener('click', (e) => {
+    if (e.target.id === 'payment-choice-modal') modal.style.display = 'none';
+  });
+  modal.querySelector('#payment-choice-close').onclick = () => {
+    modal.style.display = 'none';
+  };
+
+  return modal;
+}
+
+function openPaymentChoiceModal(ticketId, ticketData) {
+  const modal = ensurePaymentChoiceModal();
+  const titleEl = modal.querySelector('#payment-choice-title');
+  const details = modal.querySelector('#payment-choice-details');
+  const errBox  = modal.querySelector('#payment-choice-error');
+  const btnCash = modal.querySelector('#btn-pay-cash');
+  const btnSP   = modal.querySelector('#btn-pay-sp');
+
+  // Reset
+  errBox.style.display = 'none';
+  errBox.textContent   = '';
+
+  const cashStr = `$${Number(ticketData.price || 0).toFixed(2)}`;
+  const spStr   = (Number.isFinite(Number(ticketData.sPrice)) && Number(ticketData.sPrice) > 0)
+    ? `${Number(ticketData.sPrice)} sP`
+    : '—';
+
+  titleEl.textContent = `Pay for: ${ticketData.name || 'Ticket'}`;
+  details.innerHTML   = `
+    <div>Cash price: <strong>${cashStr}</strong></div>
+    <div>sP price: <strong>${spStr}</strong></div>
+  `;
+
+  // Wire handlers (re-bind each open)
+  btnCash.onclick = () => {
+    processCashPayment(ticketData);
+  };
+  btnSP.onclick = async () => {
+    try {
+      await payTicketWithSP(ticketId);
+      modal.style.display = 'none';
+      document.getElementById('ticket-modal').style.display = 'none';
+      // Optional toast
+      alert('Paid with sP successfully.');
+    } catch (err) {
+      errBox.textContent = (err && err.message) ? err.message : String(err);
+      errBox.style.display = 'block';
+    }
+  };
+
+  modal.style.display = 'flex';
+}
+
+function processCashPayment(ticketData) {
+  if (!ticketData) return;
+  if (!currentPhone) {
+    document.getElementById('phone-entry').style.display = 'flex';
+    return;
+  }
+  let url = (ticketData.paymentlink || '').trim();
+  if (!url) {
+    alert('No payment link available for this ticket.');
+    return;
+  }
+  if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
+  window.open(url, '_blank');
+}
+
+/**
+ * Atomic sP deduction using combined balance (sPointsTotal + sPoints).
+ * On success:
+ *  - Marks RSVP as paid
+ *  - Writes an audit record
+ *  - Posts a green "{name} has paid" comment
+ */
+async function payTicketWithSP(ticketId) {
+  if (!currentPhone) {
+    document.getElementById('phone-entry').style.display = 'flex';
+    throw new Error('Sign in required.');
+  }
+  if (!eventId) throw new Error('Missing eventId.');
+
+  const txnResult = await db.runTransaction(async tx => {
+    const memRef    = db.collection('members').doc(currentPhone);
+    const rsvpRef   = db.collection('events').doc(eventId).collection('rsvps').doc(currentPhone);
+    const ticketRef = db.collection('events').doc(eventId).collection('tickets').doc(ticketId);
+
+    const [memSnap, ticketSnap] = await Promise.all([tx.get(memRef), tx.get(ticketRef)]);
+    if (!ticketSnap.exists) throw new Error('Ticket not found.');
+    const t = ticketSnap.data();
+
+    const cost = Number(t.sPrice);
+    if (!Number.isFinite(cost) || cost <= 0) {
+      throw new Error('sP price unavailable for this ticket.');
+    }
+
+    const mem = memSnap.exists ? memSnap.data() : {};
+    const spTotal   = Number.isFinite(Number(mem.sPointsTotal)) ? Number(mem.sPointsTotal) : 0;
+    const spLegacy  = Number.isFinite(Number(mem.sPoints))      ? Number(mem.sPoints)      : 0;
+    const available = spTotal + spLegacy;
+
+    if (available < cost) {
+      throw new Error(`Not enough sP. You have ${available}, need ${cost}.`);
+    }
+
+    // Prefer deducting from sPointsTotal first, then sPoints if needed
+    const takeFromTotal  = Math.min(cost, spTotal);
+    const remaining      = cost - takeFromTotal;
+    const takeFromLegacy = remaining > 0 ? Math.min(remaining, spLegacy) : 0;
+
+    const spUpdate = {};
+    if (takeFromTotal)  spUpdate.sPointsTotal = firebase.firestore.FieldValue.increment(-takeFromTotal);
+    if (takeFromLegacy) spUpdate.sPoints      = firebase.firestore.FieldValue.increment(-takeFromLegacy);
+    tx.update(memRef, spUpdate);
+
+    // Mark RSVP as paid (structured state)
+    tx.set(rsvpRef, {
+      paid: true,
+      paidMethod: 'sP',
+      sPointsSpent: cost,
+      sPBreakdown: { fromTotal: takeFromTotal, fromLegacy: takeFromLegacy },
+      paidTicketId: ticketId,
+      paidAt: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+
+    // Optional: audit record
+    const payRef = db.collection('events').doc(eventId).collection('payments').doc();
+    tx.set(payRef, {
+      phone: currentPhone,
+      method: 'sP',
+      ticketId,
+      amountSP: cost,
+      breakdown: { fromTotal: takeFromTotal, fromLegacy: takeFromLegacy },
+      timestamp: firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+    const nameForComment = (mem.name || mem.Name || currentName || 'Member').toString();
+    return { nameForComment };
+  });
+
+  // Required green comment: "{name} has paid"
+  await db.collection('events')
+    .doc(eventId)
+    .collection('comments')
+    .add({
+      text: `${txnResult.nameForComment} has paid`,
+      green: true,
+      timestamp: firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+  // Close modals & UX feedback
+  const choice = document.getElementById('payment-choice-modal');
+  if (choice) choice.style.display = 'none';
+  const ticketModal = document.getElementById('ticket-modal');
+  if (ticketModal) ticketModal.style.display = 'none';
+  alert('Paid with sP successfully.');
 }
