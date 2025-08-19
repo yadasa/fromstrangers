@@ -163,7 +163,7 @@ document.addEventListener('DOMContentLoaded', () => {
     profileDocId = doc.id;
     const data = doc.data();
     // ——— show sPoints ———
-    const spoints = data.sPoints || 0;
+    const spoints = data.sPointsTotal || 0;
     const spointsLink = document.getElementById('spoints-link');
     spointsLink.addEventListener('click', e => {
       e.preventDefault(); // stop the default navigation
