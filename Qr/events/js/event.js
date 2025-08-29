@@ -11,8 +11,6 @@ auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL)
   .catch(err => console.error('Failed to set auth persistence:', err));
 const db      = firebase.firestore();
 const storage = firebase.storage();
-let currentIsAdmin = false;   // NEW
-let eventOwner     = '';      // NEW
 
 
 function makeAvatarImg(pfpId, size = 64) {
@@ -540,8 +538,6 @@ async function loadEventData() {
   if (currentPhone) {
     try {
       const userSnap = await db.collection('members').doc(currentPhone).get();
-      currentIsAdmin = !!(userSnap.exists && userSnap.data().isAdmin === true);
-      
       if (userSnap.exists && userSnap.data().isAdmin === true) {
         document.getElementById('btn-create-event').style.display = 'inline-block';
       }
@@ -629,18 +625,13 @@ async function loadEventData() {
     return;
   }
   const e = eventSnap.data();
-  eventOwner = e.createdBy || '';   // NEW: cache event host phone
 
-
-  // 6d) If current user is the event’s host OR an admin, show Payment Status
-  if (currentPhone && (eventOwner === currentPhone || currentIsAdmin)) {
+  // 6d) If the current user *is* the event’s host, show Payment Status
+  if (currentPhone && e.createdBy === currentPhone) {
     const payBtn = document.getElementById('btn-payment-status');
-    if (payBtn) {
-      payBtn.style.display = 'inline-block';
-      payBtn.onclick = showPaymentModal;
-    }
+    payBtn.style.display = 'inline-block';
+    payBtn.onclick = showPaymentModal;
   }
-
 
   // Wire up the × in the payment modal
   document.getElementById('payment-modal-close')
@@ -787,16 +778,6 @@ async function showSeeAllModal(statusFilter) {
 
 // Revised showPaymentModal: shows modal immediately & loads names in parallel
 async function showPaymentModal() {
-
-  if (!currentPhone) {
-    document.getElementById('phone-entry').style.display = 'flex';
-    return;
-  }
-  if (!(currentIsAdmin || currentPhone === eventOwner)) {
-    alert('Only the host or admins can manage payment status.');
-    return;
-  }
-  
   const listEl = document.getElementById('payment-list');
   const modal  = document.getElementById('payment-modal');
 
