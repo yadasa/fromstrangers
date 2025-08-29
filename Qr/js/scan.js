@@ -77,7 +77,7 @@ function hidePopup() {
 }
 
 // 6. Scan handler
-async function startQRScan() {
+async function startQRScanFlashy() {
   const btn       = document.getElementById('btn-scan');
   const scannerEl = document.getElementById('qr-scanner');
 
@@ -149,4 +149,4 @@ async function startQRScan() {
 
 // 7. Wire the button
 document.getElementById('btn-scan')
-        .addEventListener('click', startQRScan);
+        .addEventListener('click', startQRScanFlashy);

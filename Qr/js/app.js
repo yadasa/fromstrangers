@@ -310,7 +310,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   const scannedMap = {};
-  async function startQRScan() {
+  async function startQRScanFlashy() {
     clearInterval(qrInterval);
     clearInterval(timerInterval);
     hideQR();
@@ -405,7 +405,7 @@ document.addEventListener('DOMContentLoaded', () => {
       linkScan.onclick = (e) => {
         e.preventDefault();
         const pwd = prompt("Enter admin password to scan QR:");
-        if (pwd === 'prix') startQRScan();
+        if (pwd === 'prix') startQRScanFlashy();
         else alert('Incorrect password.');
       };
     }
