@@ -4,11 +4,12 @@
 // Expects: /api/drive/thumb?id=FILE_ID[&max=320]
 // ─────────────────────────────────────────────────────────
 
+export const config = { runtime: 'nodejs' };
 import { google } from 'googleapis';
 import { readFileSync, existsSync } from 'fs';
 import { join } from 'path';
 import stream from 'stream';
-import ffmpegPath from 'ffmpeg-static';
+import { path as ffmpegPath } from '@ffmpeg-installer/ffmpeg';
 const { spawn } = require('child_process');
 
 export default async function handler(req, res) {
