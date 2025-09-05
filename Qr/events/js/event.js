@@ -72,6 +72,18 @@ if (location.hostname === 'localhost') {
   firebase.functions().useEmulator('127.0.0.1', 5001);
 }
 
+// ADD: permission helper
+async function canEditPayments() {
+  if (!currentPhone || !eventId) return false;
+  const [meSnap, evSnap] = await Promise.all([
+    db.collection('members').doc(currentPhone).get(),
+    db.collection('events').doc(eventId).get()
+  ]);
+  if (!evSnap.exists) return false;
+  const e = evSnap.data();
+  const isAdmin = meSnap.exists && meSnap.data().isAdmin === true;
+  return !!(e.createdBy === currentPhone || isAdmin);
+}
 
 // ─────────────────────────────────────────────────────────────────────
 // INITIATE INVISIBLE RECAPTCHA FOR PHONE AUTH
@@ -627,7 +639,7 @@ async function loadEventData() {
   const e = eventSnap.data();
 
   // 6d) If the current user *is* the event’s host, show Payment Status
-  if (currentPhone && e.createdBy === currentPhone) {
+  if (await canEditPayments()) {
     const payBtn = document.getElementById('btn-payment-status');
     payBtn.style.display = 'inline-block';
     payBtn.onclick = showPaymentModal;
