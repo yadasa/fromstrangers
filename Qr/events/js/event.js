@@ -271,6 +271,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       if (saveBtn) {
         saveBtn.addEventListener('click', async () => {
+          if (!(await canEditPayments())) {
+            console.warn('No permission to edit payments');
+            return;
+          }
           console.log('💾 Save clicked');   // <-- now you should see this
           const checked = document.querySelectorAll('#payment-list input:checked');
           for (const cb of checked) {
@@ -793,6 +797,11 @@ async function showPaymentModal() {
   const listEl = document.getElementById('payment-list');
   const modal  = document.getElementById('payment-modal');
 
+  if (!(await canEditPayments())) {
+    console.warn('No permission to edit payments');
+    return;
+  }
+
   // 1) Show modal immediately
   listEl.innerHTML = '<p>Loading…</p>';
   modal.style.display = 'flex';
@@ -841,6 +850,10 @@ async function showPaymentModal() {
 // Replace the form submit with a plain Save button handler (no redirect)
 document.getElementById('payment-save')
   .addEventListener('click', async () => {
+    if (!(await canEditPayments())) {
+      console.warn('No permission to edit payments');
+      return;
+    }
     console.log('💾 Save clicked');
     const checked = document.querySelectorAll('#payment-list input:checked');
     for (const cb of checked) {
