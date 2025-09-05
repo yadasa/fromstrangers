@@ -503,7 +503,7 @@ async function uploadFiles(files) {
         card.classList.remove('selected');
       }
       btnShare.disabled = selectedItems.size === 0;
-      const canDelete = [...selectedItems].every(it => it.ownerPhone === userPhone);
+      const canDelete = [...selectedItems].every(it => canDeletePhoto(it));
       btnDelete.disabled = !canDelete || selectedItems.size === 0;
     };
     card.prepend(cb);
@@ -616,7 +616,7 @@ async function renderGallery(items, append = false) {
             }
             btnShare.disabled = selectedItems.size === 0;
             const canDel = Array.from(selectedItems)
-              .every(it => it.ownerPhone === userPhone);
+              .every(it => canDeletePhoto(it));
             btnDelete.disabled = !canDel || selectedItems.size === 0;
           };
           card.append(cb);
@@ -779,7 +779,7 @@ async function renderGallery(items, append = false) {
         }
         btnShare.disabled = selectedItems.size === 0;
         const canDel = Array.from(selectedItems)
-          .every(it => it.ownerPhone === userPhone);
+          .every(it => canDeletePhoto(it));
         btnDelete.disabled = !canDel || selectedItems.size === 0;
       };
       card.append(cb);
