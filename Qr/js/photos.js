@@ -25,6 +25,16 @@ function loadName() {
   return localStorage.getItem('userName') || '';
 }
 
+let isAdminUser = false;
+
+function canDeletePhoto(itemOrOwnerPhone) {
+  const owner = typeof itemOrOwnerPhone === 'string'
+    ? itemOrOwnerPhone
+    : itemOrOwnerPhone.ownerPhone;
+  return owner === userPhone || isAdminUser === true;
+}
+
+
 const PAGE_SIZE = 30;
 let lastDoc = null;
 
@@ -248,6 +258,7 @@ btnVerifyOtp.onclick = async () => {
       return;
     }
     const data = snap.data();
+    isAdminUser = data.isAdmin === true;
     if (!data.onList) {
       alert('Your membership is not approved for this feature.');
       return;
@@ -288,6 +299,7 @@ async function fetchUserNameAndShow(phone) {
     return;
   }
   const data = snap.data();
+  isAdminUser         = data.isAdmin === true;
   userName            = data.name || data.Name || 'No Name';
   userPoints          = data.sPoints || 0;
   uploadPointsToday   = data.uploadPointsToday || 0;
@@ -448,7 +460,7 @@ async function uploadFiles(files) {
     card.append(likeBtn);
 
     // 14) Delete button (Firestore flag instead of Drive move)
-    if (meta.ownerPhone === userPhone) {
+    if (canDeletePhoto(meta)) {
       const delBtn = document.createElement('button');
       delBtn.type = 'button';
       delBtn.className = 'photo-delete-icon';
@@ -677,7 +689,7 @@ async function renderGallery(items, append = false) {
           card.append(likeBtn);
 
           // delete button
-          if (item.ownerPhone === userPhone) {
+          if (canDeletePhoto(item)) {
             const delBtn = document.createElement('button');
             delBtn.type = 'button';
             delBtn.className = 'photo-delete-icon';
@@ -840,7 +852,7 @@ async function renderGallery(items, append = false) {
       card.append(likeBtn);
 
       // delete button
-      if (item.ownerPhone === userPhone) {
+      if (canDeletePhoto(item)) {
         const delBtn = document.createElement('button');
         delBtn.type = 'button';
         delBtn.className = 'photo-delete-icon';
