@@ -354,3 +354,10 @@ main {
 
 /* tiny spacing between media and caption */
 .post-caption { margin-top: 8px; }
+
+.post.vibe-card {
+  background: var(--bg-light);   /* beige tone from your theme */
+}
+.post.vibe-card .post-media {
+  background: var(--bg-light);   /* override black */
+}
