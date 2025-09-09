@@ -1,8 +1,78 @@
 // feed/js/feed-core.js
 
+// ---------- Theme helpers ----------
+function getSavedTheme() {
+  try { return localStorage.getItem('theme') || 'light'; } catch { return 'light'; }
+}
+function saveTheme(theme) {
+  try { localStorage.setItem('theme', theme); } catch {}
+}
+function applyTheme(theme) {
+  const root = document.documentElement; // <html>
+  if (theme === 'dark') root.classList.add('theme-dark');
+  else root.classList.remove('theme-dark');
+}
+// Apply ASAP
+applyTheme(getSavedTheme());
+
+// ---------- Header dropdown ("Signed in as", Profile, Theme toggle) ----------
+function renderSignedInMenu(container, { name }) {
+  container.innerHTML = `
+    <div class="user-menu">
+      <button class="user-menu__button" aria-haspopup="true" aria-expanded="false">☰</button>
+      <div class="user-menu__dropdown" role="menu" hidden>
+        <div class="user-menu__item user-menu__item--label" aria-disabled="true">
+          <em>Signed in as ${String(name || 'User').replace(/</g,'&lt;')}</em>
+        </div>
+        <a class="user-menu__item" href="/profile" role="menuitem">Profile</a>
+        <button class="user-menu__item" id="theme-toggle" role="menuitem">Toggle Dark Mode</button>
+      </div>
+    </div>
+  `;
+
+  const btn = container.querySelector('.user-menu__button');
+  const dd  = container.querySelector('.user-menu__dropdown');
+  const toggle = container.querySelector('#theme-toggle');
+
+  // open/close
+  btn.addEventListener('click', () => {
+    const open = !dd.hasAttribute('hidden');
+    if (open) {
+      dd.setAttribute('hidden', '');
+      btn.setAttribute('aria-expanded', 'false');
+    } else {
+      dd.removeAttribute('hidden');
+      btn.setAttribute('aria-expanded', 'true');
+    }
+  });
+
+  // outside click closes
+  document.addEventListener('click', (e) => {
+    if (!container.contains(e.target)) {
+      dd.setAttribute('hidden', '');
+      btn.setAttribute('aria-expanded', 'false');
+    }
+  });
+
+  // theme toggle
+  toggle.addEventListener('click', () => {
+    const next = (getSavedTheme() === 'dark') ? 'light' : 'dark';
+    saveTheme(next);
+    applyTheme(next);
+  });
+}
+
+// ---------- Core boot ----------
 (async function main() {
   // Wait for auth so we can prefer “not-RSVP’d” future event
   await window.FEED_AUTH_READY;
+
+  // If signed in, swap header text for dropdown menu
+  const st = window.FEED_STATE || {};
+  if (st.currentPhone) {
+    const mount = document.getElementById('signed-in');
+    if (mount) renderSignedInMenu(mount, { name: st.currentName || 'User' });
+  }
 
   // First prefetch to warm pools
   await Promise.all([
@@ -10,7 +80,7 @@
     window.FEED_DATA.prefetchRecentMedia()
   ]);
 
-  // Page 1 (starts w/ future un-RSVP’d event, then videos/images, plus slot 3&7 injections)
+  // Page 1 (starts w/ future un-RSVP’d event, then videos/images, plus slot 3 & 7 injections)
   await loadNextFeedPage();
 
   // Infinite scroll sentinel
@@ -18,8 +88,10 @@
 
   // Fallback button
   const more = document.getElementById('load-more');
-  more.style.display = 'block';
-  more.onclick = loadNextFeedPage;
+  if (more) {
+    more.style.display = 'block';
+    more.onclick = loadNextFeedPage;
+  }
 })();
 
 let isLoading = false;

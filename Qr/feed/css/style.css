@@ -16,9 +16,14 @@
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body {
   font-family: Arial, sans-serif;
-  background-color: #fafafa;
+  background-color: #dcd1c2;
   color: var(--text-color);
 }
+body.theme-dark {
+  background-color: #111111;  /* or your preferred dark background */
+  color: var(--text-color);
+}
+
 main {
   width: 100%;
   max-width: 500px;
@@ -111,8 +116,6 @@ main {
   height: auto;          /* keep natural aspect ratio */
   object-fit: contain;   /* never crop */
 }
-
-/* Note: attributes like muted/playsinline belong in HTML, not CSS */
 
 /* Action bar: RSVP buttons / links */
 .post-actions {
@@ -304,19 +307,16 @@ main {
   width: 100%;
   overflow: hidden;
 }
-
 .carousel-images {
   display: flex;
   transition: transform 0.4s ease;
   will-change: transform;
 }
-
 .carousel-images img {
   width: 100%;
   flex: 0 0 100%;
   display: block;
 }
-
 .carousel-prev,
 .carousel-next {
   position: absolute;
@@ -332,7 +332,6 @@ main {
 }
 .carousel-prev { left: 8px; }
 .carousel-next { right: 8px; }
-
 .carousel-indicators {
   position: absolute;
   bottom: 10px;
@@ -355,9 +354,232 @@ main {
 /* tiny spacing between media and caption */
 .post-caption { margin-top: 8px; }
 
+/* Keep question cards beige (do not change sliders look) */
 .post.vibe-card {
-  background: var(--bg-light);   /* beige tone from your theme */
+  background: var(--bg-light);
 }
 .post.vibe-card .post-media {
-  background: var(--bg-light);   /* override black */
+  background: var(--bg-light);
+}
+
+/* ===================== DARK MODE ===================== */
+/* Toggle by adding class="theme-dark" on body (or html) */
+.theme-dark {
+  --green:        #d6c8b4;      /* lightened text accent */
+  --green-light:  #e3d6c5;
+  --brown:        #b08a68;
+  --gold:         #d0c2a9;
+  --gold-light:   #e4d7c4;
+  --bg-light:     #f5efde;      /* keep beige for questions */
+  --bg-lighter:   #2d2a26;
+  --text-color:   #e9e3d8;
+  --button-shadow: 0 4px 10px rgba(0,0,0,0.35);
+  --card-shadow:   0 10px 22px rgba(0,0,0,0.35);
+}
+
+.theme-dark body {
+  background: #111111;
+  color: var(--text-color);
+}
+
+/* Header */
+.theme-dark .feed-header {
+  background: #a6966d;
+  border-bottom: 1px solid #2a2a2a;
+}
+.theme-dark #signed-in { color: #b7b7b7; }
+.theme-dark .feed-header .feed-title { color: var(--gold); }
+.theme-dark .btn-header-signin {
+  background: #2b2b2b;
+  color: var(--gold);
+}
+
+/* Posts */
+.theme-dark .post {
+  background: #1a1a1a;
+  border: 1px solid #2a2a2a;
+}
+.theme-dark .post-header .avatar {
+  background: #2a2a2a;
+}
+.theme-dark .post-header .post-user {
+  color: var(--gold);
+}
+.theme-dark .post-header .post-date {
+  color: #9a9a9a;
+}
+
+/* Media keeps black surround (already #000) */
+
+/* Actions / text */
+.theme-dark .post-actions {
+  border-top: 1px solid #262626;
+}
+.theme-dark .rsvp-circle {
+  background: #2a2a2a;
+  border-color: transparent;
+}
+.theme-dark .rsvp-label {
+  color: var(--text-color);
+}
+.theme-dark .rsvp-button.active .rsvp-circle {
+  background: #3a3a3a;
+  border-color: var(--gold);
+}
+.theme-dark .rsvp-button.maybe.active .rsvp-circle {
+  background: #3a3a3a;
+  border-color: var(--gold-light);
+}
+.theme-dark .rsvp-button.notgoing.active .rsvp-circle {
+  background: #3a3a3a;
+  border-color: #e5746a;
+}
+.theme-dark .rsvp-summary { color: #b7b7b7; }
+.theme-dark .rsvp-summary a { color: var(--gold); }
+
+.theme-dark .comment-link { color: #b7b7b7; }
+.theme-dark .comment-link:hover { color: #fff; }
+
+/* Caption & comments */
+.theme-dark .post-caption { color: var(--text-color); }
+.theme-dark .comment b { color: var(--gold); }
+.theme-dark .add-comment { border-top: 1px solid #262626; }
+.theme-dark .add-comment input[type="text"] {
+  color: var(--text-color);
+}
+.theme-dark .add-comment input::placeholder { color: #8e8e8e; }
+.theme-dark .add-comment button { color: var(--gold); }
+.theme-dark .likes-count { color: var(--text-color); }
+
+/* Load more */
+.theme-dark .load-more-btn {
+  background: #2b2b2b;
+  color: var(--gold);
+  box-shadow: var(--button-shadow);
+}
+
+/* Modal */
+.theme-dark .simple-modal { background: rgba(0,0,0,0.7); }
+.theme-dark .simple-modal .simple-modal-card {
+  background: #1b1b1b;
+  border: 1px solid #2a2a2a;
+  color: var(--text-color);
+}
+
+/* Keep question cards beige in dark mode too */
+.theme-dark .post.vibe-card {
+  background: var(--bg-light);
+  color: #1A1A1A; /* ensure readable text on beige */
+}
+.theme-dark .post.vibe-card .post-media {
+  background: var(--bg-light);
+}
+/* ---------- Header user menu ---------- */
+.user-menu {
+  position: relative;
+}
+.user-menu__button {
+  padding: 6px 10px;
+  border: none;
+  border-radius: 999px;
+  background: var(--brown);
+  color: #fff;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+.user-menu__dropdown {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  min-width: 200px;
+  background: #fff;
+  color: var(--text-color);
+  border: 1px solid #e9e9e9;
+  border-radius: 10px;
+  box-shadow: var(--card-shadow);
+  padding: 6px;
+  z-index: 100;
+}
+.user-menu__item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 8px 10px;
+  font-size: 0.95rem;
+  background: transparent;
+  border: none;
+  color: inherit;
+  text-decoration: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.user-menu__item:hover {
+  background: #f4efe7;
+}
+.user-menu__item--label {
+  cursor: default;
+}
+.user-menu__item--label:hover {
+  background: transparent;
+}
+
+/* ---------- Smooth theme transition (0.333s) ---------- */
+html, body, .feed-header, .post, .simple-modal .simple-modal-card {
+  transition: background-color 0.333s ease, color 0.333s ease, border-color 0.333s ease;
+}
+
+/* When dark mode is on, we add .theme-dark on <html> (documentElement) */
+html.theme-dark {
+  /* your variable overrides are already defined in your stylesheet;
+     this ensures the body also respects the background quickly */
+}
+
+/* ─── Dark mode overrides ─── */
+html.theme-dark body {
+  background-color: #121212;
+  color: #e0e0e0;
+}
+
+html.theme-dark .feed-header {
+  background: #1e1e1e;
+  border-bottom-color: #333;
+}
+
+html.theme-dark .post {
+  background: #1e1e1e;
+  border-color: #333;
+}
+
+html.theme-dark .post-header .post-user {
+  color: #e0e0e0;
+}
+html.theme-dark .post-header .post-date {
+  color: #aaa;
+}
+
+/* Dropdown menu */
+html.theme-dark .user-menu__dropdown {
+  background: #1e1e1e;
+  border: 1px solid #333;
+  color: #e0e0e0;
+}
+html.theme-dark .user-menu__item {
+  color: #e0e0e0;
+}
+html.theme-dark .user-menu__item:hover:not(.user-menu__item--label) {
+  background: #333;
+}
+
+/* Simple modal */
+html.theme-dark .simple-modal .simple-modal-card {
+  background: #1e1e1e;
+  border-color: #333;
+  color: #e0e0e0;
+}
+
+/* Ensure vibe-question cards remain beige in both themes */
+.post.vibe-card,
+.post.vibe-card .post-media {
+  background: var(--bg-light) !important;
+  color: #1A1A1A !important;
 }
