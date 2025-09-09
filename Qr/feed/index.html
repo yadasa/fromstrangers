@@ -6,36 +6,34 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Feed</title>
 
-  <!-- Main stylesheet for feed page -->
   <link rel="stylesheet" href="css/style.css" />
 
-  <!-- Firebase SDKs (App, Auth, Firestore, Storage for photo URLs if needed) -->
+  <!-- Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js" defer></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js" defer></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js" defer></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-storage-compat.js" defer></script>
 
-  <!-- Your Firebase config (defines window.firebaseConfig) -->
+  <!-- Your Firebase config -->
   <script src="../js/firebaseConfig.js" defer></script>
 
-  <!-- Feed page logic -->
-  <script src="js/feed.js" defer></script>
+  <!-- Feed modules (order matters) -->
+  <script src="js/feed-data.js" defer></script>
+  <script src="js/feed-render.js" defer></script>
+  <script src="js/feed-vibes.js" defer></script>
+  <script src="js/feed-core.js" defer></script>
 </head>
 <body>
-  <!-- Top bar -->
   <header class="feed-header">
     <img src="../assets/mainlogo.png" alt="Logo" class="main-logo">
     <h1 class="feed-title">Feed</h1>
     <div id="signed-in"></div>
   </header>
 
-  <!-- Feed container -->
   <main id="feed" class="feed"></main>
 
-  <!-- Load More (fallback to infinite scroll) -->
-  <button id="load-more" class="load-more-btn">Load More</button>
+  <button id="load-more" class="load-more-btn" style="display:none;">Load More</button>
 
-  <!-- Simple modal (likes list, etc.) -->
   <div id="simple-modal" class="simple-modal" style="display:none;">
     <div class="simple-modal-card">
       <button id="simple-modal-close" class="simple-modal-close" aria-label="Close">&times;</button>
@@ -43,7 +41,6 @@
     </div>
   </div>
 
-  <!-- Phone login overlay (iframe login) -->
   <div id="phone-entry" class="login-overlay" style="display:none;">
     <iframe id="login-iframe" src="../login" frameborder="0"></iframe>
   </div>

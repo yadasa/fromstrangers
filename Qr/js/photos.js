@@ -648,8 +648,18 @@ async function renderGallery(items, append = false) {
           cap.className = 'photo-caption';
           cap.appendChild(document.createElement('div'))
              .innerText = date.toLocaleDateString();
-          cap.appendChild(document.createElement('div'))
-             .innerText = `From ${item.ownerName || 'Strangers'}`;
+          {
+            const whoDiv = document.createElement('div');
+            whoDiv.innerText = `From ${(item.ownerName || '').trim() || '…'}`;
+            cap.appendChild(whoDiv);
+            // async resolve & update text if needed
+            if (!item.ownerName) {
+              resolveOwnerName(item).then(name => {
+                whoDiv.innerText = `From ${name || 'Strangers'}`;
+              });
+            }
+          }
+
           card.append(cap);
 
           // like button
@@ -811,8 +821,18 @@ async function renderGallery(items, append = false) {
       cap.className = 'photo-caption';
       cap.appendChild(document.createElement('div'))
          .innerText = date.toLocaleDateString();
-      cap.appendChild(document.createElement('div'))
-         .innerText = `From ${item.ownerName || 'Strangers'}`;
+      {
+        const whoDiv = document.createElement('div');
+        whoDiv.innerText = `From ${(item.ownerName || '').trim() || '…'}`;
+        cap.appendChild(whoDiv);
+        // async resolve & update text if needed
+        if (!item.ownerName) {
+          resolveOwnerName(item).then(name => {
+            whoDiv.innerText = `From ${name || 'Strangers'}`;
+          });
+        }
+      }
+
       card.append(cap);
 
       // like button
@@ -1088,6 +1108,26 @@ async function updatePoints(type, delta = 0) {
 pointsClose.onclick = () => {
   pointsOverlay.style.display = 'none';
 };
+
+const uploaderNameCache = new Map(); // phone -> name
+
+async function resolveOwnerName(item) {
+  if (item.ownerName && item.ownerName.trim()) return item.ownerName;
+  if (!item.ownerPhone) return '';
+
+  if (uploaderNameCache.has(item.ownerPhone)) {
+    return uploaderNameCache.get(item.ownerPhone);
+  }
+  const snap = await db.collection('members').doc(item.ownerPhone).get();
+  const name = (snap.exists ? (snap.data().name || snap.data().Name || '') : '').trim();
+  uploaderNameCache.set(item.ownerPhone, name || '');
+  // opportunistically backfill Firestore so future loads are instant
+  if (name) {
+    db.collection('photos').doc(item.id).update({ ownerName: name }).catch(()=>{});
+  }
+  return name;
+}
+
 
 // 16) Load more (pagination) ------------------------------------------------
 async function loadMore() {

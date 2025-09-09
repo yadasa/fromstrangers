@@ -34,6 +34,67 @@ function ordinal(n) {
   return `${n}th`;
 }
 
+// Escape user-provided strings before inserting via innerHTML
+function esc(s = '') {
+  return String(s).replace(/[&<>"']/g, (m) => (
+    m === '&' ? '&amp;' :
+    m === '<' ? '&lt;'  :
+    m === '>' ? '&gt;'  :
+    m === '"' ? '&quot;':
+               '&#39;'
+  ));
+}
+
+// Group consecutive photos by the SAME owner within 3 minutes into a single "carousel" item
+const THREE_MIN_MS = 3 * 60 * 1000;
+
+/**
+ * Input: array of photo docs in *descending* time order (your current query does this).
+ * Each item must have: { id, ownerPhone, ownerName, url, name, mimeType?, ts }
+ * Output: array where consecutive items from the same owner within 3min are merged:
+ *   - { type:'photo-group', ids:[...], ownerPhone, ownerName, ts, media:[{url,name,mimeType,ts}, ...] }
+ *   - or single photo stays: { type:'photo', id, ownerPhone, ownerName, url, name, mimeType, ts }
+ */
+function groupPhotosWithinThreeMinutes(photosDesc) {
+  const out = [];
+  let i = 0;
+  while (i < photosDesc.length) {
+    const first = photosDesc[i];
+    const bucket = [first];
+    let j = i + 1;
+    while (
+      j < photosDesc.length &&
+      photosDesc[j].ownerPhone === first.ownerPhone &&
+      Math.abs(photosDesc[j].ts - first.ts) <= THREE_MIN_MS
+    ) {
+      bucket.push(photosDesc[j]);
+      j++;
+    }
+
+    if (bucket.length === 1) {
+      out.push({ type: 'photo', ...first });
+    } else {
+      // keep the earliest timestamp of the group to preserve ordering (use first.ts)
+      out.push({
+        type: 'photo-group',
+        ids: bucket.map(b => b.id),
+        ownerPhone: first.ownerPhone,
+        ownerName: first.ownerName,
+        ts: first.ts,
+        media: bucket.map(b => ({
+          url: b.url,
+          name: b.name,
+          mimeType: b.mimeType,
+          ts: b.ts
+        }))
+      });
+    }
+    i = j;
+  }
+  return out;
+}
+
+
 /** From (YYYY-MM-DD, "HH:MM" or "H:MM AM/PM") -> "Friday, October 24th, 2025 @ 7:00 PM" */
 function formatEventDate12h(isoDateStr = '', timeStr = '') {
   let Y, M, D;
@@ -102,24 +163,37 @@ auth.onAuthStateChanged(async (user) => {
   await loadNextFeedPage();
   ensureInfiniteScroll();
   const more = qs('#load-more');
-  more.onclick = loadNextFeedPage;
+  if (more) more.onclick = loadNextFeedPage;
 });
 
 // --- Fetch a mixed page of events + photos ---
 async function fetchFeedPage() {
   // Photos (recent)
-  let photoQ = db.collection('photos')
+    let photoQ = db.collection('photos')
     .where('deleted', '==', false)
-    .orderBy('timestamp', 'desc')
+    .orderBy('timestamp','desc')
     .limit(24);
-  if (feedCursor.lastPhotoDoc) photoQ = photoQ.startAfter(feedCursor.lastPhotoDoc);
-  const photoSnap = await photoQ.get();
-  if (!photoSnap.empty) feedCursor.lastPhotoDoc = photoSnap.docs[photoSnap.docs.length - 1];
+    if (feedCursor.lastPhotoDoc) photoQ = photoQ.startAfter(feedCursor.lastPhotoDoc);
+    const photoSnap = await photoQ.get();
+    if (!photoSnap.empty) feedCursor.lastPhotoDoc = photoSnap.docs[photoSnap.docs.length-1];
 
-  const photos = photoSnap.docs.map(d => {
+    // Map raw photos
+    const rawPhotos = photoSnap.docs.map(d => {
     const x = d.data();
-    return { type: 'photo', id: d.id, ts: x.timestamp?.toMillis?.() || 0, ...x };
-  });
+    return {
+        type: 'photo',
+        id: d.id,
+        ownerPhone: x.ownerPhone || '',
+        ownerName:  x.ownerName  || 'Strangers',
+        url:        x.url,
+        name:       x.name || '',
+        mimeType:   x.mimeType || '',
+        ts:         x.timestamp?.toMillis?.() || 0
+    };
+    });
+
+    // Group consecutive photos by same owner within 3 minutes
+    const photos = groupPhotosWithinThreeMinutes(rawPhotos);
 
   // Events (sort by event start if available, fallback to createdAt)
   let eventQ = db.collection('events').orderBy('createdAt', 'desc').limit(24);
@@ -224,8 +298,8 @@ async function renderEventPost(e) {
     const cap = document.createElement('div');
     cap.className = 'post-caption';
     cap.innerHTML = `
-      ${e.title ? `<div class="title"><b>${e.title}</b></div>` : ''}
-      ${e.description ? `<div class="desc">${e.description}</div>` : ''}
+      ${e.title ? `<div class="title"><b>${esc(e.title)}</b></div>` : ''}
+      ${e.description ? `<div class="desc">${esc(e.description)}</div>` : ''}
     `;
     post.appendChild(cap);
   }
@@ -285,71 +359,120 @@ async function renderEventPost(e) {
 // --- Render: Photo post (uses your CSS classes/IDs) ---
 async function renderPhotoPost(p) {
   const feed = qs('#feed');
-  const isVideo = p.mimeType ? p.mimeType.startsWith('video/') : /\.(mp4|mov|webm|ogg)$/i.test(p.name || '');
 
-  const post = document.createElement('article');
-  post.className = 'post photo';
+  // Normal single photo (possibly a video)
+  if (p.type === 'photo') {
+    const isVideo = p.mimeType
+      ? p.mimeType.startsWith('video/')
+      : /\.(mp4|mov|webm|ogg)$/i.test(p.name || '');
 
-  // Header
-  const header = document.createElement('div');
-  header.className = 'post-header';
+    const card = document.createElement('article');
+    card.className = 'post photo';
 
-  const avatar = document.createElement('div');
-  avatar.className = 'avatar';
-  header.appendChild(avatar);
+    card.innerHTML = `
+      <header class="post-header">
+        <div class="post-user">${p.ownerName || 'Strangers'}</div>
+        <div class="post-sub">${p.ts ? new Date(p.ts).toLocaleString() : ''}</div>
+      </header>
 
-  const userEl = document.createElement('div');
-  userEl.className = 'post-user';
-  userEl.textContent = p.ownerName || 'Strangers';
-  header.appendChild(userEl);
+      <div class="post-media">
+        ${
+          isVideo
+            ? `<video class="auto-video" muted playsinline preload="metadata" src="${p.url}"></video>`
+            : `<img src="${p.url}" alt="${(p.name || 'Photo')}" />`
+        }
+      </div>
 
-  const dateEl = document.createElement('div');
-  dateEl.className = 'post-date';
-  dateEl.textContent = p.ts ? new Date(p.ts).toLocaleString() : '';
-  header.appendChild(dateEl);
+      <div class="post-actions">
+        <div class="likes-count">0 likes</div>
+      </div>
 
-  post.appendChild(header);
+      <div class="post-comments"><div class="comment empty">No comments yet</div></div>
+    `;
 
-  // Media
-  const media = document.createElement('div');
-  media.className = 'post-media';
-  if (isVideo) {
-    const v = document.createElement('video');
-    v.className = 'auto-video';
-    v.muted = true;
-    v.playsInline = true;
-    v.preload = 'metadata';
-    v.src = p.url;
-    media.appendChild(v);
-  } else {
-    const img = document.createElement('img');
-    img.src = p.url;
-    img.alt = p.name || 'Photo';
-    img.loading = 'lazy';
-    media.appendChild(img);
+    feed.appendChild(card);
+
+    // Likes + modal
+    await renderPhotoLikes(p.id, qs('.likes-count', card));
+
+    // Allow tapping video to toggle sound
+    const v = card.querySelector('video.auto-video');
+    if (v) {
+      v.addEventListener('click', () => {
+        v.muted = !v.muted;
+        if (!v.paused) v.play().catch(()=>{});
+      });
+    }
+    return;
   }
-  post.appendChild(media);
 
-  // Actions (likes)
-  const actions = document.createElement('div');
-  actions.className = 'post-actions';
-  const likes = document.createElement('div');
-  likes.className = 'likes-count';
-  likes.textContent = '0 likes';
-  actions.appendChild(likes);
-  post.appendChild(actions);
+  // Grouped carousel of photos (and ignore videos for carousel)
+  if (p.type === 'photo-group') {
+    const mediaItems = p.media.filter(m => {
+      const isVid = m.mimeType ? m.mimeType.startsWith('video/') :
+        /\.(mp4|mov|webm|ogg)$/i.test(m.name || '');
+      return !isVid; // only photos in carousel; videos render as single posts elsewhere
+    });
 
-  // Comments shell (optional – you can later add photo comments support)
-  const comments = document.createElement('div');
-  comments.className = 'post-comments';
-  comments.innerHTML = `<div class="comment empty">No comments yet</div>`;
-  post.appendChild(comments);
+    // if (somehow) only videos, fallback to single style for first:
+    if (!mediaItems.length) {
+      return renderPhotoPost({
+        type: 'photo',
+        id: p.ids[0],
+        ownerPhone: p.ownerPhone,
+        ownerName: p.ownerName,
+        url: p.media[0]?.url,
+        name: p.media[0]?.name,
+        mimeType: p.media[0]?.mimeType,
+        ts: p.ts
+      });
+    }
 
-  feed.appendChild(post);
+    const card = document.createElement('article');
+    card.className = 'post photo';
 
-  // Wire likes count modal
-  await renderPhotoLikes(p.id, likes);
+    const dots = mediaItems.map((_, i) =>
+      `<span class="${i === 0 ? 'active' : ''}"></span>`
+    ).join('');
+
+    const slides = mediaItems.map(m =>
+      `<img src="${m.url}" alt="${m.name || 'Photo'}" />`
+    ).join('');
+
+    card.innerHTML = `
+      <header class="post-header">
+        <div class="post-user">${p.ownerName || 'Strangers'}</div>
+        <div class="post-sub">${p.ts ? new Date(p.ts).toLocaleString() : ''}</div>
+      </header>
+
+      <div class="post-media">
+        <div class="carousel-container">
+          <div class="carousel-images">
+            ${slides}
+          </div>
+          <button class="carousel-prev" aria-label="Previous">&#10094;</button>
+          <button class="carousel-next" aria-label="Next">&#10095;</button>
+          <div class="carousel-indicators">${dots}</div>
+        </div>
+      </div>
+
+      <div class="post-actions">
+        <div class="likes-count">0 likes</div>
+      </div>
+
+      <div class="post-comments"><div class="comment empty">No comments yet</div></div>
+    `;
+
+    feed.appendChild(card);
+
+    // You can count likes using the first photo id in the group (simplest)
+    await renderPhotoLikes(p.ids[0], qs('.likes-count', card));
+
+    // Initialize this carousel
+    initCarousels(card);
+  }
 }
+
 
 // --- RSVP helpers ---
 async function preselectRSVP(eventId, wrapEl) {
@@ -494,8 +617,39 @@ function setupVideoAutoplayObservers() {
       });
     }, { threshold: 0.5, rootMargin: '150px 0px' }); // begin just before fully visible
   }
-  qsa('video.auto-video').forEach(v => videoObserver.observe(v));
+  qsa('video.auto-video').forEach(v => {
+    if (!v.dataset._io) {
+        videoObserver.observe(v);
+        v.dataset._io = '1';
+    }
+  });
 }
+
+function initCarousels(root = document) {
+  const carousels = root.querySelectorAll('.carousel-container');
+  carousels.forEach(carousel => {
+    const strip = carousel.querySelector('.carousel-images');
+    const slides = Array.from(carousel.querySelectorAll('.carousel-images > *'));
+    const dots = Array.from(carousel.querySelectorAll('.carousel-indicators span'));
+    const prev = carousel.querySelector('.carousel-prev');
+    const next = carousel.querySelector('.carousel-next');
+    let idx = 0;
+
+    function show(k) {
+      if (!slides.length) return;
+      idx = (k + slides.length) % slides.length;
+      strip.style.transform = `translateX(-${idx * 100}%)`;
+      dots.forEach((d, i) => d.classList.toggle('active', i === idx));
+    }
+
+    prev?.addEventListener('click', () => show(idx - 1));
+    next?.addEventListener('click', () => show(idx + 1));
+    dots.forEach((d, i) => d.addEventListener('click', () => show(i)));
+
+    show(0);
+  });
+}
+
 
 // --- Infinite scroll + fallback button ---
 function ensureInfiniteScroll() {

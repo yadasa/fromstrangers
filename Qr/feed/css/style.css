@@ -297,3 +297,60 @@ main {
   border-radius: 8px;
   background: #fff;
 }
+
+/* ─── Photo carousel for grouped posts (same user, within 3 min) ─── */
+.carousel-container {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+}
+
+.carousel-images {
+  display: flex;
+  transition: transform 0.4s ease;
+  will-change: transform;
+}
+
+.carousel-images img {
+  width: 100%;
+  flex: 0 0 100%;
+  display: block;
+}
+
+.carousel-prev,
+.carousel-next {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  border: none;
+  background: rgba(0,0,0,0.45);
+  color: #fff;
+  padding: 6px 10px;
+  border-radius: 24px;
+  cursor: pointer;
+  z-index: 2;
+}
+.carousel-prev { left: 8px; }
+.carousel-next { right: 8px; }
+
+.carousel-indicators {
+  position: absolute;
+  bottom: 10px;
+  left: 0; right: 0;
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  z-index: 2;
+}
+.carousel-indicators span {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.5);
+}
+.carousel-indicators span.active {
+  background: #fff;
+}
+
+/* tiny spacing between media and caption */
+.post-caption { margin-top: 8px; }
