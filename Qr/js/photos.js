@@ -967,15 +967,36 @@ btnShare.onclick = shareSelected;
 
 // 13) Delete multiple --------------------------------------------------------
 btnDelete.onclick = async () => {
-  const tasks = Array.from(selectedItems)
-    .filter(it => it.ownerPhone === userPhone)
-    .map(it => fetch('/api/drive/move', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ fileId: it.id })
-    }));
-  await Promise.all(tasks);
-  loadGallery();
+  // only items the current user can delete (owner OR admin)
+  const items = Array.from(selectedItems).filter(it => canDeletePhoto(it));
+  if (items.length === 0) return;
+
+  btnDelete.disabled = true;
+  btnDelete.innerText = 'Deleting…';
+
+  try {
+    // Use a Firestore batch (faster, fewer round-trips)
+    const batch = db.batch();
+    items.forEach(it => {
+      const ref = db.collection('photos').doc(it.id);
+      batch.update(ref, { deleted: true });
+    });
+    await batch.commit();
+
+    // Refresh UI (simplest) — or remove cards individually if you prefer
+    await loadGallery();
+  } catch (err) {
+    console.error('Bulk delete failed:', err);
+    alert('Could not delete selected items.');
+  } finally {
+    btnDelete.disabled = false;
+    btnDelete.innerText = 'Delete';
+    selectedItems.clear();
+    btnShare.disabled = true;
+    btnDelete.disabled = true;
+    selectMode = false;
+    btnSelect.innerText = 'Select multiple';
+  }
 };
 
 // 14) Modal image/video overlay ------------------------------------------------
