@@ -75,6 +75,8 @@ main {
   border-radius: 8px;
   box-shadow: var(--card-shadow);
   overflow: hidden;
+  position: relative;
+  z-index: 0;
 }
 
 /* Post header */
@@ -557,6 +559,10 @@ html.theme-dark .post-header .post-date {
   color: #aaa;
 }
 
+
+html.theme-dark .main-logo {
+  filter: invert(1);
+}
 /* Dropdown menu */
 html.theme-dark .user-menu__dropdown {
   background: #1e1e1e;
@@ -582,4 +588,97 @@ html.theme-dark .simple-modal .simple-modal-card {
 .post.vibe-card .post-media {
   background: var(--bg-light) !important;
   color: #1A1A1A !important;
+}
+/* === Animated Blobs Background (matches homepage) === */
+.background-container {
+  width: 100vw;
+  height: 100vh;
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: -1;          /* keep behind feed UI */
+  filter: blur(20px);   /* soft, dreamy look */
+  pointer-events: none; /* never capture clicks */
+}
+
+@keyframes moveBlob1 {
+  0% { transform: translate(10vw, -15vh) scale(1); }
+  50% { transform: translate(-30vw, 60vh) scale(1.3); }
+  100% { transform: translate(10vw, -15vh) scale(1); }
+}
+@keyframes moveBlob2 {
+  0% { transform: translate(80vw, 10vh) scale(1); }
+  50% { transform: translate(20vw, 70vh) scale(0.8); }
+  100% { transform: translate(80vw, 10vh) scale(1); }
+}
+@keyframes moveBlob3 {
+  0% { transform: translate(50vw, 90vh) scale(1.2); }
+  50% { transform: translate(90vw, -10vh) scale(1); }
+  100% { transform: translate(50vw, 90vh) scale(1.2); }
+}
+@keyframes moveBlob4 {
+  0% { transform: translate(-10vw, 50vh) scale(1); }
+  50% { transform: translate(70vw, 20vh) scale(1.4); }
+  100% { transform: translate(-10vw, 50vh) scale(1); }
+}
+@keyframes moveBlob5 {
+  0% { transform: translate(30vw, 20vh) scale(0.9); }
+  50% { transform: translate(-10vw, -20vh) scale(1.1); }
+  100% { transform: translate(30vw, 20vh) scale(0.9); }
+}
+
+.shape-blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(60px);
+  opacity: 0.7;
+}
+
+/* Colors pulled from your homepage style */
+:root {
+  --gradient-color-1: #eeceaa;
+  --gradient-color-2: #ccab5f;
+  --gradient-color-3: #cbc3b0;
+  --gradient-color-4: #a07e57;
+  --gradient-color-5: #d6a66e;
+}
+
+.shape-blob:nth-child(1) {
+  width: 450px; height: 450px;
+  background: var(--gradient-color-1);
+  animation: moveBlob1 30s infinite alternate;
+}
+.shape-blob:nth-child(2) {
+  width: 350px; height: 350px;
+  background: var(--gradient-color-2);
+  animation: moveBlob2 35s infinite alternate-reverse;
+}
+.shape-blob:nth-child(3) {
+  width: 300px; height: 300px;
+  background: var(--gradient-color-3);
+  animation: moveBlob3 28s infinite alternate;
+}
+.shape-blob:nth-child(4) {
+  width: 400px; height: 400px;
+  background: var(--gradient-color-4);
+  animation: moveBlob4 40s infinite alternate-reverse;
+}
+.shape-blob:nth-child(5) {
+  width: 250px; height: 250px;
+  background: var(--gradient-color-5);
+  animation: moveBlob5 25s infinite alternate;
+}
+
+/* Make sure page content lives above the blobs */
+body, main, .feed-header, #feed {
+  position: relative;
+  
+}
+/* Example: darker, moodier blob hues for dark mode */
+:root[data-theme="dark"] {
+  --gradient-color-1: #6b5d4a;
+  --gradient-color-2: #8a6b3a;
+  --gradient-color-3: #5f594d;
+  --gradient-color-4: #4a3827;
+  --gradient-color-5: #7a5a34;
 }
