@@ -100,11 +100,17 @@ async function loadNextFeedPage() {
   isLoading = true;
   try {
     const queue = await window.FEED_DATA.buildNextRenderQueuePage();
+    if (!queue || queue.length === 0) {
+      // Nothing to render right now (e.g. no media to accompany the next event)
+      // Gently back off; more media will be fetched on next scroll or manual 'Load More'
+      return;
+    }
     await window.FEED_RENDER.renderQueue(queue);
   } catch (e) {
     console.error('Feed page load failed', e);
+  } finally {
+    isLoading = false;
   }
-  isLoading = false;
 }
 
 function ensureInfiniteScroll() {

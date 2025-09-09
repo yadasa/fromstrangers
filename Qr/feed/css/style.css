@@ -682,3 +682,19 @@ body, main, .feed-header, #feed {
   --gradient-color-4: #4a3827;
   --gradient-color-5: #7a5a34;
 }
+/* Ensure feed posts have side gap on small screens */
+@media (max-width: 600px) {
+  .post {
+    margin: 1rem 6vw;
+  }
+}
+
+/* Style avatar images in likes list modal */
+.likes-list img {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  margin-right: 8px;
+  vertical-align: middle;
+}
