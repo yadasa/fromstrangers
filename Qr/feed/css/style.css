@@ -698,3 +698,33 @@ body, main, .feed-header, #feed {
   margin-right: 8px;
   vertical-align: middle;
 }
+
+/* Allow horizontal swipes while keeping page vertical scroll */
+.carousel-container { 
+  touch-action: pan-y;
+}
+
+.photo-like-btn {
+  border: none;
+  background: transparent;
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 4px 6px;
+}
+.photo-like-btn.liked { color: #e0245e; }
+
+
+.btn-header-share {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 999px;
+  background: var(--green);
+  color: var(--gold);
+  cursor: pointer;
+  font-size: 0.85rem;
+  box-shadow: var(--button-shadow);
+  margin-right: 8px;
+}
+
+

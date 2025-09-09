@@ -18,7 +18,8 @@ window.FEED_STATE = {
   currentName:  '',
   cursors: { events: null, photos: null },
   pool: { futureEvents: [], videos: [], photos: [] },
-  viewCounts: {}  // track how many times each post has been viewed by this user
+  viewCounts: {},
+  lastRenderedType: null
 };
 
 // Load viewed posts count from localStorage (to avoid showing >3 times)
@@ -30,6 +31,11 @@ try {
 }
 
 // ----- Utilities -----
+// How many items to return per "page" to the renderer
+const CYCLE_PAGE_SIZE = 12;
+// Track event spacing across pages:
+window.FEED_STATE.sinceLastEvent = 999;
+
 function now() { return Date.now(); }
 function toMillis(ts) {
   if (!ts) return 0;
@@ -311,76 +317,88 @@ async function ensureSomeMedia(minVideos = 1, minPhotos = 0, maxRetries = 2) {
 }
 
 // --- REPLACE your buildNextRenderQueuePage with this version ---
+// Build one “page” queue respecting the pattern and injections,
+// while preventing back-to-back events across page boundaries.
 async function buildNextRenderQueuePage() {
   const st = window.FEED_STATE;
   const queue = [];
 
-  // 1) Event first (prefer not-RSVP’d)
-  const firstEvent = await pickFutureEventStart();
-  if (firstEvent) queue.push(firstEvent);
+  // We require >=7 items between events across page boundaries.
+  // If sinceLastEvent < 7, we CANNOT place an event at the top of this page.
+  const canPlaceEventNow = st.sinceLastEvent >= 7;
 
-  // 2) Make sure we have at least some media ready; if not, don't return an event-only page
-  const mediaReady = await ensureSomeMedia(1, 0, 2); // aim for at least 1 media
-  if (!mediaReady) {
-    // No media to accompany an event -> don't spam another lonely event
-    // Put the event back into the pool (so we can use it next time with media)
-    if (firstEvent) st.pool.futureEvents.unshift(firstEvent);
-    return []; // signal: nothing to render this round
+  // 1) Optional event first (only if spacing allows)
+  let placedEvent = false;
+  if (canPlaceEventNow) {
+    const evt = await pickFutureEventStart();
+    if (evt) {
+      queue.push(evt);
+      placedEvent = true;
+      st.sinceLastEvent = 0; // just placed one
+    }
   }
 
-  // 3) Pick 1–3 videos and 0–9 images
+  // 2) Always add 1–3 videos, then 0–9 images
   const { vids, imgs } = await pickVideosAndImages();
   queue.push(...vids);
 
-  // 4) Inject random media into slot #3 (index 2)
-  // Make sure we try to inject ONLY from remaining pools (not events)
+  // 3) Inject random media into slot #3 (index 2)
   if (queue.length >= 2) {
     if (st.pool.videos.length < 3 && st.pool.photos.length < 3) {
       await prefetchRecentMedia();
     }
-    const choices = [...st.pool.videos.slice(0, 6), ...st.pool.photos.slice(0, 6)];
+    const choices = [
+      ...(st.pool.videos.slice(0, 6)),
+      ...(st.pool.photos.slice(0, 6))
+    ];
     if (choices.length) {
       const inject = pickNWeighted(choices, 1, m => weightByRecency(m.ts))[0];
       if (inject) {
-        // remove injected from its pool
-        if (inject.type === 'photo') {
-          const i1 = st.pool.videos.findIndex(x => x.id === inject.id);
-          if (i1 >= 0) st.pool.videos.splice(i1, 1);
-          const i2 = st.pool.photos.findIndex(x => x.id === inject.id);
-          if (i2 >= 0) st.pool.photos.splice(i2, 1);
+        // remove from its pool
+        if (inject.type === 'photo' && inject.id) {
+          const iVid = st.pool.videos.findIndex(x => x.id === inject.id);
+          if (iVid >= 0) st.pool.videos.splice(iVid, 1);
+          const iImg = st.pool.photos.findIndex(x => x.id === inject.id);
+          if (iImg >= 0) st.pool.photos.splice(iImg, 1);
         } else if (inject.type === 'photo-group' && inject.ids?.length) {
-          const i3 = st.pool.photos.findIndex(x => x.ids?.[0] === inject.ids[0]);
-          if (i3 >= 0) st.pool.photos.splice(i3, 1);
+          const iGrp = st.pool.photos.findIndex(x => x.ids?.[0] === inject.ids[0]);
+          if (iGrp >= 0) st.pool.photos.splice(iGrp, 1);
         }
         queue.splice(2, 0, inject);
       }
     }
   }
 
-  // Then images
+  // 4) Then images
   queue.push(...imgs);
 
-  // 5) Inject a vibe question at slot #7 (index 6) if available
-  const vibe = await window.VIBES_pickRandomUnanswered?.();
-  if (vibe) {
-    const vibeItem = { type: 'vibe-question', ...vibe };
-    if (queue.length >= 6) {
-      queue.splice(6, 0, vibeItem);
-    } else {
-      queue.push(vibeItem);
+  // 5) Vibes slider at slot #7 (index 6)
+  if (typeof window.VIBES_pickRandomUnanswered === 'function') {
+    const vibe = await window.VIBES_pickRandomUnanswered({ db, phone: st.currentPhone });
+    if (vibe) {
+      if (queue.length >= 6) queue.splice(6, 0, { type: 'vibe-question', ...vibe });
+      else queue.push({ type: 'vibe-question', ...vibe });
     }
   }
 
-  // 6) Ensure only one event per page (already guaranteed), and that page has at least one media
-  const containsMedia = queue.some(i => i.type !== 'event');
-  if (!containsMedia) {
-    // Put the event back so we don't lose it, and return nothing.
-    if (firstEvent) st.pool.futureEvents.unshift(firstEvent);
-    return [];
+  // Enforce that we never add more than one event on this page
+  // (we only placed 0 or 1 above), and update spacing tracker for next page.
+  const page = queue.slice(0, CYCLE_PAGE_SIZE);
+
+  // Update sinceLastEvent based on what this page contains
+  for (const it of page) {
+    if (it.type === 'event') {
+      st.sinceLastEvent = 0;
+    } else {
+      st.sinceLastEvent++;
+    }
   }
 
-  return queue.slice(0, 12);
+  return page;
 }
+
+
+
 
 window.FEED_DATA = {
   prefetchFutureEvents,

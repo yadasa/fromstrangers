@@ -94,6 +94,63 @@ function renderSignedInMenu(container, { name }) {
   }
 })();
 
+// Storage helper (compat SDK already loaded on page)
+const storage = firebase.storage();
+
+// Wire Share Media
+(function wireShareMedia() {
+  const btn  = document.getElementById('feed-share-btn');
+  const file = document.getElementById('feed-file-input');
+  if (!btn || !file) return;
+
+  btn.addEventListener('click', () => {
+    if (!window.FEED_STATE.currentPhone) {
+      document.getElementById('phone-entry').style.display = 'flex';
+      return;
+    }
+    file.value = '';
+    file.click();
+  });
+
+  file.addEventListener('change', async () => {
+    const f = file.files && file.files[0];
+    if (!f) return;
+
+    // simple caption prompt for now
+    const caption = (prompt('Add a caption (optional):') || '').trim();
+
+    try {
+      // 1) Create Firestore doc ID first
+      const docRef = db.collection('photos').doc();
+      const objectPath = `photos/${docRef.id}_${encodeURIComponent(f.name)}`;
+      const storageRef = storage.ref().child(objectPath);
+
+      // 2) Upload file
+      await storageRef.put(f);
+      const downloadURL = await storageRef.getDownloadURL();
+
+      // 3) Write Firestore doc
+      await docRef.set({
+        url: downloadURL,
+        name: f.name,
+        mimeType: f.type || '',
+        ownerPhone: window.FEED_STATE.currentPhone || '',
+        ownerName:  window.FEED_STATE.currentName  || 'Strangers',
+        caption: caption || '',
+        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+        deleted: false
+      });
+
+      // 4) Optimistically show at top (optional) or just allow it to appear in next page
+      alert('Uploaded! It will appear in the feed shortly.');
+    } catch (e) {
+      console.error('Upload failed', e);
+      alert('Upload failed. Please try again.');
+    }
+  });
+})();
+
+
 let isLoading = false;
 async function loadNextFeedPage() {
   if (isLoading) return;
