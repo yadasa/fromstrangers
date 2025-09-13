@@ -65,6 +65,7 @@ function formatEventDate12h(iso = '', time = '') {
   return `${w}, ${mo} ${ordinal(dt.getDate())}, ${dt.getFullYear()} @ ${hh}:${mm} ${ampm}`;
 }
 
+
 /* =========================
    EVENT POSTS
    ========================= */
@@ -112,7 +113,7 @@ async function renderEventPost(e) {
         <div class="rsvp-button notgoing"><div class="rsvp-circle">❌</div><div class="rsvp-label">Not Going</div></div>
       </div>
       <div class="rsvp-summary"></div>
-      <a class="comment-link" href="/Qr/eventid.html?e=${encodeURIComponent(e.id)}">View event details</a>
+      <a class="comment-link" href="/events/eventid.html?e=${encodeURIComponent(e.id)}">View event details</a>
     </div>
     <div class="post-comments"></div>
     <div class="add-comment">
