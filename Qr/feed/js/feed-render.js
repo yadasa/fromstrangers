@@ -19,7 +19,6 @@ function showSimpleModal(innerHtml) {
 // Show timestamp on non-event posts (photos/videos)?
 const SHOW_MEDIA_TIMESTAMP = false;
 
-
 // (Kept as-is; likes list builds profile links using profileId inside renderPhotoLikes)
 function profileLinkHtml(name, phone) {
   const safeName = window.FEED_UTILS.esc(name || 'Unknown');
@@ -68,7 +67,6 @@ function formatEventDate12h(iso = '', time = '') {
   const mm = String(dt.getMinutes()).padStart(2, '0');
   return `${w}, ${mo} ${ordinal(dt.getDate())}, ${dt.getFullYear()} @ ${hh}:${mm} ${ampm}`;
 }
-
 
 /* =========================
    EVENT POSTS
@@ -316,8 +314,11 @@ async function renderPhotoPost(p) {
       <div class="post-header">
         <img class="avatar" src="../assets/defaultpfp.png" alt="User">
         <div class="post-user">${window.FEED_UTILS.esc(p.ownerName || 'Strangers')}</div>
-        ${SHOW_MEDIA_TIMESTAMP ? `<div class="post-sub">${p.ts ? new Date(p.ts).toLocaleString() : ''}</div>` : ''}
-
+        ${
+          SHOW_MEDIA_TIMESTAMP
+            ? `<div class="post-sub">${p.ts ? new Date(p.ts).toLocaleString() : ''}</div>`
+            : ''
+        }
       </div>
       <div class="post-media">
         <div class="carousel-container">
@@ -417,8 +418,11 @@ async function renderPhotoPost(p) {
     <div class="post-header">
       <img class="avatar" src="../assets/defaultpfp.png" alt="User">
       <div class="post-user">${window.FEED_UTILS.esc(p.ownerName || 'Strangers')}</div>
-      ${SHOW_MEDIA_TIMESTAMP ? `<div class="post-sub">${p.ts ? new Date(p.ts).toLocaleString() : ''}</div>` : ''}
-
+      ${
+        SHOW_MEDIA_TIMESTAMP
+          ? `<div class="post-sub">${p.ts ? new Date(p.ts).toLocaleString() : ''}</div>`
+          : ''
+      }
     </div>
     <div class="post-media">
       ${
@@ -767,7 +771,7 @@ function trackViewed(postId) {
 }
 
 /* =========================
-   PUBLIC RENDER QUEUE
+   PUBLIC RENDER QUEUE + FALLBACK HELPERS
    ========================= */
 
 function shuffleInPlace(arr) {
@@ -783,24 +787,26 @@ async function fetchRandomFallbackPhotos(n = 5) {
     const base = db.collection('photos').where('deleted', '==', false);
     const [descSnap, ascSnap] = await Promise.all([
       base.orderBy('timestamp', 'desc').limit(50).get(),
-      base.orderBy('timestamp', 'asc').limit(50).get()
+      base.orderBy('timestamp', 'asc').limit(50).get(),
     ]);
 
-    const take = (snap) => snap.docs.map((d) => {
-      const x = d.data();
-      const ts = x.timestamp && (x.timestamp.toMillis?.() || (x.timestamp.seconds * 1000)) || 0;
-      return {
-        type: 'photo',
-        id: d.id,
-        ownerPhone: x.ownerPhone || '',
-        ownerName:  x.ownerName  || 'Strangers',
-        url:        x.url,
-        name:       x.name || '',
-        mimeType:   x.mimeType || '',
-        ts,
-        caption:    x.caption || ''
-      };
-    });
+    const take = (snap) =>
+      snap.docs.map((d) => {
+        const x = d.data();
+        const ts =
+          (x.timestamp && (x.timestamp.toMillis?.() || x.timestamp.seconds * 1000)) || 0;
+        return {
+          type: 'photo',
+          id: d.id,
+          ownerPhone: x.ownerPhone || '',
+          ownerName: x.ownerName || 'Strangers',
+          url: x.url,
+          name: x.name || '',
+          mimeType: x.mimeType || '',
+          ts,
+          caption: x.caption || '',
+        };
+      });
 
     const pool = [...take(descSnap), ...take(ascSnap)];
     shuffleInPlace(pool);
@@ -823,4 +829,4 @@ async function renderQueue(items) {
   setupVideoAutoplayObservers();
 }
 
-window.FEED_RENDER = { renderQueue };
+window.FEED_RENDER = { renderQueue, fetchRandomFallbackPhotos };
